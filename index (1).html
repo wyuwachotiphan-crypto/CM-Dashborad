@@ -1,0 +1,2390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ERV_Construction Project Management</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#0E2238;        /* blueprint ink — primary dark surface */
+    --ink-soft:#163655;    /* secondary dark surface (tab bar) */
+    --grid:#3E7CA6;        /* blueprint gridline blue */
+    --heading:#154BA6;     /* section heading blue */
+    --paper:#FFFFFF;       /* card surface */
+    --canvas:#FFFFFF;      /* page background */
+    --accent:#E2691F;      /* survey-flag orange — primary accent */
+    --accent-soft:#F3D9C2; /* tint of accent */
+    --pulse:#4FB8D6;       /* blueprint cyan — ambient / live signature */
+    --text:#16202C;        /* body ink */
+    --steel:#647480;       /* secondary text */
+    --line:#DEDACD;        /* hairline border on paper */
+    --green:#3E8F63;
+    --red:#C2493C;
+    --gray:#98A5AD;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--canvas); color:var(--text); min-height:100vh; padding-bottom:56px;
+  }
+  .wrap{max-width:1320px; margin:0 auto; padding:0 24px;}
+  ::selection{background:var(--accent-soft); color:var(--ink);}
+
+  /* ================= HEADER ================= */
+  header{
+    position:relative; background:var(--ink); color:#fff; padding:20px 0 0; overflow:hidden;
+    box-shadow:0 1px 0 rgba(0,0,0,0.25);
+  }
+  header::before{
+    content:''; position:absolute; inset:0; pointer-events:none; opacity:0.5;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(79,184,214,0.10) 0, rgba(79,184,214,0.10) 1px, transparent 1px, transparent 26px),
+      repeating-linear-gradient(90deg, rgba(79,184,214,0.10) 0, rgba(79,184,214,0.10) 1px, transparent 1px, transparent 26px);
+  }
+  .scanline{
+    position:absolute; left:0; right:0; height:46px; top:-46px;
+    background:linear-gradient(180deg, transparent, rgba(79,184,214,0.16), transparent);
+    animation:scan 7s linear infinite; pointer-events:none;
+  }
+  @keyframes scan{ 0%{top:-46px;} 100%{top:160px;} }
+  @media (prefers-reduced-motion: reduce){ .scanline{animation:none; display:none;} }
+
+  .head-row{position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; padding-bottom:18px;}
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand-logo-wrap{
+    background:#fff; border-radius:8px; padding:7px 14px; display:flex; align-items:center; flex-shrink:0;
+    box-shadow:0 2px 8px rgba(0,0,0,0.18);
+  }
+  .brand-logo{height:42px; width:auto; display:block;}
+  .brand h1{font-family:'Space Grotesk'; font-weight:600; font-size:21px; letter-spacing:0.2px;}
+  .brand p{font-size:12.5px; color:#9FB3C4; margin-top:3px; font-family:'IBM Plex Mono'; letter-spacing:0.2px;}
+  .head-right{display:flex; align-items:center; gap:16px;}
+  .live-pill{display:flex; align-items:center; gap:8px; background:rgba(79,184,214,0.10); border:1px solid var(--pulse); padding:6px 13px; border-radius:20px; font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--pulse); letter-spacing:0.3px;}
+  .dot{width:7px; height:7px; border-radius:50%; background:var(--pulse); animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%{opacity:1; box-shadow:0 0 0 0 rgba(79,184,214,0.5);} 70%{opacity:0.5; box-shadow:0 0 0 5px rgba(79,184,214,0);} 100%{opacity:1;}}
+  @media (prefers-reduced-motion: reduce){ .dot{animation:none;} }
+  .clock{font-family:'IBM Plex Mono'; font-size:12.5px; color:#9FB3C4; text-align:right;}
+  .clock b{color:#fff; font-size:15px; display:block; font-weight:500;}
+
+  /* Tabs */
+  .tabs{position:relative; z-index:1; display:flex; gap:4px; background:var(--ink-soft); border-top:1px solid rgba(255,255,255,0.06);}
+  .tabs button{
+    flex:none; background:transparent; border:none; color:#A9BACA; padding:13px 22px;
+    font-family:'IBM Plex Sans'; font-weight:600; font-size:13px; cursor:pointer;
+    border-bottom:2.5px solid transparent; transition:color .15s, border-color .15s;
+  }
+  .tabs button.active{color:#fff; border-bottom-color:var(--accent);}
+  .tabs button:hover{color:#fff;}
+
+  .page{display:none;}
+  .page.active{display:block; animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){ .page.active{animation:none;} }
+
+  /* ================= SECTION HEADERS ================= */
+  .sec-title{margin:38px 0 14px; scroll-margin-top:64px;}
+
+  .sec-title .eyebrow{display:block; font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:1.4px; color:var(--accent); text-transform:uppercase; margin-bottom:5px;}
+  .sec-title h2{font-family:'Space Grotesk'; font-size:19px; font-weight:600; color:var(--heading); display:inline;}
+  .sec-title .hint{font-size:12px; color:var(--steel); float:right; margin-top:4px;}
+  .sec-title .rule{height:2px; background:linear-gradient(90deg, var(--accent) 0 36px, var(--line) 36px 100%); margin-top:10px;}
+
+  /* ================= KPI / OVERVIEW ================= */
+  .overview{display:grid; grid-template-columns:repeat(4,1fr) 1.25fr; gap:14px;}
+  .kpi{
+    background:var(--paper); border:1px solid var(--line); border-radius:9px; padding:17px 18px 16px; position:relative;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .kpi:hover{transform:translateY(-2px); box-shadow:0 8px 18px -8px rgba(14,34,56,0.25);}
+  .kpi-clickable{cursor:pointer;}
+  .kpi::before{content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:9px 9px 0 0; background:var(--steel);}
+  .kpi.total::before{background:var(--ink);}
+  .kpi.construction::before{background:var(--accent);}
+  .kpi.completed::before{background:var(--green);}
+  .kpi.attention::before{background:var(--red);}
+  .kpi .icon{width:20px; height:20px; color:var(--steel); margin-bottom:10px;}
+  .kpi.total .icon{color:var(--ink);}
+  .kpi.construction .icon{color:var(--accent);}
+  .kpi.completed .icon{color:var(--green);}
+  .kpi.attention .icon{color:var(--red);}
+  .kpi .label{font-size:11px; text-transform:uppercase; letter-spacing:0.7px; color:var(--steel); font-weight:600;}
+  .kpi .value{font-family:'Space Grotesk'; font-size:22px; font-weight:600; margin-top:5px; line-height:1.15; color:var(--ink); word-break:break-word;}
+  .kpi .value.value-lg{font-size:33px; line-height:1;}
+  .kpi .sub{font-size:11.5px; color:var(--steel); margin-top:6px; font-family:'IBM Plex Mono';}
+
+  .donut-panel{background:var(--paper); border:1px solid var(--line); border-radius:9px; padding:14px 16px; display:flex; align-items:center; gap:16px;}
+  .donut-wrap{position:relative; width:92px; height:92px; flex-shrink:0;}
+  .donut-wrap canvas{width:92px!important; height:92px!important;}
+  .donut-center{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; pointer-events:none;}
+  .donut-center b{font-family:'Space Grotesk'; font-size:20px; color:var(--ink); line-height:1;}
+  .donut-center span{font-family:'IBM Plex Mono'; font-size:8.5px; color:var(--steel); text-transform:uppercase; letter-spacing:0.4px;}
+  .donut-legend{font-size:12px;}
+  .donut-legend div{display:flex; align-items:center; gap:7px; margin-bottom:5px;}
+  .donut-legend .sw{width:8px; height:8px; border-radius:50%; display:inline-block;}
+
+  /* ================= PANELS / TABLES ================= */
+  .panel{background:var(--paper); border:1px solid var(--line); border-radius:9px; padding:20px;}
+  .panel h3{font-family:'Space Grotesk'; font-size:14.5px; font-weight:600; margin-bottom:14px; color:var(--heading);}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel); border-bottom:1.5px solid var(--ink); padding:8px 10px;}
+  td{padding:11px 10px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  tbody tr{transition:background .12s;}
+  tbody tr:hover{background:rgba(226,105,31,0.045);}
+
+  .badge{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600; padding:4px 10px 4px 8px; border-radius:20px; white-space:nowrap; border:1px solid transparent;}
+  .badge::before{content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0;}
+  .badge.construction{color:#9a5413; border-color:rgba(226,105,31,0.35); background:rgba(226,105,31,0.07);}
+  .badge.construction::before{background:var(--accent);}
+  .badge.completed{color:var(--green); border-color:rgba(62,143,99,0.35); background:rgba(62,143,99,0.07);}
+  .badge.completed::before{background:var(--green);}
+  .badge.planning{color:var(--steel); border-color:rgba(100,116,128,0.3); background:rgba(100,116,128,0.06);}
+  .badge.planning::before{background:var(--gray);}
+  .badge.on_hold{color:var(--red); border-color:rgba(194,73,60,0.35); background:rgba(194,73,60,0.07);}
+  .badge.on_hold::before{background:var(--red);}
+  .badge.flag{color:var(--red); border-color:rgba(194,73,60,0.35); background:rgba(194,73,60,0.07);}
+  .badge.flag::before{background:var(--red);}
+  .badge.normal{color:var(--green); border-color:rgba(62,143,99,0.35); background:rgba(62,143,99,0.07);}
+  .badge.normal::before{background:var(--green);}
+
+  .progress-cell{display:flex; align-items:center; gap:9px;}
+  .pbar{flex:1; height:7px; background:var(--line); border-radius:4px; overflow:hidden; min-width:70px;}
+  .pbar span{display:block; height:100%; background:linear-gradient(90deg, var(--accent), #f08a44); border-radius:4px;}
+  .pnum{font-family:'IBM Plex Mono'; font-size:12px; width:36px; text-align:right; color:var(--steel);}
+
+  /* ================= PROJECT LIST (ROW LAYOUT) ================= */
+  .project-list-wrap{overflow-x:auto;}
+  .status-list-head{
+    display:grid; grid-template-columns:minmax(220px,1fr) 110px 120px 200px 140px; gap:16px; align-items:center;
+    min-width:820px; padding:0 8px 10px; border-bottom:1.5px solid var(--ink);
+    font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel);
+  }
+  .status-grid{display:flex; flex-direction:column; min-width:820px;}
+  .status-card{
+    display:grid; grid-template-columns:minmax(220px,1fr) 110px 120px 200px 140px; gap:16px; align-items:center;
+    padding:13px 8px; border-bottom:1px solid var(--line); cursor:pointer; transition:background .12s ease;
+  }
+  .status-card:last-child{border-bottom:none;}
+  .status-card:hover{background:rgba(226,105,31,0.045);}
+  .sc-name{font-weight:600; font-size:13.5px; color:var(--text); line-height:1.35; display:block;}
+  .sc-sub{display:block; font-size:11.5px; color:var(--steel); margin-top:3px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .sc-sub.risk-warn{color:#9a5413; font-weight:600;}
+  .internal-list-head{
+    display:grid; grid-template-columns:minmax(220px,1fr) 130px 220px; gap:16px; align-items:center;
+    min-width:600px; padding:0 8px 10px; border-bottom:1.5px solid var(--ink);
+    font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel);
+  }
+  .internal-row{
+    display:grid; grid-template-columns:minmax(220px,1fr) 130px 220px; gap:16px; align-items:center;
+    padding:13px 8px; border-bottom:1px solid var(--line); min-width:600px;
+  }
+  .internal-row:last-child{border-bottom:none;}
+  .internal-dates{font-family:'IBM Plex Mono'; font-size:12px; color:var(--steel);}
+  .sc-sub.risk-danger{color:var(--red); font-weight:600;}
+  .badge-type{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600; padding:4px 10px 4px 8px; border-radius:20px; white-space:nowrap; border:1px solid transparent;}
+  .badge-type::before{content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0;}
+  .badge-type.internal{color:#2B5A82; border-color:rgba(62,124,166,0.35); background:rgba(62,124,166,0.08);}
+  .badge-type.internal::before{background:var(--grid);}
+  .badge-type.external{color:var(--steel); border-color:rgba(100,116,128,0.3); background:rgba(100,116,128,0.06);}
+  .badge-type.external::before{background:var(--gray);}
+
+  /* ================= TYPE SPLIT (Project Overview) ================= */
+  .type-split-panel{margin-top:14px;}
+  .type-split-bar{display:flex; height:14px; border-radius:7px; overflow:hidden; background:var(--line); margin-bottom:12px;}
+  .type-split-bar span{height:100%; transition:width .4s ease;}
+  .type-split-legend{display:flex; gap:22px; flex-wrap:wrap; font-size:12px;}
+  .type-split-legend div{display:flex; align-items:center; gap:7px;}
+  .type-split-legend .sw{width:8px; height:8px; border-radius:50%; display:inline-block;}
+
+  /* ================= CHART DRILL-DOWN ================= */
+  .chart-hint{display:block; font-size:11.5px; color:var(--steel); margin:-8px 0 10px; font-style:italic;}
+  .breakdown-rows{display:flex; flex-direction:column; gap:8px; max-height:60vh; overflow-y:auto;}
+  .breakdown-row{display:grid; grid-template-columns:1fr 160px 100px; align-items:center; gap:10px; font-size:12px;}
+  .breakdown-name{color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .breakdown-bar{height:8px; background:var(--line); border-radius:4px; overflow:hidden;}
+  .breakdown-bar span{display:block; height:100%; border-radius:4px;}
+  .breakdown-val{font-family:'IBM Plex Mono'; text-align:right; color:var(--ink); white-space:nowrap;}
+  .breakdown-empty{font-size:12px; color:var(--steel); font-style:italic;}
+  .breakdown-row-simple{display:grid; grid-template-columns:minmax(110px,1fr) 84px 104px; align-items:center; gap:12px; font-size:12.5px; padding:10px 4px; border-bottom:1px solid var(--line);}
+  .breakdown-row-simple-2col{grid-template-columns:minmax(110px,1fr) 104px;}
+  .breakdown-row-simple-4col{grid-template-columns:minmax(70px,1fr) 92px 46px 66px; gap:8px; transition:background .12s ease; cursor:pointer;}
+  .breakdown-row-simple-4col:hover{background:rgba(226,105,31,0.045);}
+  .breakdown-row-simple-4col.open{background:rgba(226,105,31,0.06);}
+  .breakdown-row-simple-4col .badge, .breakdown-row-simple-4col .badge-risk{padding:3px 7px 3px 6px; gap:4px; white-space:nowrap;}
+  .kpi-proj-detail{display:none; flex-wrap:wrap; gap:6px 20px; align-items:baseline; background:var(--canvas); border-radius:6px; padding:10px 14px; margin-top:-4px; font-size:12px;}
+  .kpi-proj-detail.open{display:flex;}
+  .kpi-proj-detail > span{display:inline-flex; gap:5px;}
+  .kpi-proj-detail .label{color:var(--steel); font-weight:600;}
+  .kpi-proj-detail .label::after{content:':';}
+  .kpi-proj-detail .value{color:var(--ink); font-family:'IBM Plex Mono';}
+  .breakdown-row-simple:last-child{border-bottom:none;}
+  .breakdown-row-simple-head{font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel); border-bottom:1.5px solid var(--ink); padding:0 4px 10px;}
+  .breakdown-row-simple span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text);}
+  .breakdown-row-simple:not(.breakdown-row-simple-head) span:nth-child(2){font-family:'IBM Plex Mono'; color:var(--steel);}
+  .breakdown-row-simple:not(.breakdown-row-simple-head) span:last-child{font-family:'IBM Plex Mono'; color:var(--ink); text-align:right;}
+  .visit-row{display:grid; grid-template-columns:100px 1fr 1fr 70px; align-items:center; gap:10px; font-size:12.5px; padding:8px 0; border-bottom:1px solid var(--line);}
+  .visit-row:last-child{border-bottom:none;}
+  .visit-row-head{font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel); border-bottom:1.5px solid var(--ink); padding-bottom:8px;}
+  .visit-row span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text);}
+  .visit-row:not(.visit-row-head) span:first-child{font-family:'IBM Plex Mono'; color:var(--steel);}
+  .visit-row:not(.visit-row-head) span:last-child{font-family:'IBM Plex Mono'; color:var(--ink); text-align:right;}
+  .badge-risk{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600; padding:4px 10px 4px 8px; border-radius:20px; white-space:nowrap; border:1px solid transparent;}
+  .badge-risk::before{content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0;}
+  .badge-risk.risk-ok{color:var(--green); border-color:rgba(62,143,99,0.35); background:rgba(62,143,99,0.07);}
+  .badge-risk.risk-ok::before{background:var(--green);}
+  .badge-risk.risk-warn{color:#9a5413; border-color:rgba(226,105,31,0.35); background:rgba(226,105,31,0.08);}
+  .badge-risk.risk-warn::before{background:var(--accent);}
+  .badge-risk.risk-danger{color:var(--red); border-color:rgba(194,73,60,0.4); background:rgba(194,73,60,0.09);}
+  .badge-risk.risk-danger::before{background:var(--red);}
+  .badge-risk.risk-hold{color:var(--steel); border-color:rgba(100,116,128,0.3); background:rgba(100,116,128,0.06);}
+  .badge-risk.risk-hold::before{background:var(--gray);}
+  .badge-risk.risk-done{color:var(--green); border-color:rgba(62,143,99,0.25); background:rgba(62,143,99,0.05);}
+  .badge-risk.risk-done::before{background:var(--green);}
+  .badge-risk.risk-unknown{color:var(--steel); border-color:var(--line); background:var(--canvas);}
+  .badge-risk.risk-unknown::before{background:var(--gray);}
+
+  /* ================= KPI ICON CIRCLE ================= */
+  .kpi .icon-wrap{
+    width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:11px;
+    background:rgba(100,116,128,0.1);
+  }
+  .kpi.total .icon-wrap{background:rgba(14,34,56,0.08);}
+  .kpi.construction .icon-wrap{background:rgba(226,105,31,0.1);}
+  .kpi.completed .icon-wrap{background:rgba(62,143,99,0.1);}
+  .kpi.attention .icon-wrap{background:rgba(194,73,60,0.1);}
+  .kpi .icon{width:18px; height:18px; margin-bottom:0;}
+
+  .sv-charts-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:14px; margin-bottom:14px;}
+  .sv-chart-card{background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:16px;}
+  .sv-chart-card .sv-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .sv-chart-card .sv-name{font-family:'Space Grotesk'; font-weight:600; font-size:13.5px; color:var(--ink); display:flex; align-items:center; gap:8px;}
+  .sv-chart-card .sv-name .dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+  .sv-chart-card .sv-total{font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--steel);}
+  .sv-chart-card .sv-total b{color:var(--ink); font-family:'Space Grotesk'; font-size:14px;}
+  .sv-chart-footer{display:flex; gap:18px; flex-wrap:wrap; padding:14px 0; border-top:1px solid var(--line); font-size:12px; color:var(--steel);}
+  .sv-chart-footer b{color:var(--ink); font-family:'Space Grotesk';}
+  .contractor-summary{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 280px)); gap:14px; margin-bottom:18px;}
+
+  .gantt-wrap{overflow-x:auto;}
+  .gantt{min-width:1000px; position:relative;}
+  .gantt-header{display:grid; grid-template-columns:220px 1fr; margin-bottom:8px;}
+  .gantt-header .months{position:relative; font-family:'IBM Plex Mono'; font-size:11px; color:var(--steel); border-bottom:1.5px solid var(--ink); height:22px;}
+  .gantt-header .months div.cur-month{color:var(--accent); position:relative;}
+  .gantt-header .months div.cur-month::after{content:''; position:absolute; left:10%; right:10%; bottom:-1.5px; height:2.5px; background:var(--accent); border-radius:2px;}
+  .gantt-row{
+    display:grid; grid-template-columns:220px 1fr; grid-template-rows:auto auto; align-items:center; row-gap:5px;
+    border-bottom:1px solid var(--line); padding:10px 0; transition:background .12s;
+  }
+  .gantt-row:hover{background:rgba(62,124,166,0.045);}
+  .gantt-row .pname{grid-column:1; grid-row:1/3; font-size:12.5px; font-weight:600; padding-right:10px; line-height:1.3; color:var(--text); align-self:center;}
+  .gantt-track{grid-column:2; grid-row:1; position:relative; height:26px; background-image:repeating-linear-gradient(90deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent calc(100%/var(--weeks)));}
+  .pdates{grid-column:2; grid-row:2; display:flex; gap:16px; flex-wrap:wrap; font-size:10.5px; font-family:'IBM Plex Mono'; color:var(--steel);}
+  .pdate-item{display:inline-flex; align-items:center; gap:5px;}
+  .pdate-item .dot{width:7px; height:7px; border-radius:50%; flex-shrink:0; display:inline-block;}
+  .pdate-item .dot.construction{background:var(--accent);}
+  .pdate-item .dot.completed{background:var(--green);}
+  .pdate-item .dot.planning{background:var(--gray);}
+  .pdate-item .dot.on_hold{background:var(--red);}
+  .pdate-item .dot.delivery{background:var(--ink);}
+  .pdate-item.pdate-delivery{font-weight:600; color:var(--ink);}
+  .gantt-bar{
+    position:absolute; top:4px; height:18px; border-radius:9px; font-size:9.5px; color:#fff; display:flex; align-items:center;
+    padding:0 8px; white-space:nowrap; overflow:hidden; font-family:'IBM Plex Mono'; transition:filter .12s, transform .12s; box-shadow:0 1px 3px rgba(14,34,56,0.18);
+  }
+  .gantt-bar:hover{filter:brightness(1.08); transform:scaleY(1.12); z-index:3;}
+  .gantt-bar.construction{background:linear-gradient(90deg, var(--accent), #ec8138); color:#fff;}
+  .gantt-bar.completed{background:linear-gradient(90deg, var(--green), #4fab78);}
+  .gantt-bar.planning{background:repeating-linear-gradient(45deg, var(--gray), var(--gray) 5px, #b7c0c6 5px, #b7c0c6 10px); color:#33404a;}
+  .gantt-bar.on_hold{background:repeating-linear-gradient(45deg, var(--red), var(--red) 5px, #d97b6f 5px, #d97b6f 10px);}
+  .today-marker{position:absolute; top:0; bottom:0; width:0; z-index:5; pointer-events:none;}
+  .today-marker .line{position:absolute; top:0; bottom:0; width:1.5px; background:var(--pulse);}
+  .today-marker .tag{position:absolute; top:-21px; left:0; transform:translateX(-50%); font-size:9.5px; font-family:'IBM Plex Mono'; color:#fff; background:var(--pulse); padding:2px 6px; border-radius:3px; white-space:nowrap;}
+  .gantt-legend{display:flex; gap:18px; margin-top:16px; font-size:11.5px; flex-wrap:wrap; color:var(--steel);}
+  .gantt-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .gantt-legend .sw{width:13px; height:9px; border-radius:5px; display:inline-block;}
+
+  /* ================= FINANCE ================= */
+  .fin-overview-grid{display:grid; grid-template-columns:1fr; gap:14px; margin-bottom:14px;}
+  .fin-donut-panel{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;}
+  .fin-donut-panel h3{align-self:flex-start;}
+  .fin-donut-panel .donut-wrap{margin:8px 0;}
+  .fin-donut-panel .donut-legend{align-self:stretch;}
+  .variation-summary{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px;}
+
+  .footnote{margin-top:34px; padding:14px 18px; background:rgba(62,124,166,0.07); border:1px solid rgba(62,124,166,0.18); border-radius:8px; font-size:12.5px; color:var(--steel);}
+  .footnote b{color:var(--ink);}
+
+  /* ================= CHANGE NOTIFICATION ================= */
+  .change-notif{
+    background:#FBF3E8; border:1px solid rgba(226,105,31,0.35); border-radius:10px; padding:16px 18px; margin-bottom:26px;
+    animation:fadeIn .25s ease;
+  }
+  .change-notif-head{display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--ink);}
+  .change-notif-head svg{width:19px; height:19px; color:var(--accent); flex-shrink:0;}
+  .change-notif-head span{flex:1;}
+  .change-notif-close{background:none; border:none; cursor:pointer; color:var(--steel); font-size:15px; padding:2px 6px; flex-shrink:0;}
+  .change-notif-close:hover{color:var(--ink);}
+  .change-notif-list{list-style:none; margin:12px 0 0; padding:0; max-height:260px; overflow-y:auto;}
+  .change-notif-list li{font-size:12.5px; color:var(--text); padding:6px 0; border-top:1px solid rgba(226,105,31,0.18); display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
+  .change-notif-list li:first-child{border-top:none;}
+  .change-notif-list b{color:var(--ink);}
+  .change-notif-more{font-style:italic; color:var(--steel); justify-content:center;}
+  .change-tag{font-family:'IBM Plex Mono'; font-size:9.5px; text-transform:uppercase; padding:2px 6px; border-radius:3px; flex-shrink:0;}
+  .change-tag.added{background:rgba(62,143,99,0.14); color:var(--green);}
+  .change-tag.changed{background:rgba(226,105,31,0.14); color:#9a5413;}
+  .change-tag.removed{background:rgba(194,73,60,0.14); color:var(--red);}
+
+  .history-entry{border-bottom:1px solid var(--line); padding:4px 0;}
+  .history-entry:last-child{border-bottom:none;}
+  .history-entry-head{
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:none; border:none; cursor:pointer; padding:11px 4px; font-size:13px; color:var(--text); text-align:left;
+  }
+  .history-entry-head:hover{color:var(--accent);}
+  .history-entry-head b{color:var(--ink);}
+  .history-count{font-family:'IBM Plex Mono'; font-size:11px; color:var(--steel); background:var(--canvas); padding:2px 8px; border-radius:10px; flex-shrink:0;}
+  .history-entry-body{display:none; margin:0 0 12px; padding:0;}
+  .history-entry-body.open{display:block;}
+
+  /* ================= UPLOAD PAGE ================= */
+  .upload-box{
+    background:var(--paper); border:1.5px dashed var(--grid); padding:48px 24px; text-align:center; margin-top:18px; border-radius:10px;
+    transition:border-color .2s, background .2s;
+  }
+  .upload-box.dragover{border-color:var(--accent); background:rgba(226,105,31,0.05);}
+  .upload-box svg{width:38px; height:38px; color:var(--pulse); margin-bottom:14px;}
+  .upload-box h3{font-family:'Space Grotesk'; font-size:17px; font-weight:600; margin-bottom:8px; color:var(--heading);}
+  .upload-box p{font-size:13px; color:var(--steel); margin-bottom:18px;}
+  .upload-box input[type=file]{display:none;}
+  .btn{
+    display:inline-block; background:var(--ink); color:#fff; border:none; padding:11px 24px;
+    font-family:'IBM Plex Sans'; font-weight:600; letter-spacing:0.2px; font-size:13px;
+    cursor:pointer; border-radius:6px; transition:background .15s, transform .1s;
+  }
+  .btn:hover{background:var(--accent); transform:translateY(-1px);}
+  .btn.secondary{background:transparent; color:var(--ink); border:1.5px solid var(--ink);}
+  .btn.secondary:hover{background:var(--ink); color:#fff;}
+  .status-msg{margin-top:16px; padding:12px 16px; border-radius:6px; font-size:13px; display:none;}
+  .status-msg.ok{background:rgba(62,143,99,0.1); color:var(--green); border:1px solid rgba(62,143,99,0.35); display:block;}
+  .status-msg.err{background:rgba(194,73,60,0.08); color:var(--red); border:1px solid rgba(194,73,60,0.35); display:block;}
+  .req-table{margin-top:30px;}
+  .req-table table{font-size:12.5px;}
+  .pill-small{font-family:'IBM Plex Mono'; font-size:11px; background:var(--ink); color:var(--pulse); padding:2px 8px; border-radius:4px;}
+
+  /* ================= FILTERS ================= */
+  .filter-bar{display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:14px;}
+  .chip-groups{display:flex; flex-direction:column; gap:8px;}
+  .chip-group{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .chip-group-label{font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel); width:44px; flex-shrink:0;}
+  .chips{display:flex; gap:8px; flex-wrap:wrap;}
+  .chip{
+    display:inline-flex; align-items:center; gap:7px; background:var(--paper); border:1.5px solid var(--line); color:var(--steel);
+    font-family:'IBM Plex Sans'; font-weight:600; font-size:12.5px; padding:7px 13px; border-radius:20px; cursor:pointer;
+    transition:all .15s;
+  }
+  .chip .sw{width:8px; height:8px; border-radius:50%; background:var(--chip-color, var(--steel)); opacity:0.4;}
+  .chip .chip-count{font-family:'IBM Plex Mono'; font-size:11px; opacity:0.7;}
+  .chip.active{border-color:var(--chip-color, var(--ink)); color:var(--ink); background:color-mix(in srgb, var(--chip-color, var(--ink)) 8%, var(--paper));}
+  .chip.active .sw{opacity:1;}
+  .chip:hover{border-color:var(--chip-color, var(--ink));}
+  .chip-reset{background:transparent; border-style:dashed; color:var(--steel);}
+  .search-box{display:flex; align-items:center; gap:8px; background:var(--paper); border:1.5px solid var(--line); border-radius:20px; padding:7px 14px; min-width:220px;}
+  .search-box svg{width:15px; height:15px; color:var(--steel); flex-shrink:0;}
+  .search-box input{border:none; outline:none; background:transparent; font-family:'IBM Plex Sans'; font-size:12.5px; color:var(--text); width:100%;}
+
+  .proj-link{cursor:pointer;}
+  span.proj-link, td .proj-link{font-weight:600; color:var(--text); border-bottom:1.5px dashed var(--grid); transition:color .12s;}
+  span.proj-link:hover, td .proj-link:hover{color:var(--accent); border-bottom-color:var(--accent);}
+
+  /* ================= PROJECT DETAIL MODAL ================= */
+  .modal-backdrop{position:fixed; inset:0; background:rgba(14,34,56,0.55); display:none; align-items:center; justify-content:center; z-index:50; padding:24px;}
+  .modal-backdrop.open{display:flex;}
+  .modal-card{
+    background:var(--paper); border-radius:12px; max-width:560px; width:100%; max-height:85vh; overflow-y:auto;
+    box-shadow:0 24px 60px -12px rgba(14,34,56,0.45); animation:modalIn .2s ease;
+  }
+  #breakdownModalCard{max-width:80vw; width:80vw; max-height:80vh;}
+  #scheduleModalCard{max-width:80vw; width:80vw; max-height:80vh; display:flex; flex-direction:column;}
+  #scheduleModalCard .modal-body{flex:1; min-height:0; display:flex; flex-direction:column;}
+  #scheduleModalCard canvas{flex:1; min-height:0;}
+  @keyframes modalIn{from{opacity:0; transform:translateY(10px) scale(0.98);} to{opacity:1; transform:translateY(0) scale(1);}}
+  @media (prefers-reduced-motion: reduce){ .modal-card{animation:none;} }
+  .modal-head{display:flex; align-items:flex-start; justify-content:space-between; padding:22px 24px 16px; border-bottom:1px solid var(--line);}
+  .modal-head h3{font-family:'Space Grotesk'; font-size:19px; font-weight:600; color:var(--heading); margin-bottom:6px;}
+  .modal-close{background:none; border:none; cursor:pointer; color:var(--steel); font-size:20px; line-height:1; padding:4px;}
+  .modal-close:hover{color:var(--accent);}
+  .modal-body{padding:20px 24px 24px;}
+  .modal-section-title{font-family:'IBM Plex Mono'; font-size:10.5px; text-transform:uppercase; letter-spacing:0.6px; color:var(--steel); margin:18px 0 8px;}
+  .modal-list{display:flex; flex-direction:column;}
+  .modal-list-row{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:10px 2px; border-bottom:1px solid var(--line);}
+  .modal-list-row:last-child{border-bottom:none;}
+  .modal-list-row .label{font-size:12.5px; color:var(--steel); font-weight:600; flex-shrink:0;}
+  .modal-list-row .value{font-family:'Space Grotesk'; font-weight:600; color:var(--ink); font-size:15px; text-align:right;}
+  .modal-list-row .value .sub{display:block; font-family:'IBM Plex Mono'; font-size:11px; color:var(--steel); font-weight:400; margin-top:2px;}
+  .modal-list-row.emphasis{background:rgba(226,105,31,0.05); border-radius:8px; padding:12px 13px; border-bottom:none; margin-bottom:2px;}
+  .modal-list-row.emphasis .value{font-size:17px;}
+  .modal-phase{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .modal-phase:last-child{border-bottom:none;}
+  .modal-phase .ph-name{flex:1; font-weight:500;}
+  .modal-phase .ph-date{font-family:'IBM Plex Mono'; font-size:11px; color:var(--steel); white-space:nowrap;}
+  .modal-remarks{background:rgba(226,105,31,0.06); border-left:3px solid var(--accent); padding:10px 13px; border-radius:6px; font-size:12.5px; color:var(--text); margin-top:14px;}
+  .schedule-chart-legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:10px; font-size:11.5px; color:var(--steel);}
+  .schedule-chart-legend span{display:flex; align-items:center; gap:6px;}
+  .schedule-chart-legend .sw{width:8px; height:8px; display:inline-block; flex-shrink:0;}
+
+
+  @media (max-width:1100px){
+    .overview{grid-template-columns:repeat(2,1fr);}
+    .fin-overview-grid{grid-template-columns:1fr;}
+    .variation-summary{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="scanline"></div>
+  <div class="wrap head-row">
+    <div class="brand">
+      <div class="brand-logo-wrap">
+        <img class="brand-logo" src="data:image/png;base64,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" alt="Coral Life logo">
+      </div>
+      <div>
+        <h1>ERV_Construction Project Management</h1>
+      </div>
+    </div>
+    <div class="head-right">
+      <div class="live-pill"><span class="dot"></span> LIVE</div>
+      <div class="clock" style="margin-right:4px;"><b id="refreshLabel">Manual</b><span id="refreshSubLabel">Upload / Refresh</span></div>
+      <div class="clock"><b id="clockTime">--:--:--</b><span id="clockDate">-</span></div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="tabs">
+      <button class="active" data-page="overview">Overview</button>
+      <button data-page="projects">Projects &amp; Schedule</button>
+      <button data-page="internal">Internal Work</button>
+      <button data-page="survey">Customer Survey</button>
+      <button data-page="upload">Upload Excel Data</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ================= OVERVIEW PAGE ================= -->
+  <div class="page active" id="page-overview">
+
+    <div class="change-notif" id="changeNotification" style="display:none;"></div>
+
+    <!-- ============ 1. PROJECT OVERVIEW ============ -->
+    <div class="sec-title" id="sec-overview">
+      <span class="eyebrow">Overview</span>
+      <h2>Project Overview</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="overview">
+      <div class="kpi total kpi-clickable" data-kpi="all">
+        <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+        <div class="label">Total Projects</div><div class="value value-lg" id="kTotal">0</div><div class="sub">All Projects</div>
+      </div>
+      <div class="kpi construction kpi-clickable" data-kpi="construction">
+        <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg></div>
+        <div class="label">Construction</div><div class="value value-lg" id="kConstruction">0</div><div class="sub">In Construction</div>
+      </div>
+      <div class="kpi completed kpi-clickable" data-kpi="completed">
+        <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 7L9 19l-5.5-5.5"/></svg></div>
+        <div class="label">Completed</div><div class="value value-lg" id="kCompleted">0</div><div class="sub">Completed</div>
+      </div>
+      <div class="kpi attention kpi-clickable" data-kpi="on_hold">
+        <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 9v4m0 4h.01M10.3 3.9 2.7 17a1.6 1.6 0 0 0 1.4 2.4h15.8a1.6 1.6 0 0 0 1.4-2.4L13.7 3.9a1.6 1.6 0 0 0-2.8 0Z"/></svg></div>
+        <div class="label">Requires Attention</div><div class="value value-lg" id="kAttention">0</div><div class="sub">On Hold</div>
+      </div>
+      <div class="donut-panel">
+        <div class="donut-wrap">
+          <canvas id="statusDonut"></canvas>
+          <div class="donut-center"><b id="statusDonutCenter">0</b><span>Projects</span></div>
+        </div>
+        <div class="donut-legend" id="donutLegend"></div>
+      </div>
+    </div>
+
+    <div class="panel type-split-panel">
+      <h3 style="margin-bottom:10px;">Internal vs External</h3>
+      <div class="type-split-bar" id="typeSplitBar"></div>
+      <div class="type-split-legend" id="typeSplitLegend"></div>
+    </div>
+
+    <!-- ============ 2. FINANCIAL OVERVIEW ============ -->
+    <div class="sec-title" id="sec-financial-overview">
+      <span class="eyebrow">Financials</span>
+      <h2>Financial Overview</h2>
+      <span class="hint">Source: "Summary Report" sheet</span>
+      <div class="rule"></div>
+    </div>
+    <div class="fin-overview-grid">
+      <div class="panel">
+        <h3>Revenue Breakdown (All Filtered Projects)</h3>
+        <span class="chart-hint">Click a bar to see the breakdown by project</span>
+        <canvas id="financialOverviewChart" height="170"></canvas>
+      </div>
+    </div>
+    <div class="sv-chart-footer" id="finOverviewFooter"></div>
+
+    <!-- ============ 3. CONTRACT VARIATIONS & PRELIMINARY ============ -->
+    <div class="sec-title" id="sec-variations">
+      <span class="eyebrow">Variations</span>
+      <h2>Contract Variations &amp; Preliminary</h2>
+      <span class="hint">VO = Variation Order (additional work, shown negative) &middot; VE = Variation (omitted/reduced work, shown positive) &middot; see the Projects section for per-project figures</span>
+      <div class="rule"></div>
+    </div>
+    <div class="panel">
+      <span class="chart-hint">Click a bar to see the breakdown by project</span>
+      <canvas id="variationChart" height="110"></canvas>
+    </div>
+    <div class="sv-chart-footer" id="variationChartFooter"></div>
+
+    <!-- ============ 4. MONTHLY SITE VISIT OVERVIEW ============ -->
+    <div class="sec-title" id="sec-site-visit">
+      <span class="eyebrow">Site Visits</span>
+      <h2>Monthly Site Visit Overview</h2>
+      <span class="hint">Whole team, total hours by month (Jan&ndash;Dec) &middot; Source: "Site Visit Log" sheet</span>
+      <div class="rule"></div>
+    </div>
+    <div class="panel">
+      <span class="chart-hint">Click a bar to see each visit's date, project/site, and inspector</span>
+      <canvas id="siteVisitChart" height="90"></canvas>
+    </div>
+    <div class="sv-chart-footer" id="svChartFooter"></div>
+
+    <!-- ============ 5. CONTRACTOR ASSIGNMENTS ============ -->
+    <div class="sec-title" id="sec-contractors">
+      <span class="eyebrow">Contractors</span>
+      <h2>Contractor Assignments</h2>
+      <span class="hint">Source: "Summary Report" sheet &middot; see the Projects section for full contractor details</span>
+      <div class="rule"></div>
+    </div>
+    <div class="contractor-summary">
+      <div class="kpi"><div class="label">Total Contract Value</div><div class="value" id="cTotalValue">-</div><div class="sub">All Filtered Projects</div></div>
+    </div>
+
+    <div class="panel">
+      <h3>Total Contract Value by Contractor</h3>
+      <span class="chart-hint">Click a bar to see each project and its contract value</span>
+      <canvas id="contractorChart" height="110"></canvas>
+      <div id="contractorChartEmpty" style="display:none; text-align:center; color:var(--steel); font-style:italic; padding:18px;"></div>
+    </div>
+
+    <div class="footnote" id="footnoteText">
+      No project data loaded yet — go to the "Upload Excel Data" tab to load your project file and populate this Dashboard.
+    </div>
+  </div>
+
+  <!-- ================= PROJECTS & SCHEDULE PAGE ================= -->
+  <div class="page" id="page-projects">
+
+    <!-- ============ 1. PROJECTS ============ -->
+    <div class="sec-title" id="sec-projects">
+      <span class="eyebrow">Projects</span>
+      <h2>Projects</h2>
+      <span class="hint">Click a project to view its full details · This filter applies to all sections on this page</span>
+      <div class="rule"></div>
+    </div>
+    <div class="filter-bar">
+      <div class="chip-groups">
+        <div class="chip-group"><span class="chip-group-label">Status</span><div class="chips" id="filterChips"></div></div>
+        <div class="chip-group"><span class="chip-group-label">Type</span><div class="chips" id="typeFilterChips"></div></div>
+      </div>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="projectSearch" placeholder="Search project name...">
+      </div>
+    </div>
+    <div class="panel project-list-wrap">
+      <div class="status-list-head">
+        <div>Project</div><div>Type</div><div>Status</div><div>Progress</div><div>Risk</div>
+      </div>
+      <div class="status-grid" id="constructionTable"></div>
+    </div>
+
+    <!-- ============ 2. MASTER SCHEDULE ============ -->
+    <div class="sec-title" id="sec-schedule" style="margin-top:24px;">
+      <span class="eyebrow">Schedule</span>
+      <h2 id="ganttYearTitle" style="display:inline;">Master Schedule</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="panel gantt-wrap">
+      <div class="gantt">
+        <div class="gantt-header"><div></div><div class="months" id="monthHeader"></div></div>
+        <div id="ganttBody"></div>
+        <div class="today-marker" id="todayMarker"><div class="line"></div><div class="tag">Today</div></div>
+      </div>
+      <div class="gantt-legend">
+        <span><i class="sw" style="background:var(--accent)"></i> Construction</span>
+        <span><i class="sw" style="background:var(--green)"></i> Completed</span>
+        <span><i class="sw" style="background:repeating-linear-gradient(45deg,var(--gray),var(--gray) 4px,#b7c0c6 4px,#b7c0c6 8px)"></i> Planning</span>
+        <span><i class="sw" style="background:repeating-linear-gradient(45deg,var(--red),var(--red) 4px,#d97b6f 4px,#d97b6f 8px)"></i> Hold</span>
+        <span><i class="sw" style="background:var(--pulse); width:2px; border-radius:0;"></i> Today</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= INTERNAL WORK PAGE ================= -->
+  <div class="page" id="page-internal">
+    <div class="sec-title">
+      <span class="eyebrow">Internal</span>
+      <h2>Internal Work</h2>
+      <span class="hint">Non-project internal tasks &amp; initiatives &middot; Source: "Internal Work" sheet</span>
+      <div class="rule"></div>
+    </div>
+    <div class="panel project-list-wrap">
+      <div class="internal-list-head">
+        <div>Topic</div><div>Status</div><div>Start &rarr; End</div>
+      </div>
+      <div id="internalWorkList"></div>
+    </div>
+  </div>
+
+  <!-- ================= UPLOAD PAGE ================= -->
+  <div class="page" id="page-upload">
+    <div class="sec-title">
+      <span class="eyebrow">Data Sync</span>
+      <h2>Upload an Excel File to Update the Dashboard</h2>
+      <div class="rule"></div>
+    </div>
+
+    <div class="upload-box" id="dropZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <h3>Drag and Drop Excel File Here</h3>
+      <p>Or select an .xlsx file containing sheets named <span class="pill-small">Master Schedule</span> and <span class="pill-small">Summary Report</span> (and optionally <span class="pill-small">Site Visit Log</span> / <span class="pill-small">Internal Work</span>)</p>
+      <label class="btn" for="fileInput">Select Excel File</label>
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+      <div class="status-msg" id="uploadStatus"></div>
+    </div>
+
+    <div class="sec-title" style="margin-top:30px;">
+      <span class="eyebrow">Live Source</span>
+      <h2>Refresh From a Hosted File Link</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="panel">
+      <p style="font-size:13px; color:var(--text); line-height:1.6;">
+        Enter a <b>direct-download</b> link to your Excel file. Click <b>Refresh Now</b> anytime to reload the latest version &mdash; if anything changed since the last refresh, you'll see a change notice at the top of the Dashboard tab automatically.
+      </p>
+      <p style="font-size:12.5px; color:var(--steel); margin-top:8px;">
+        Note: SharePoint/OneDrive share links usually require a Microsoft sign-in and most don't allow this kind of automatic loading from a webpage &mdash; if Refresh fails below, that's almost certainly why. A public direct link (e.g. a GitHub raw file link) is the most reliable option.
+      </p>
+      <div style="margin-top:14px;">
+        <span style="font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--steel); font-family:'IBM Plex Mono'; display:block; margin-bottom:6px;">File URL</span>
+        <input type="text" id="refreshUrlInput" placeholder="https://..." value="https://raw.githubusercontent.com/wyuwachotiphan-crypto/CM-Dashborad/main/Construction_Portfolio_Template.xlsx" style="width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-family:'IBM Plex Sans';">
+        <button class="btn" style="margin-top:10px;" onclick="refreshFromURL(document.getElementById('refreshUrlInput').value.trim())">↺ Refresh Now</button>
+      </div>
+      <div class="status-msg" id="refreshStatus"></div>
+      <p style="font-size:12px; color:var(--steel); margin-top:14px;">
+        Last refreshed: <b id="refreshLastTime">never</b>
+      </p>
+    </div>
+
+    <div class="req-table">
+      <div class="sec-title">
+        <span class="eyebrow">Reference</span>
+        <h2>Required File Structure</h2>
+        <div class="rule"></div>
+      </div>
+      <div class="panel" style="margin-bottom:14px; overflow-x:auto;">
+        <h3>Sheet: Master Schedule (1 row = 1 work phase)</h3>
+        <table>
+          <thead><tr><th>Project Name</th><th>Phase</th><th>Start Date</th><th>End Date</th><th>Actual Start Date</th><th>Actual End Date</th><th>% Complete</th><th>Status</th><th>Delivery Date</th><th>Actual Delivery Date</th><th>Remarks</th></tr></thead>
+          <tbody><tr><td>Northgate Tower</td><td>Construction Period 1</td><td>2025-09-01</td><td>2026-09-30</td><td>2025-09-05</td><td>-</td><td>70%</td><td>Construction</td><td>2026-12-20</td><td>-</td><td>-</td></tr></tbody>
+        </table>
+        <p style="font-size:12.5px; color:var(--steel); margin-top:10px;">
+          <b>Start Date / End Date</b> = the <u>planned</u> schedule window for that phase &middot; <b>Actual Start Date / Actual End Date</b> = when that phase actually started/finished on site (leave blank if not finished yet) — together these power the Planned vs Actual schedule chart on each project's detail popup &middot; <b>Delivery Date</b> = the contractual handover/delivery date to the client &middot; <b>Actual Delivery Date</b> = the date the project was actually handed over — one value per project (same for every phase row of that project)
+        </p>
+      </div>
+      <div class="panel" style="overflow-x:auto;">
+        <h3>Sheet: Summary Report (1 row = 1 project)</h3>
+        <table>
+          <thead><tr><th>Project Name</th><th>Status</th><th>Project Type</th><th>Overall Progress (%)</th><th>Budget (THB)</th><th>Spent (THB)</th><th>Cash Advance (THB)</th><th>Collected (THB)</th><th>Man Power (Hours)</th><th>Site Visit Days</th><th>Site Inspector</th><th>Preliminary (THB)</th><th>VO - Variation Order (THB)</th><th>VE - Variation/Omission (THB)</th><th>Contractor Name</th><th>Contract Value (THB)</th><th>Start Date</th><th>End Date</th><th>Project Manager</th><th>Remarks</th><th>Master Schedule PDF</th><th>BD Data Received Date</th></tr></thead>
+          <tbody><tr><td>Northgate Tower</td><td>Construction</td><td>External</td><td>70%</td><td>50,000,000</td><td>29,000,000</td><td>1,500,000</td><td>27,000,000</td><td>48</td><td>18</td><td>Somchai Jaidee</td><td>3,000,000</td><td>1,800,000</td><td>400,000</td><td>Siam Builders Co., Ltd.</td><td>47,000,000</td><td>2025-09-01</td><td>2026-12-15</td><td>Somchai Jaidee</td><td>-</td><td>https://drive.google.com/.../schedule.pdf</td><td>2026-06-20</td></tr></tbody>
+        </table>
+      </div>
+      <p style="font-size:12.5px; color:var(--steel); margin-top:10px;">
+        <b>Project Type</b> = Internal (งานภายในองค์กร) or External (งานก่อสร้างภายนอก) — powers the Type filter on the Projects list &middot; <b>Cash Advance (THB)</b> = the project's allocated petty cash float &middot; <b>Collected (THB)</b> = payment already collected from the client/owner &middot; <b>Man Power (Hours)</b> = cumulative site-inspection hours &middot; <b>Site Visit Days</b> = number of days a site visit was conducted &middot; <b>Site Inspector</b> = name of the person who carried out the site visit &middot; <b>Preliminary</b> = preliminary/general site cost item &middot; <b>VO</b> = Variation Order, value of additional work &middot; <b>VE</b> = Variation/Omission, value of reduced or omitted work &middot; <b>Contractor Name</b> = the main contractor engaged for the project (use "Not Yet Awarded" if not yet contracted) &middot; <b>Contract Value</b> = the awarded contract sum for that contractor &middot; <b>Master Schedule PDF</b> = a direct link (SharePoint/Google Drive/GitHub, etc.) to that project's Master Schedule PDF — shown as a "View Master Schedule (PDF)" button on the project detail popup, leave blank if none &middot; <b>BD Data Received Date</b> = the date the Business Development team reported/received this project's financial figures — shown in the Financial Overview breakdown popup
+      </p>
+      <p style="font-size:12.5px; color:var(--steel); margin-top:14px;">
+        The <b>Status</b> column accepts: Construction / Completed / Planning / On Hold &middot; the <b>Project Type</b> column accepts: Internal / External / <b>Non-Project</b> (defaults to External if left blank)
+        — Project names in the Master Schedule must <b>match exactly</b> with names in the Summary Report so the system can correctly link the two sheets.
+      </p>
+      <p style="font-size:12.5px; color:var(--steel); margin-top:10px;">
+        A row with Project Type = <b>Non-Project</b> is excluded from Total Projects, the Projects list, and every other project-level total — only its <b>Cash Advance (THB)</b> value is added into the portfolio-wide <b>Cash Advance</b> total on the Contract Variations chart. Use this for Cash Advance amounts that aren't tied to any specific project in the database.
+      </p>
+
+      <div class="panel" style="margin-top:14px;">
+        <h3>Sheet: Site Visit Log (optional — 1 row = 1 site visit)</h3>
+        <table>
+          <thead><tr><th>Visit Date</th><th>Project Name</th><th>Inspector Name</th><th>Site Visit Hours</th></tr></thead>
+          <tbody><tr><td>2026-01-05</td><td>Northgate Tower</td><td>Somchai Jaidee</td><td>4</td></tr></tbody>
+        </table>
+        <p style="font-size:12.5px; color:var(--steel); margin-top:10px;">
+          Powers the <b>Monthly Site Visit Overview</b> chart — a team-wide view of off-site work execution by month, in hours. Add one row per visit (one team member, one site, one day). <b>Visit Date</b> = the exact day of the visit &middot; <b>Project Name</b> = which project/site was visited (leave blank if not tied to a specific project) — click a bar on the chart to see each visit's date, project, and inspector. If this sheet is missing, the chart will simply show no data.
+        </p>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <h3>Sheet: Internal Work (optional — 1 row = 1 internal task/initiative)</h3>
+        <table>
+          <thead><tr><th>Topic</th><th>Details</th><th>Start Date</th><th>End Date</th><th>Status</th></tr></thead>
+          <tbody><tr><td>ปรับปรุงระบบ CRM</td><td>อัปเดตฟอร์มบันทึกข้อมูลลูกค้า</td><td>2026-06-01</td><td>2026-07-15</td><td>In Progress</td></tr></tbody>
+        </table>
+        <p style="font-size:12.5px; color:var(--steel); margin-top:10px;">
+          Powers the <b>Internal Work</b> tab — a list of internal, non-project tasks or initiatives. The <b>Status</b> column accepts: In Progress / Completed / Planning / On Hold. If this sheet is missing, the tab will simply show no data.
+        </p>
+      </div>
+
+      <button class="btn secondary" style="margin-top:16px;" onclick="resetToSample()">↺ Load Sample Data (for reference)</button>
+      <button class="btn secondary" style="margin-top:16px; margin-left:10px;" onclick="clearData()">✕ Clear Data</button>
+    </div>
+
+    <div class="sec-title" style="margin-top:30px;">
+      <span class="eyebrow">History</span>
+      <h2>Change History</h2>
+      <span class="hint">Every change detected on upload or refresh is kept here, even after the notice at the top is dismissed</span>
+      <div class="rule"></div>
+    </div>
+    <div class="panel">
+      <div id="changeHistoryList"></div>
+      <button class="btn secondary" style="margin-top:16px;" onclick="clearChangeLog()">✕ Clear Change History</button>
+    </div>
+  </div>
+
+  <!-- ================= CUSTOMER SURVEY PAGE ================= -->
+  <div class="page" id="page-survey">
+    <div class="sec-title">
+      <span class="eyebrow">Coral Life</span>
+      <h2>Customer Survey — ERV Installation Feedback</h2>
+      <span class="hint">Live page hosted separately — <a href="https://nchatupongtrakul-ops.github.io/ERV-Project-Construction-Survey/" target="_blank" rel="noopener" style="color:var(--accent); font-weight:600;">Open in a new tab ↗</a></span>
+      <div class="rule"></div>
+    </div>
+    <div class="panel" style="padding:0; overflow:hidden;">
+      <iframe src="https://nchatupongtrakul-ops.github.io/ERV-Project-Construction-Survey/" title="Customer Survey" style="width:100%; height:80vh; min-height:560px; border:none; display:block;" loading="lazy"></iframe>
+    </div>
+    <div class="footnote">
+      If the survey above appears blank, the source site may block being shown inside another page — use the "Open in a new tab" link above instead.
+    </div>
+  </div>
+
+</div>
+
+<!-- ================= PROJECT DETAIL MODAL ================= -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal-card" id="modalCard">
+    <div class="modal-head">
+      <div>
+        <h3 id="modalProjectName">-</h3>
+        <span class="badge-type" id="modalProjectType">-</span>
+        <span class="badge" id="modalProjectStatus" style="margin-left:6px;">-</span>
+        <span class="badge-risk" id="modalProjectRisk" style="margin-left:6px;">-</span>
+      </div>
+      <button class="modal-close" id="modalCloseBtn" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="modalMasterSchedulePdf" style="margin-bottom:16px;"></div>
+
+      <div class="modal-list">
+        <div class="modal-list-row emphasis"><span class="label">Budget</span><span class="value" id="modalBudget">-</span></div>
+        <div class="modal-list-row"><span class="label">Collected</span><span class="value"><span id="modalCollected">-</span><span class="sub" id="modalCollectedPct"></span></span></div>
+        <div class="modal-list-row"><span class="label">Paid to Contractor</span><span class="value"><span id="modalSpent">-</span><span class="sub" id="modalSpentPct"></span></span></div>
+        <div class="modal-list-row"><span class="label">Pending Drawdown (from client)</span><span class="value"><span id="modalPending">-</span><span class="sub" id="modalPendingPct"></span></span></div>
+      </div>
+
+      <div class="modal-section-title">Delivery Schedule</div>
+      <div class="modal-list">
+        <div class="modal-list-row"><span class="label">First Fix</span><span class="value"><span id="modalFirstFixDate">-</span><span class="sub" id="modalFirstFixPct"></span></span></div>
+        <div class="modal-list-row"><span class="label">Second Fix</span><span class="value"><span id="modalSecondFixDate">-</span><span class="sub" id="modalSecondFixPct"></span></span></div>
+        <div class="modal-list-row"><span class="label">Delivery Date</span><span class="value" id="modalDelivery">-</span></div>
+      </div>
+
+      <div class="modal-section-title">Contractor</div>
+      <div class="modal-list">
+        <div class="modal-list-row"><span class="label">Contractor Name</span><span class="value" id="modalContractor" style="font-size:14px;">-</span></div>
+      </div>
+
+      <div class="modal-section-title">Others</div>
+      <div class="modal-list">
+        <div class="modal-list-row"><span class="label">Progress</span><span class="value" id="modalProgress">-</span></div>
+        <div class="modal-list-row"><span class="label">Completion Date</span><span class="value" id="modalEnd">-</span></div>
+        <div class="modal-list-row"><span class="label">Financial Status</span><span class="value" id="modalFinFlag" style="font-size:13px;">-</span></div>
+        <div class="modal-list-row"><span class="label">Cash Advance</span><span class="value" id="modalPetty">-</span></div>
+        <div class="modal-list-row"><span class="label">Man Power (Site Inspection)</span><span class="value" id="modalManHours">-</span></div>
+        <div class="modal-list-row"><span class="label">Site Visit (Days / Inspector)</span><span class="value" id="modalSiteVisit" style="font-size:14px;">-</span></div>
+        <div class="modal-list-row"><span class="label">Contract Value</span><span class="value"><span id="modalContractValue">-</span><span class="sub" id="modalContractPct"></span></span></div>
+        <div class="modal-list-row"><span class="label">Preliminary</span><span class="value" id="modalPrelim">-</span></div>
+        <div class="modal-list-row"><span class="label">VO (Addition)</span><span class="value" id="modalVO">-</span></div>
+        <div class="modal-list-row"><span class="label">VE (Deduction)</span><span class="value" id="modalVE">-</span></div>
+        <div class="modal-list-row"><span class="label">Net Variation (VE &minus; VO)</span><span class="value" id="modalNetVar">-</span></div>
+        <div class="modal-list-row"><span class="label">Adjusted Contract Value</span><span class="value" id="modalAdjusted">-</span></div>
+      </div>
+
+      <div class="modal-section-title">Master Schedule — Planned vs Actual</div>
+      <button class="btn secondary" id="modalOpenScheduleChartBtn" style="display:inline-flex; align-items:center; gap:7px;">📈 View Progress Chart (Planned vs Actual)</button>
+
+      <div class="modal-section-title">Work Phase Detail (Master Schedule)</div>
+      <div id="modalPhases"></div>
+      <div id="modalRemarksWrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CHART BREAKDOWN MODAL ================= -->
+<div class="modal-backdrop" id="breakdownModalBackdrop">
+  <div class="modal-card" id="breakdownModalCard">
+    <div class="modal-head">
+      <div>
+        <h3 id="breakdownModalTitle">-</h3>
+        <span class="hint" style="float:none; display:block; margin-top:4px;">by project</span>
+      </div>
+      <button class="modal-close" id="breakdownModalCloseBtn" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="breakdown-rows" id="breakdownModalRows"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCHEDULE CHART MODAL (Planned vs Actual) ================= -->
+<div class="modal-backdrop" id="scheduleModalBackdrop">
+  <div class="modal-card" id="scheduleModalCard">
+    <div class="modal-head">
+      <div>
+        <h3 id="scheduleModalTitle">-</h3>
+        <span class="hint" style="float:none; display:block; margin-top:4px;">Master Schedule — Planned vs Actual</span>
+      </div>
+      <button class="modal-close" id="scheduleModalCloseBtn" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <canvas id="modalScheduleChart"></canvas>
+      <div class="schedule-chart-legend">
+        <span><i class="sw" style="background:var(--gray); border-radius:0; width:14px; height:3px;"></i> Planned</span>
+        <span><i class="sw" style="background:var(--accent); border-radius:0; width:14px; height:3px;"></i> Actual</span>
+        <span><i class="sw" style="background:var(--steel); border-radius:2px;"></i> Milestone (Planned)</span>
+        <span><i class="sw" style="background:var(--accent); border-radius:2px;"></i> Milestone (Actual)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Disable the datalabels plugin globally by default; enabled explicitly on charts showing money amounts */
+if(window.ChartDataLabels){ Chart.register(ChartDataLabels); Chart.defaults.plugins.datalabels = {display:false}; }
+
+/* ===================== SAMPLE / DEFAULT DATA ===================== */
+const SAMPLE_PROJECTS = [
+  {name:'Northgate Tower', status:'construction', type:'external', progress:70, budget:50_000_000, spent:29_000_000, start:'2025-09-01', end:'2026-12-15', owner:'Somchai Jaidee', remarks:'', pettyCash:1500000, collected:27000000, manHours:48, siteVisitDays:18, inspector:'Somchai Jaidee', preliminary:3000000, vo:1800000, ve:400000, contractor:'Siam Builders Co., Ltd.', contractValue:47000000, deliveryDate:'2026-12-20', masterSchedulePdf:'https://example.com/schedules/northgate-tower-master-schedule.pdf', dataReceivedDate:'2026-06-15',
+   phases:[{phase:'Construction Period 1', start:'2025-09-01', end:'2026-09-30', pct:70, status:'construction'},
+           {phase:'Construction Period 2', start:'2026-09-15', end:'2026-12-15', pct:10, status:'planning'}]},
+  {name:'Riverside Mall Renovation', status:'construction', type:'external', progress:88, budget:32_000_000, spent:27_500_000, start:'2025-11-01', end:'2026-08-30', owner:'Wipa Thongkham', remarks:'', pettyCash:800000, collected:26000000, manHours:36, siteVisitDays:14, inspector:'Wipa Thongkham', preliminary:1500000, vo:900000, ve:250000, contractor:'Delta Construction Group', contractValue:30500000, deliveryDate:'2026-09-05', masterSchedulePdf:'https://example.com/schedules/riverside-mall-master-schedule.pdf', dataReceivedDate:'2026-06-18',
+   phases:[{phase:'Construction Period 1', start:'2025-11-01', end:'2026-05-31', actualStart:'2025-11-04', actualEnd:'2026-06-10', pct:100, status:'completed'},
+           {phase:'Construction Period 2', start:'2026-05-15', end:'2026-08-30', actualStart:'2026-06-12', pct:88, status:'construction'}]},
+  {name:'Greenfield Logistics Park', status:'construction', type:'external', progress:25, budget:120_000_000, spent:31_000_000, start:'2026-03-01', end:'2027-02-28', owner:'Prayuth Boonmee', remarks:'Disbursement exceeds physical progress', pettyCash:2000000, collected:28000000, manHours:20, siteVisitDays:9, inspector:'Prayuth Boonmee', preliminary:6000000, vo:2500000, ve:0, contractor:'Horizon Engineering & Construction', contractValue:112000000, deliveryDate:'2027-03-10',
+   phases:[{phase:'Construction Period 1', start:'2026-03-01', end:'2026-11-30', pct:25, status:'construction'},
+           {phase:'Construction Period 2', start:'2026-11-15', end:'2027-02-28', pct:0, status:'planning'}]},
+  {name:'Sunrise Residences Phase 2', status:'construction', type:'external', progress:55, budget:75_000_000, spent:48_000_000, start:'2025-06-01', end:'2026-09-30', owner:'Manop Srisuk', remarks:'', pettyCash:1200000, collected:44000000, manHours:30, siteVisitDays:12, inspector:'Manop Srisuk', preliminary:4000000, vo:1200000, ve:600000, contractor:'Apex Builders Co., Ltd.', contractValue:71000000, deliveryDate:'2026-10-05',
+   phases:[{phase:'Construction Period 1', start:'2025-06-01', end:'2026-06-30', pct:55, status:'construction'},
+           {phase:'Construction Period 2', start:'2026-06-15', end:'2026-09-30', pct:0, status:'planning'}]},
+  {name:'Central Business Hub', status:'planning', type:'internal', progress:5, budget:200_000_000, spent:2_000_000, start:'2026-07-01', end:'2027-12-31', owner:'Arunee Pong', remarks:'Awaiting design approval from client', pettyCash:300000, collected:1500000, manHours:8, siteVisitDays:3, inspector:'Arunee Pong', preliminary:8000000, vo:0, ve:0, contractor:'Not Yet Awarded', contractValue:0, deliveryDate:'2028-01-15',
+   phases:[{phase:'Construction Period 1', start:'2026-07-01', end:'2027-06-30', pct:5, status:'planning'},
+           {phase:'Construction Period 2', start:'2027-06-15', end:'2027-12-31', pct:0, status:'planning'}]},
+  {name:'Lakeview Bridge Repair', status:'completed', type:'internal', progress:100, budget:15_000_000, spent:14_200_000, start:'2025-04-01', end:'2026-03-15', owner:'Wichai Promma', remarks:'Project handed over', pettyCash:200000, collected:14200000, manHours:60, siteVisitDays:22, inspector:'Wichai Promma', preliminary:500000, vo:300000, ve:100000, contractor:'Delta Construction Group', contractValue:14500000, deliveryDate:'2026-03-15',
+   phases:[{phase:'Construction Period 1', start:'2025-04-01', end:'2025-10-15', pct:100, status:'completed'},
+           {phase:'Construction Period 2', start:'2025-10-01', end:'2026-03-15', pct:100, status:'completed'}]},
+  {name:'Metro Station Extension', status:'construction', type:'external', progress:40, budget:90_000_000, spent:33_000_000, start:'2026-01-15', end:'2026-11-30', owner:'Somchai Jaidee', remarks:'', pettyCash:1000000, collected:30000000, manHours:24, siteVisitDays:10, inspector:'Somchai Jaidee', preliminary:5000000, vo:2000000, ve:350000, contractor:'Horizon Engineering & Construction', contractValue:85000000, deliveryDate:'2026-12-10',
+   phases:[{phase:'Construction Period 1', start:'2026-01-15', end:'2026-08-31', pct:40, status:'construction'},
+           {phase:'Construction Period 2', start:'2026-08-15', end:'2026-11-30', pct:0, status:'planning'}]},
+  {name:'Hillcrest Office Park', status:'on_hold', type:'internal', progress:12, budget:60_000_000, spent:9_000_000, start:'2025-12-01', end:'2026-10-31', owner:'Wipa Thongkham', remarks:'On hold - awaiting additional funding', pettyCash:500000, collected:8000000, manHours:10, siteVisitDays:5, inspector:'Wipa Thongkham', preliminary:2000000, vo:0, ve:500000, contractor:'Siam Builders Co., Ltd.', contractValue:57000000, deliveryDate:'2026-11-15',
+   phases:[{phase:'Construction Period 1', start:'2025-12-01', end:'2026-06-30', pct:12, status:'on_hold'},
+           {phase:'Construction Period 2', start:'2026-06-15', end:'2026-10-31', pct:0, status:'on_hold'}]},
+];
+
+// Monthly team site-visit log: one row per inspector per month
+const SAMPLE_SITE_VISIT_LOG = [
+  {month:'2026-01-06', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:8},
+  {month:'2026-01-14', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:8},
+  {month:'2026-01-22', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:8},
+  {month:'2026-01-09', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:9},
+  {month:'2026-01-23', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:9},
+  {month:'2026-01-15', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', hours:12},
+  {month:'2026-02-04', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:10},
+  {month:'2026-02-18', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:10},
+  {month:'2026-02-27', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:10},
+  {month:'2026-02-11', project:'Hillcrest Office Park', inspector:'Wipa Thongkham', hours:12},
+  {month:'2026-02-25', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:12},
+  {month:'2026-02-13', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', hours:16},
+  {month:'2026-02-10', project:'Central Business Hub', inspector:'Arunee Pong', hours:6},
+  {month:'2026-03-05', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:12},
+  {month:'2026-03-19', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:12},
+  {month:'2026-03-26', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:12},
+  {month:'2026-03-12', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', hours:18},
+  {month:'2026-03-06', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', hours:24},
+  {month:'2026-03-20', project:'Lakeview Bridge Repair', inspector:'Wichai Promma', hours:28},
+  {month:'2026-04-02', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:14},
+  {month:'2026-04-16', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:14},
+  {month:'2026-04-09', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:15},
+  {month:'2026-04-23', project:'Hillcrest Office Park', inspector:'Wipa Thongkham', hours:15},
+  {month:'2026-04-17', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', hours:12},
+  {month:'2026-04-08', project:'Central Business Hub', inspector:'Arunee Pong', hours:8},
+  {month:'2026-05-07', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:20},
+  {month:'2026-05-21', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:20},
+  {month:'2026-05-14', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:16},
+  {month:'2026-05-11', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', hours:22},
+  {month:'2026-05-28', project:'Lakeview Bridge Repair', inspector:'Wichai Promma', hours:34},
+  {month:'2026-06-03', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:16},
+  {month:'2026-06-17', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:16},
+  {month:'2026-06-10', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:14},
+  {month:'2026-06-24', project:'Hillcrest Office Park', inspector:'Wipa Thongkham', hours:14},
+  {month:'2026-06-05', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', hours:16},
+  {month:'2026-06-19', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', hours:12},
+  {month:'2026-06-12', project:'Central Business Hub', inspector:'Arunee Pong', hours:10},
+];
+
+const SAMPLE_INTERNAL_WORK = [
+  {topic:'ปรับปรุงระบบ CRM', details:'อัปเดตฟอร์มบันทึกข้อมูลลูกค้าให้รองรับโครงการ Internal', start:'2026-06-01', end:'2026-07-15', status:'construction'},
+  {topic:'จัดอบรมทีมช่าง', details:'อบรมมาตรฐานความปลอดภัยหน้างานประจำไตรมาส', start:'2026-05-10', end:'2026-05-12', status:'completed'},
+  {topic:'ปรับปรุงคลังอุปกรณ์', details:'จัดหมวดหมู่และตรวจนับอุปกรณ์ในคลังกลาง', start:'2026-07-01', end:'2026-07-31', status:'planning'},
+  {topic:'ต่อสัญญาซัพพลายเออร์', details:'เจรจาต่อสัญญาผู้จำหน่ายวัสดุก่อสร้างรายหลัก', start:'2026-06-15', end:'2026-06-30', status:'on_hold'},
+];
+
+let state = { projects: [], siteVisitLog: [], internalWork: [], extraCashAdvance: 0 };
+
+/* ===================== PERSISTENCE (remember last uploaded file) ===================== */
+const STORAGE_KEY = 'cm_dashboard_last_upload_v1';
+
+function saveStateToStorage(fileLabel){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      projects: state.projects,
+      siteVisitLog: state.siteVisitLog,
+      internalWork: state.internalWork,
+      extraCashAdvance: state.extraCashAdvance,
+      fileLabel: fileLabel || 'Unknown file',
+      savedAt: new Date().toISOString()
+    }));
+  }catch(e){ /* storage unavailable (e.g. private browsing) — safe to ignore */ }
+}
+
+function loadStateFromStorage(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+
+function clearStoredState(){
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+}
+
+/* ===================== PERSISTENT CHANGE LOG ===================== */
+const CHANGE_LOG_KEY = 'cm_dashboard_change_log_v1';
+const CHANGE_LOG_MAX_ENTRIES = 30;
+
+function loadChangeLog(){
+  try{
+    const raw = localStorage.getItem(CHANGE_LOG_KEY);
+    if(!raw) return [];
+    return JSON.parse(raw);
+  }catch(e){ return []; }
+}
+
+function appendChangeLog(fileLabel, changes){
+  if(!changes || !changes.length) return;
+  try{
+    const log = loadChangeLog();
+    log.unshift({
+      timestamp: new Date().toISOString(),
+      fileLabel: fileLabel || 'Unknown file',
+      changes: changes
+    });
+    while(log.length > CHANGE_LOG_MAX_ENTRIES) log.pop();
+    localStorage.setItem(CHANGE_LOG_KEY, JSON.stringify(log));
+  }catch(e){ /* storage unavailable — safe to ignore */ }
+}
+
+function clearChangeLog(){
+  try{ localStorage.removeItem(CHANGE_LOG_KEY); }catch(e){}
+  renderChangeHistory();
+}
+
+function renderChangeHistory(){
+  const wrap = document.getElementById('changeHistoryList');
+  if(!wrap) return;
+  const log = loadChangeLog();
+  if(!log.length){
+    wrap.innerHTML = `<div style="text-align:center; color:var(--steel); font-style:italic; padding:18px;">No changes recorded yet \u2014 this fills in automatically every time an upload or refresh changes the data.</div>`;
+    return;
+  }
+  wrap.innerHTML = log.map((entry, i)=>{
+    const dt = new Date(entry.timestamp).toLocaleString('en-GB');
+    return `
+    <div class="history-entry">
+      <button class="history-entry-head" onclick="document.getElementById('historyBody_${i}').classList.toggle('open');">
+        <span>${dt} \u2014 <b>${entry.fileLabel}</b></span>
+        <span class="history-count">${entry.changes.length} change${entry.changes.length===1?'':'s'}</span>
+      </button>
+      <ul class="change-notif-list history-entry-body" id="historyBody_${i}">
+        ${entry.changes.map(c=>`<li><span class="change-tag ${c.type}">${c.type}</span><b>${c.project}</b> \u2014 ${c.text}</li>`).join('')}
+      </ul>
+    </div>`;
+  }).join('');
+}
+
+let filterState = { statuses: new Set(['construction','completed','planning','on_hold']), types: new Set(['internal','external']), search:'' };
+
+const statusLabel = {construction:'Construction', completed:'Completed', planning:'Planning', on_hold:'Hold'};
+const statusColor = {construction:'#E2691F', completed:'#3E8F63', planning:'#98A5AD', on_hold:'#C2493C'};
+const typeLabel = {internal:'Internal', external:'External'};
+const typeColor = {internal:'#3E7CA6', external:'#98A5AD'};
+const taskStatusLabel = {construction:'In Progress', completed:'Completed', planning:'Planning', on_hold:'On Hold'};
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let statusDonutChart=null;
+
+function normStatus(raw){
+  const s = (raw||'').toString().toLowerCase();
+  if(s.includes('complet')) return 'completed';
+  if(s.includes('hold') || s.includes('delay')) return 'on_hold';
+  if(s.includes('plan')) return 'planning';
+  return 'construction';
+}
+
+function normType(raw){
+  const s = (raw||'').toString().trim().toLowerCase();
+  return s.startsWith('int') ? 'internal' : 'external';
+}
+
+/* Schedule risk: compares the project's end date against the current date/time, weighed against actual progress */
+function computeRisk(p){
+  if(p.status==='completed') return {label:'Completed', cls:'risk-done', daysLate:0};
+  if(p.status==='on_hold') return {label:'On Hold', cls:'risk-hold', daysLate:0};
+  if(!p.start || !p.end) return {label:'No Schedule', cls:'risk-unknown', daysLate:0};
+  const now = new Date();
+  const start = new Date(p.start);
+  const end = new Date(p.end);
+  if(isNaN(start) || isNaN(end)) return {label:'No Schedule', cls:'risk-unknown', daysLate:0};
+  if(now > end){
+    const daysLate = Math.round((now-end)/86400000);
+    return {label:'Overdue', cls:'risk-danger', daysLate};
+  }
+  const totalMs = end - start;
+  const totalDays = totalMs/86400000;
+  const elapsedMs = now - start;
+  const expectedPct = totalMs>0 ? Math.max(0, Math.min(100, elapsedMs/totalMs*100)) : 0;
+  const gap = expectedPct - (p.progress||0);
+  if(gap > 15){
+    const daysLate = Math.max(1, Math.round(gap/100*totalDays));
+    return {label:'At Risk', cls:'risk-warn', daysLate};
+  }
+  return {label:'On Track', cls:'risk-ok', daysLate:0};
+}
+
+/* count-up animation for KPI numbers */
+function countUp(el, target, opts={}){
+  const isInt = Number.isInteger(target);
+  if(reduceMotion){ el.textContent = opts.fmt ? opts.fmt(target) : target; return; }
+  const dur = 600, start = performance.now(), from = 0;
+  function step(t){
+    const p = Math.min(1, (t-start)/dur);
+    const val = from + (target-from) * (1-Math.pow(1-p,3));
+    el.textContent = opts.fmt ? opts.fmt(isInt? Math.round(val) : val) : (isInt? Math.round(val) : val.toFixed(1));
+    if(p<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ===================== CLOCK ===================== */
+function tickClock(){
+  const now = new Date();
+  document.getElementById('clockTime').textContent = now.toLocaleTimeString('th-TH');
+  document.getElementById('clockDate').textContent = now.toLocaleDateString('th-TH', {year:'numeric', month:'short', day:'numeric'});
+}
+setInterval(tickClock,1000); tickClock();
+
+/* ===================== TABS ===================== */
+document.querySelectorAll('.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-'+btn.dataset.page).classList.add('active');
+  });
+});
+
+/* ===================== FILTER ===================== */
+function getFilteredProjects(){
+  return state.projects.filter(p=>
+    filterState.statuses.has(p.status) &&
+    filterState.types.has(p.type) &&
+    (!filterState.search || p.name.toLowerCase().includes(filterState.search))
+  );
+}
+
+function emptyStateMsg(){
+  return state.projects.length===0
+    ? 'No project data loaded yet — go to the "Upload Excel Data" tab to load your project file.'
+    : 'No projects match the selected filters.';
+}
+
+function renderFilterChips(){
+  const counts = {construction:0, completed:0, planning:0, on_hold:0};
+  const typeCounts = {internal:0, external:0};
+  state.projects.forEach(x=>{ counts[x.status]++; typeCounts[x.type]++; });
+  const order = ['construction','completed','planning','on_hold'];
+  const typeOrder = ['internal','external'];
+
+  const statusBar = document.getElementById('filterChips');
+  statusBar.innerHTML = order.map(k=>
+    `<button class="chip ${filterState.statuses.has(k)?'active':''}" data-status="${k}" style="--chip-color:${statusColor[k]}">
+       <i class="sw"></i>${statusLabel[k]} <span class="chip-count">${counts[k]}</span>
+     </button>`).join('');
+
+  const typeBar = document.getElementById('typeFilterChips');
+  typeBar.innerHTML = typeOrder.map(k=>
+    `<button class="chip ${filterState.types.has(k)?'active':''}" data-type="${k}" style="--chip-color:${typeColor[k]}">
+       <i class="sw"></i>${typeLabel[k]} <span class="chip-count">${typeCounts[k]}</span>
+     </button>`).join('') +
+   `<button class="chip chip-reset" id="chipResetAll">Show All</button>`;
+
+  const rerenderAll = ()=>{ renderFilterChips(); renderConstructionTable(); renderSiteVisitChart(); renderGantt(); renderContractors(); renderFinance(); renderVariations(); };
+
+  statusBar.querySelectorAll('.chip[data-status]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const k = btn.dataset.status;
+      if(filterState.statuses.has(k)) filterState.statuses.delete(k); else filterState.statuses.add(k);
+      if(filterState.statuses.size===0) filterState.statuses = new Set(order); // avoid empty dead-end
+      rerenderAll();
+    });
+  });
+  typeBar.querySelectorAll('.chip[data-type]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const k = btn.dataset.type;
+      if(filterState.types.has(k)) filterState.types.delete(k); else filterState.types.add(k);
+      if(filterState.types.size===0) filterState.types = new Set(typeOrder); // avoid empty dead-end
+      rerenderAll();
+    });
+  });
+  document.getElementById('chipResetAll').addEventListener('click', ()=>{
+    filterState.statuses = new Set(order); filterState.types = new Set(typeOrder); filterState.search='';
+    document.getElementById('projectSearch').value='';
+    rerenderAll();
+  });
+}
+
+document.getElementById('projectSearch').addEventListener('input', e=>{
+  filterState.search = e.target.value.trim().toLowerCase();
+  renderConstructionTable(); renderSiteVisitChart(); renderGantt(); renderContractors(); renderFinance(); renderVariations();
+});
+
+
+function renderOverview(){
+  const p = state.projects;
+  countUp(document.getElementById('kTotal'), p.length);
+  countUp(document.getElementById('kConstruction'), p.filter(x=>x.status==='construction').length);
+  countUp(document.getElementById('kCompleted'), p.filter(x=>x.status==='completed').length);
+  countUp(document.getElementById('kAttention'), p.filter(x=>x.status==='on_hold').length);
+  document.getElementById('statusDonutCenter').textContent = p.length;
+
+  const counts = {construction:0, completed:0, planning:0, on_hold:0};
+  p.forEach(x=>counts[x.status]++);
+  if(statusDonutChart) statusDonutChart.destroy();
+  statusDonutChart = new Chart(document.getElementById('statusDonut'), {
+    type:'doughnut',
+    data:{ labels:Object.keys(counts).map(k=>statusLabel[k]),
+      datasets:[{data:Object.values(counts), backgroundColor:Object.keys(counts).map(k=>statusColor[k]), borderWidth:2, borderColor:'#FBF8F1'}]},
+    options:{plugins:{legend:{display:false}}, cutout:'68%', animation:reduceMotion?false:{duration:500}}
+  });
+  document.getElementById('donutLegend').innerHTML = Object.keys(counts).map(k=>
+    `<div><span class="sw" style="background:${statusColor[k]}"></span>${statusLabel[k]} <b style="color:var(--ink); font-family:'IBM Plex Mono';">${counts[k]}</b><span style="color:var(--steel); margin-left:3px;">(${p.length? Math.round(counts[k]/p.length*100):0}%)</span></div>`).join('');
+}
+
+/* ===================== RENDER: INTERNAL / EXTERNAL SPLIT ===================== */
+function renderTypeOverview(){
+  const p = state.projects;
+  const typeCounts = {internal:0, external:0};
+  p.forEach(x=>typeCounts[x.type]++);
+  const total = p.length;
+  const order = ['internal','external'];
+
+  document.getElementById('typeSplitBar').innerHTML = total ? order.map(k=>
+    `<span style="width:${typeCounts[k]/total*100}%; background:${typeColor[k]}" title="${typeLabel[k]}: ${typeCounts[k]}"></span>`).join('')
+    : `<span style="width:100%; background:var(--line);"></span>`;
+
+  document.getElementById('typeSplitLegend').innerHTML = order.map(k=>
+    `<div><span class="sw" style="background:${typeColor[k]}"></span>${typeLabel[k]} <b style="color:var(--ink); font-family:'IBM Plex Mono';">${typeCounts[k]}</b><span style="color:var(--steel); margin-left:3px;">(${total? Math.round(typeCounts[k]/total*100):0}%)</span></div>`).join('');
+}
+
+/* ===================== RENDER: PROJECT LIST ===================== */
+function renderConstructionTable(){
+  const wrap = document.getElementById('constructionTable');
+  const rows = getFilteredProjects();
+  wrap.innerHTML = rows.length ? rows.map(p=>{
+    const risk = computeRisk(p);
+    const showAlert = risk.cls==='risk-warn' || risk.cls==='risk-danger';
+    const alertText = risk.cls==='risk-danger'
+      ? `Overdue by ${risk.daysLate} day${risk.daysLate===1?'':'s'} past End Date`
+      : `At risk \u2014 approx. ${risk.daysLate} day${risk.daysLate===1?'':'s'} behind schedule`;
+    const subText = p.remarks ? p.remarks : (showAlert ? alertText : '');
+    const subCls = p.remarks ? '' : risk.cls;
+    return `
+    <div class="status-card proj-link" data-name="${p.name}">
+      <div>
+        <span class="sc-name">${p.name}</span>
+        ${subText ? `<span class="sc-sub ${subCls}">${subText}</span>` : ''}
+      </div>
+      <div><span class="badge-type ${p.type}">${typeLabel[p.type]}</span></div>
+      <div><span class="badge ${p.status}">${statusLabel[p.status]}</span></div>
+      <div class="progress-cell"><div class="pbar"><span style="width:${p.progress}%; background:${statusColor[p.status]}"></span></div><span class="pnum">${p.progress}%</span></div>
+      <div><span class="badge-risk ${risk.cls}">${risk.label}</span></div>
+    </div>`;
+  }).join('') : `<div style="text-align:center; color:var(--steel); font-style:italic; padding:24px;">${emptyStateMsg()}</div>`;
+}
+
+/* ===================== RENDER: GANTT ===================== */
+function fmtShortDate(dateStr){
+  if(!dateStr) return '-';
+  const d = new Date(dateStr);
+  if(isNaN(d)) return '-';
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+}
+
+function computeGanttRange(rows){
+  let dates = [];
+  rows.forEach(p=> (p.phases&&p.phases.length ? p.phases : [{start:p.start,end:p.end}]).forEach(ph=>{
+    if(ph.start) dates.push(new Date(ph.start));
+    if(ph.end) dates.push(new Date(ph.end));
+  }));
+  const today = new Date();
+  if(!dates.length) dates = [today];
+  let min = new Date(Math.min(...dates));
+  let max = new Date(Math.max(...dates));
+  // pad one week each side, and snap to Monday-start weeks for clean gridlines
+  min.setDate(min.getDate() - ((min.getDay()+6)%7) - 7);
+  max.setDate(max.getDate() + (7-((max.getDay()+6)%7)) + 7);
+  return {min, max, totalDays: Math.round((max-min)/86400000)};
+}
+
+function renderGantt(){
+  const rows = getFilteredProjects();
+  const {min:rangeStart, max:rangeEnd, totalDays} = computeGanttRange(rows);
+  const totalWeeks = Math.max(1, Math.round(totalDays/7));
+
+  function posPct(dateStr){
+    if(!dateStr) return 0;
+    let d = new Date(dateStr);
+    if(d < rangeStart) d = new Date(rangeStart);
+    if(d > rangeEnd) d = new Date(rangeEnd);
+    return Math.max(0, Math.min(100, (d-rangeStart)/86400000/totalDays*100));
+  }
+
+  // Month header labels, positioned by actual date proportion (handles multi-year ranges)
+  const monthHeader = document.getElementById('monthHeader');
+  monthHeader.innerHTML = '';
+  monthHeader.style.position = 'relative';
+  monthHeader.style.height = '22px';
+  const now = new Date();
+  let cursor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+  const monthDivs = [];
+  while(cursor <= rangeEnd){
+    const next = new Date(cursor.getFullYear(), cursor.getMonth()+1, 1);
+    const segStart = cursor < rangeStart ? rangeStart : cursor;
+    const segEnd = next > rangeEnd ? rangeEnd : next;
+    const left = posPct(segStart.toISOString().slice(0,10));
+    const width = Math.max(posPct(segEnd.toISOString().slice(0,10)) - left, 0);
+    const isCur = (now.getFullYear()===cursor.getFullYear() && now.getMonth()===cursor.getMonth());
+    const label = cursor.toLocaleDateString('en-GB', {month:'short'}) + (cursor.getMonth()===0 ? ` '${String(cursor.getFullYear()).slice(2)}` : '');
+    monthDivs.push(`<div class="${isCur?'cur-month':''}" style="position:absolute; left:${left}%; width:${width}%; top:0; text-align:center; font-weight:${isCur?600:500};">${label}</div>`);
+    cursor = next;
+  }
+  monthHeader.innerHTML = monthDivs.join('');
+  monthHeader.style.setProperty('--weeks', totalWeeks);
+
+  const todayPct = (now>=rangeStart && now<=rangeEnd) ? posPct(now.toISOString().slice(0,10)) : null;
+  const body = document.getElementById('ganttBody');
+  body.innerHTML = rows.length ? rows.map(p=>{
+    const phases = (p.phases&&p.phases.length) ? p.phases : [{phase:p.status, start:p.start, end:p.end, pct:p.progress, status:p.status}];
+    const bars = phases.map(ph=>{
+      const left = posPct(ph.start);
+      const width = Math.max(posPct(ph.end)-left, 1.2);
+      const m = ph.phase.match(/Period\s*\d+/i);
+      const shortLabel = m ? m[0] : ph.phase;
+      const tooltip = `${ph.phase} · ${fmtShortDate(ph.start)} \u2192 ${fmtShortDate(ph.end)} · ${ph.pct}%`;
+      return `<div class="gantt-bar ${ph.status}" style="left:${left}%; width:${width}%;" title="${tooltip}">${shortLabel} ${ph.pct}%</div>`;
+    }).join('');
+    const captions = phases.map((ph,i)=>{
+      const m = ph.phase.match(/Period\s*\d+/i);
+      const shortLabel = m ? m[0] : ph.phase;
+      return `<span class="pdate-item"><i class="dot ${ph.status}"></i>${shortLabel}: ${fmtShortDate(ph.start)} \u2192 ${fmtShortDate(ph.end)}</span>`;
+    }).join('') + (p.deliveryDate ? `<span class="pdate-item pdate-delivery"><i class="dot delivery"></i>Delivery Date: ${fmtShortDate(p.deliveryDate)}</span>` : '');
+    return `<div class="gantt-row" style="--weeks:${totalWeeks};">
+      <div class="pname"><span class="proj-link" data-name="${p.name}">${p.name}</span></div>
+      <div class="gantt-track" style="--weeks:${totalWeeks};">${bars}</div>
+      <div class="pdates">${captions}</div>
+    </div>`;
+  }).join('') : `<div style="padding:18px; text-align:center; color:var(--steel); font-style:italic;">${emptyStateMsg()}</div>`;
+
+  const marker = document.getElementById('todayMarker');
+  if(todayPct===null){
+    marker.style.display = 'none';
+  } else {
+    marker.style.display = '';
+    marker.style.left = `calc(220px + (100% - 220px) * ${todayPct/100})`;
+    marker.style.top = '0';
+    marker.style.bottom = '0';
+  }
+}
+
+/* ===================== RENDER: FINANCE ===================== */
+function fmtM(n){ return '\u0e3f'+Math.round(n||0).toLocaleString('en-US'); }
+let financialOverviewChart = null;
+/* ===================== CHART DRILL-DOWN (click a bar -> per-project breakdown) ===================== */
+function hasContractor(p){
+  const raw = String(p.contractor||'').trim().toLowerCase();
+  return !(!raw || raw==='-' || raw==='–' || raw==='not yet awarded' || raw==='tbd');
+}
+
+function renderChartBreakdown(title, rows, valueFn, colorHex, opts){
+  opts = opts || {};
+  const dateFn = opts.dateFn;
+  const simple = opts.simple || !!dateFn;
+  document.getElementById('breakdownModalTitle').textContent = title;
+  const rowsEl = document.getElementById('breakdownModalRows');
+  const items = rows.map(p=>({name:p.name, value:valueFn(p), date:dateFn?dateFn(p):null})).filter(x=>x.value)
+    .sort((a,b)=>Math.abs(b.value)-Math.abs(a.value));
+  if(!items.length){
+    rowsEl.innerHTML = `<div class="breakdown-empty">No project-level data for this bar.</div>`;
+  } else if(simple){
+    const colClass = dateFn ? '' : ' breakdown-row-simple-2col';
+    rowsEl.innerHTML = `
+      <div class="breakdown-row-simple breakdown-row-simple-head${colClass}">
+        <span>Project</span>${dateFn ? '<span>Received</span>' : ''}<span>Amount</span>
+      </div>
+      ` + items.map(x=>`
+        <div class="breakdown-row-simple${colClass}">
+          <span title="${x.name}">${x.name}</span>
+          ${dateFn ? `<span>${x.date || '-'}</span>` : ''}
+          <span>${fmtM(Math.abs(x.value))}</span>
+        </div>`).join('');
+  } else {
+    const maxAbs = Math.max(...items.map(x=>Math.abs(x.value)));
+    rowsEl.innerHTML = items.map(x=>`
+        <div class="breakdown-row">
+          <span class="breakdown-name" title="${x.name}">${x.name}</span>
+          <div class="breakdown-bar"><span style="width:${maxAbs? Math.abs(x.value)/maxAbs*100:0}%; background:${colorHex}"></span></div>
+          <span class="breakdown-val">${fmtM(Math.abs(x.value))}</span>
+        </div>`).join('');
+  }
+  document.getElementById('breakdownModalBackdrop').classList.add('open');
+}
+
+/* Project Overview KPI cards -> popup listing the matching projects.
+   Click a row to expand its details inline (no stacked pop-up). */
+function renderProjectListPopup(title, projects){
+  document.getElementById('breakdownModalTitle').textContent = title;
+  const rowsEl = document.getElementById('breakdownModalRows');
+  if(!projects.length){
+    rowsEl.innerHTML = `<div class="breakdown-empty">No projects match.</div>`;
+  } else {
+    rowsEl.innerHTML = `
+      <div class="breakdown-row-simple breakdown-row-simple-head breakdown-row-simple-4col">
+        <span>Project</span><span>Status</span><span>Prog.</span><span>Risk</span>
+      </div>
+      ` + projects.map((p,i)=>{
+        const risk = computeRisk(p);
+        const notAwarded = !p.contractor || p.contractor==='Not Yet Awarded';
+        return `
+        <div class="breakdown-row-simple breakdown-row-simple-4col kpi-proj-row" data-idx="${i}">
+          <span title="${p.name}">${p.name}</span>
+          <span><span class="badge ${p.status}" style="font-size:10px;">${statusLabel[p.status]}</span></span>
+          <span>${p.progress}%</span>
+          <span><span class="badge-risk ${risk.cls}" style="font-size:10px;">${risk.label}</span></span>
+        </div>
+        <div class="kpi-proj-detail" id="kpiProjDetail${i}">
+          <span><span class="label">Budget</span><span class="value">${fmtM(p.budget||0)}</span></span>
+          <span><span class="label">Collected</span><span class="value">${fmtM(p.collected||0)} (${p.budget? Math.round((p.collected||0)/p.budget*100):0}%)</span></span>
+          <span><span class="label">Paid to Contractor</span><span class="value">${fmtM(p.spent||0)} (${p.contractValue? Math.round((p.spent||0)/p.contractValue*100):0}%)</span></span>
+          <span><span class="label">Contractor</span><span class="value">${notAwarded ? 'Not Yet Awarded' : p.contractor}</span></span>
+          <span><span class="label">Delivery Date</span><span class="value">${p.deliveryDate || '-'}</span></span>
+          ${p.remarks ? `<span><span class="label">Remarks</span><span class="value">${p.remarks}</span></span>` : ''}
+        </div>`;
+      }).join('');
+    rowsEl.querySelectorAll('.kpi-proj-row').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        const detail = document.getElementById('kpiProjDetail'+row.dataset.idx);
+        const wasOpen = detail.classList.contains('open');
+        rowsEl.querySelectorAll('.kpi-proj-detail.open').forEach(d=>d.classList.remove('open'));
+        rowsEl.querySelectorAll('.kpi-proj-row.open').forEach(r=>r.classList.remove('open'));
+        if(!wasOpen){ detail.classList.add('open'); row.classList.add('open'); }
+      });
+    });
+  }
+  document.getElementById('breakdownModalBackdrop').classList.add('open');
+}
+document.querySelectorAll('.kpi-clickable').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    const kind = el.dataset.kpi;
+    const list = kind==='all' ? state.projects : state.projects.filter(p=>p.status===kind);
+    const titleMap = {all:'All Projects', construction:'Construction', completed:'Completed', on_hold:'Requires Attention (On Hold)'};
+    renderProjectListPopup(titleMap[kind], list);
+  });
+});
+
+/* Wires a modal's close button + backdrop-click-to-close; returns the close fn */
+function wireModal(backdropId, closeBtnId){
+  const close = ()=> document.getElementById(backdropId).classList.remove('open');
+  document.getElementById(closeBtnId).addEventListener('click', close);
+  document.getElementById(backdropId).addEventListener('click', e=>{ if(e.target.id===backdropId) close(); });
+  return close;
+}
+
+const closeBreakdownModal = wireModal('breakdownModalBackdrop', 'breakdownModalCloseBtn');
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeBreakdownModal(); });
+
+function renderVisitBreakdown(title, records){
+  document.getElementById('breakdownModalTitle').textContent = title;
+  const rowsEl = document.getElementById('breakdownModalRows');
+  if(!records.length){
+    rowsEl.innerHTML = `<div class="breakdown-empty">No site visits logged for this month.</div>`;
+  } else {
+    const sorted = [...records].sort((a,b)=> new Date(a.month) - new Date(b.month));
+    rowsEl.innerHTML = `
+      <div class="visit-row visit-row-head">
+        <span>Date</span><span>Project / Site</span><span>Inspector</span><span>Hours</span>
+      </div>
+      ` + sorted.map(r=>`
+        <div class="visit-row">
+          <span>${fmtShortDate(r.month)}</span>
+          <span title="${r.project||''}">${r.project || '—'}</span>
+          <span>${r.inspector||'-'}</span>
+          <span>${r.hours||0} hrs</span>
+        </div>`).join('');
+  }
+  document.getElementById('breakdownModalBackdrop').classList.add('open');
+}
+
+function renderFinance(){
+  const p = getFilteredProjects();
+  const totalRevenue = p.reduce((s,x)=>s+x.budget,0);
+  const totalSpent = p.reduce((s,x)=>s+x.spent,0);
+  const totalCollected = p.reduce((s,x)=>s+(x.collected||0),0);
+  const pendingDrawdown = totalRevenue - totalCollected;
+  const totalContractorValue = p.reduce((s,x)=> s+(hasContractor(x) ? (x.contractValue||0) : 0), 0);
+
+  const finDefs = [
+    {label:'Revenue', color:'#163655', fn:x=>x.budget||0, dateFn:x=>x.dataReceivedDate||''},
+    {label:'Paid to Contractor', color:'#E2691F', fn:x=>x.spent||0},
+    {label:'Pending Drawdown', color:'#98A5AD', fn:x=>(x.budget||0)-(x.collected||0)},
+    {label:'Amount Collected', color:'#3E8F63', fn:x=>x.collected||0},
+    {label:'Total Contractor Value', color:'#4FB8D6', fn:x=>hasContractor(x) ? (x.contractValue||0) : 0}
+  ];
+
+  if(financialOverviewChart) financialOverviewChart.destroy();
+  financialOverviewChart = new Chart(document.getElementById('financialOverviewChart'), {
+    type:'bar',
+    data:{
+      labels: finDefs.map(d=>d.label),
+      datasets:[{
+        data:[totalRevenue, totalSpent, pendingDrawdown, totalCollected, totalContractorValue],
+        backgroundColor: finDefs.map(d=>d.color),
+        borderRadius:5, maxBarThickness:34
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,
+      animation: reduceMotion?false:{duration:400},
+      onClick:(evt, elements)=>{
+        if(!elements.length) return;
+        const d = finDefs[elements[0].index];
+        renderChartBreakdown(d.label, p, d.fn, d.color, {simple:true, dateFn:d.dateFn});
+      },
+      onHover:(evt, elements)=>{ evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
+      plugins:{ legend:{display:false},
+        tooltip:{callbacks:{label:(item)=> fmtM(item.parsed.x) }},
+        datalabels:{display:true, color:'#16243A', anchor:'end', align:'end', offset:4, font:{family:"'IBM Plex Mono'", size:10.5, weight:600}, formatter:(v)=>fmtM(v)} },
+      layout:{padding:{right:60}},
+      scales:{ x:{beginAtZero:true, ticks:{callback:(v)=>fmtM(v)}}, y:{grid:{display:false}} }
+    }
+  });
+
+  document.getElementById('finOverviewFooter').innerHTML = `
+    <span>Revenue: <b>${fmtM(totalRevenue)}</b></span>
+    <span>Paid to Contractor: <b>${totalRevenue? Math.round(totalSpent/totalRevenue*100):0}%</b> of revenue</span>
+    <span>Collected: <b>${totalRevenue? Math.round(totalCollected/totalRevenue*100):0}%</b> of revenue</span>
+    <span>Pending Drawdown: <b>${fmtM(pendingDrawdown)}</b></span>
+    <span>Total Contractor Value: <b>${fmtM(totalContractorValue)}</b></span>
+  `;
+}
+
+/* ===================== RENDER: SITE VISIT SUMMARY (whole team, months 1-12) ===================== */
+let siteVisitChart = null;
+const INSPECTOR_PALETTE = ['#E2691F','#3E8F63','#4FB8D6','#C2493C','#98A5AD','#163655','#9a5413','#6B8E23'];
+const MONTHS_FULL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function renderSiteVisitChart(){
+  const log = state.siteVisitLog || [];
+  const canvas = document.getElementById('siteVisitChart');
+  const footer = document.getElementById('svChartFooter');
+
+  if(siteVisitChart){ siteVisitChart.destroy(); siteVisitChart = null; }
+
+  if(!log.length){
+    canvas.style.display = 'none';
+    footer.innerHTML = `<span style="font-style:italic;">No site visit log data loaded yet \u2014 go to the "Upload Excel Data" tab to load your Site Visit Log.</span>`;
+    return;
+  }
+  canvas.style.display = 'block';
+
+  // Determine the year to display (most common year in the log)
+  const yearCounts = {};
+  log.forEach(r=>{ const y = new Date(r.month).getFullYear(); yearCounts[y] = (yearCounts[y]||0)+1; });
+  const year = Object.entries(yearCounts).sort((a,b)=>b[1]-a[1])[0][0];
+
+  // Sum hours per calendar month (1-12) for that year, across the whole team
+  const monthlyTotals = Array(12).fill(0);
+  log.forEach(r=>{
+    const d = new Date(r.month);
+    if(d.getFullYear() == year) monthlyTotals[d.getMonth()] += (r.hours||0);
+  });
+
+  siteVisitChart = new Chart(canvas, {
+    type:'bar',
+    data:{
+      labels: MONTHS_FULL.map(m=>`${m} ${year}`),
+      datasets:[{
+        label:'Site Visit Hours', data: monthlyTotals,
+        backgroundColor: INSPECTOR_PALETTE[0], borderRadius:4, maxBarThickness:42
+      }]
+    },
+    options:{
+      responsive:true,
+      animation: reduceMotion?false:{duration:400},
+      onClick:(evt, elements)=>{
+        if(!elements.length) return;
+        const monthIdx = elements[0].index;
+        const records = log.filter(r=>{ const d = new Date(r.month); return d.getFullYear()==year && d.getMonth()===monthIdx; });
+        renderVisitBreakdown(`${MONTHS_FULL[monthIdx]} ${year} — Site Visits`, records);
+      },
+      onHover:(evt, elements)=>{ evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
+      plugins:{ legend:{display:false} },
+      scales:{ x:{grid:{display:false}}, y:{beginAtZero:true, ticks:{precision:0}, title:{display:true, text:'Hours'}} }
+    }
+  });
+
+  const inspectors = [...new Set(log.map(r=>r.inspector).filter(Boolean))];
+  const totalHours = monthlyTotals.reduce((s,v)=>s+v,0);
+  const avgPerMonth = (totalHours/12).toFixed(1);
+  footer.innerHTML = `
+    <span>Total (${year}, all team members): <b>${totalHours} hrs</b></span>
+    <span>Team members logging visits: <b>${inspectors.length}</b></span>
+    <span>Avg. per month: <b>${avgPerMonth} hrs</b></span>
+  `;
+}
+
+/* ===================== RENDER: CONTRACT VARIATIONS ===================== */
+let variationChart = null;
+function renderVariations(){
+  const p = getFilteredProjects();
+  const totalPrelim = p.reduce((s,x)=>s+(x.preliminary||0),0);
+  const totalVO = p.reduce((s,x)=>s+(x.vo||0),0);
+  const totalVE = p.reduce((s,x)=>s+(x.ve||0),0);
+  const totalPetty = p.reduce((s,x)=>s+(x.pettyCash||0),0) + (state.extraCashAdvance||0);
+
+  const varDefs = [
+    {label:'Total Preliminary', color:'#163655', fn:x=>x.preliminary||0},
+    {label:'Total VO (Additions)', color:'#E2691F', fn:x=>x.vo||0},
+    {label:'Total VE (Deductions)', color:'#3E8F63', fn:x=>x.ve||0},
+    {label:'Cash Advance', color:'#4FB8D6', fn:x=>x.pettyCash||0}
+  ];
+
+  if(variationChart) variationChart.destroy();
+  variationChart = new Chart(document.getElementById('variationChart'), {
+    type:'bar',
+    data:{
+      labels: varDefs.map(d=>d.label),
+      datasets:[{
+        data:[totalPrelim, -totalVO, totalVE, totalPetty],
+        backgroundColor: varDefs.map(d=>d.color),
+        borderRadius:5, maxBarThickness:40
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,
+      animation: reduceMotion?false:{duration:400},
+      onClick:(evt, elements)=>{
+        if(!elements.length) return;
+        const d = varDefs[elements[0].index];
+        renderChartBreakdown(d.label, p, d.fn, d.color);
+      },
+      onHover:(evt, elements)=>{ evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
+      plugins:{ legend:{display:false},
+        tooltip:{callbacks:{label:(item)=> fmtM(Math.abs(item.parsed.x)) }},
+        datalabels:{display:true, color:'#16243A', anchor:'end', align:(ctx)=> ctx.dataset.data[ctx.dataIndex]<0 ? 'start' : 'end', offset:4, font:{family:"'IBM Plex Mono'", size:10.5, weight:600}, formatter:(v)=>fmtM(Math.abs(v))} },
+      layout:{padding:{left:60, right:60}},
+      scales:{
+        x:{ ticks:{callback:(v)=>fmtM(Math.abs(v))}, grid:{color:(ctx)=> ctx.tick.value===0 ? '#0E2238' : 'rgba(0,0,0,0.06)'} },
+        y:{grid:{display:false}}
+      }
+    }
+  });
+
+  document.getElementById('variationChartFooter').innerHTML = `
+    <span>Total Preliminary: <b>${fmtM(totalPrelim)}</b></span>
+    <span>Total VO (Additions): <b>-${fmtM(totalVO)}</b></span>
+    <span>Total VE (Deductions): <b>+${fmtM(totalVE)}</b></span>
+    <span>Cash Advance: <b>${fmtM(totalPetty)}</b></span>
+  `;
+}
+
+/* ===================== RENDER: CONTRACTORS ===================== */
+let contractorChart = null;
+function renderContractors(){
+  const p = getFilteredProjects();
+
+  // Aggregate contract value per contractor
+  // - Skip projects with no contractor name (empty, whitespace, dashes, or "Not Yet Awarded")
+  // - Normalize contractor names: trim + collapse multiple spaces so minor typos don't create duplicate entries
+  const byContractor = {};
+  p.forEach(x=>{
+    if(!hasContractor(x)) return;
+    const name = String(x.contractor).trim().replace(/\s+/g,' '); // collapse multiple spaces
+    if(!byContractor[name]) byContractor[name] = {value:0, count:0, projects:[]};
+    byContractor[name].value += (x.contractValue||0);
+    byContractor[name].count += 1;
+    byContractor[name].projects.push(x);
+  });
+  const ranked = Object.entries(byContractor).sort((a,b)=>b[1].value-a[1].value);
+
+  // Total only counts projects that actually have a contractor assigned
+  const totalValue = ranked.reduce((s,[,d])=>s+d.value, 0);
+  document.getElementById('cTotalValue').textContent = fmtM(totalValue);
+
+  const chartCanvas = document.getElementById('contractorChart');
+  const chartEmpty = document.getElementById('contractorChartEmpty');
+  if(contractorChart){ contractorChart.destroy(); contractorChart = null; }
+  if(!ranked.length){
+    chartCanvas.style.display = 'none';
+    chartEmpty.style.display = 'block';
+    chartEmpty.textContent = emptyStateMsg();
+  } else {
+    chartCanvas.style.display = 'block';
+    chartEmpty.style.display = 'none';
+    contractorChart = new Chart(chartCanvas, {
+      type:'bar',
+      data:{
+        labels: ranked.map(([name])=>name + (byContractor[name].count>1 ? ` (${byContractor[name].count} projects)` : '')),
+        datasets:[{
+          data: ranked.map(([,d])=>d.value),
+          backgroundColor: INSPECTOR_PALETTE,
+          borderRadius:4, maxBarThickness:30
+        }]
+      },
+      options:{
+        indexAxis:'y',
+        responsive:true,
+        animation: reduceMotion?false:{duration:400},
+        onClick:(evt, elements)=>{
+          if(!elements.length) return;
+          const [name, d] = ranked[elements[0].index];
+          renderChartBreakdown(name, d.projects, x=>x.contractValue||0, '#4FB8D6');
+        },
+        onHover:(evt, elements)=>{ evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
+        plugins:{ legend:{display:false},
+          tooltip:{callbacks:{label:(item)=> fmtM(item.parsed.x) }},
+          datalabels:{display:true, color:'#16243A', anchor:'end', align:'end', offset:4, font:{family:"'IBM Plex Mono'", size:10.5, weight:600}, formatter:(v)=>fmtM(v)} },
+        layout:{padding:{right:60}},
+        scales:{ x:{beginAtZero:true, ticks:{callback:(v)=>fmtM(v)}}, y:{grid:{display:false}} }
+      }
+    });
+  }
+
+}
+
+/* ===================== RENDER: INTERNAL WORK ===================== */
+function renderInternalWork(){
+  const wrap = document.getElementById('internalWorkList');
+  const items = state.internalWork;
+  wrap.innerHTML = items.length ? items.map(t=>`
+    <div class="internal-row">
+      <div>
+        <span class="sc-name">${t.topic}</span>
+        ${t.details ? `<span class="sc-sub">${t.details}</span>` : ''}
+      </div>
+      <div><span class="badge ${t.status}">${taskStatusLabel[t.status]}</span></div>
+      <div class="internal-dates">${t.start||'-'} &rarr; ${t.end||'-'}</div>
+    </div>`).join('') : `<div style="text-align:center; color:var(--steel); font-style:italic; padding:24px;">No internal work items loaded yet — go to the "Upload Excel Data" tab to load your Internal Work sheet.</div>`;
+}
+
+function renderAll(){ renderFilterChips(); renderOverview(); renderTypeOverview(); renderConstructionTable(); renderSiteVisitChart(); renderGantt(); renderContractors(); renderFinance(); renderVariations(); renderInternalWork(); }
+
+/* ===================== EXCEL IMPORT ===================== */
+function excelDateToISO(val){
+  if(val instanceof Date) return val.toISOString().slice(0,10);
+  if(typeof val === 'number'){
+    const d = XLSX.SSF.parse_date_code(val);
+    return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+  }
+  if(typeof val === 'string'){
+    const d = new Date(val);
+    if(!isNaN(d)) return d.toISOString().slice(0,10);
+  }
+  return null;
+}
+
+/* Normalizes a column header for forgiving matching: lowercases, strips
+   parentheses/currency notes and collapses whitespace, so minor differences
+   in the user's Excel headers (extra spaces, missing "(THB)", different case)
+   don't silently cause a field to read as empty/zero. */
+/* Robust numeric parser: handles cells where the number was entered/stored as
+   text with thousands separators or currency symbols (e.g. "47,000,000" or
+   "฿47,000,000"), which a plain parseFloat() would truncate at the first comma. */
+function toNum(v){
+  if(typeof v === 'number') return isNaN(v) ? 0 : v;
+  if(v === null || v === undefined || v === '') return 0;
+  const cleaned = String(v).replace(/[,\s฿$]/g,'').replace(/[^0-9.\-]/g,'');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
+function normKey(s){
+  return String(s||'').toLowerCase().replace(/\(.*?\)/g,'').replace(/\s+/g,' ').trim();
+}
+function buildNormRow(row){
+  const norm = {};
+  for(const k in row){ norm[normKey(k)] = row[k]; }
+  return norm;
+}
+function field(normRow, ...candidates){
+  for(const c of candidates){
+    const nc = normKey(c);
+    if(normRow[nc] !== undefined && normRow[nc] !== '') return normRow[nc];
+  }
+  const keys = Object.keys(normRow);
+  for(const c of candidates){
+    const nc = normKey(c);
+    const foundKey = keys.find(k => k && nc && (k.includes(nc) || nc.includes(k)));
+    if(foundKey && normRow[foundKey] !== '') return normRow[foundKey];
+  }
+  return undefined;
+}
+
+function parseWorkbook(wb){
+  const schedName = wb.SheetNames.find(n=>n.trim().toLowerCase()==='master schedule');
+  const summName = wb.SheetNames.find(n=>n.trim().toLowerCase()==='summary report');
+  if(!schedName || !summName){
+    throw new Error('Could not find a "Master Schedule" and/or "Summary Report" sheet in this file — please check that the sheet names match exactly.');
+  }
+  const schedRows = XLSX.utils.sheet_to_json(wb.Sheets[schedName], {range:3, defval:''}).map(buildNormRow);
+  const summRows = XLSX.utils.sheet_to_json(wb.Sheets[summName], {range:3, defval:''}).map(buildNormRow);
+  if(!summRows.length) throw new Error('The "Summary Report" sheet contains no data.');
+
+  // Rows marked Project Type = "Non-Project" aren't real projects (e.g. a Cash Advance
+  // total with no project to attribute it to) — exclude them from the project list/KPIs,
+  // but still fold their Cash Advance into the portfolio-wide total.
+  const isNonProject = r => /non.?project/i.test(String(field(r,'Project Type')||''));
+  const extraCashAdvance = summRows.filter(r=>field(r,'Project Name') && isNonProject(r))
+    .reduce((s,r)=> s + toNum(field(r,'Cash Advance (THB)','Petty Cash')), 0);
+
+  const projects = summRows.filter(r=>field(r,'Project Name') && !isNonProject(r)).map(r=>{
+    const progressRaw = field(r,'Overall Progress (%)','Progress');
+    const pct = typeof progressRaw==='number' && progressRaw<=1
+      ? Math.round(progressRaw*100) : Math.round(toNum(progressRaw));
+    return {
+      name: String(field(r,'Project Name')).trim(),
+      status: normStatus(field(r,'Status')),
+      type: normType(field(r,'Project Type')),
+      progress: pct,
+      budget: toNum(field(r,'Budget (THB)','Budget')),
+      spent: toNum(field(r,'Spent (THB)','Spent')),
+      pettyCash: toNum(field(r,'Cash Advance (THB)','Petty Cash')),
+      collected: toNum(field(r,'Collected (THB)','Collected')),
+      manHours: toNum(field(r,'Man Power (Hours)','Man Power','Man Hours')),
+      siteVisitDays: toNum(field(r,'Site Visit Days')),
+      inspector: field(r,'Site Inspector')||'',
+      preliminary: toNum(field(r,'Preliminary (THB)','Preliminary')),
+      vo: toNum(field(r,'VO - Variation Order (THB)','VO Variation Order','VO')),
+      ve: toNum(field(r,'VE - Variation/Omission (THB)','VE Variation Omission','VE')),
+      contractor: field(r,'Contractor Name','Contractor')||'',
+      contractValue: toNum(field(r,'Contract Value (THB)','Contract Value')),
+      start: excelDateToISO(field(r,'Start Date')),
+      end: excelDateToISO(field(r,'End Date')),
+      owner: field(r,'Project Manager')||'',
+      remarks: field(r,'Remarks')||'',
+      masterSchedulePdf: field(r,'Master Schedule PDF','Master Schedule Link','PDF Link')||'',
+      dataReceivedDate: excelDateToISO(field(r,'BD Data Received Date','Data Received Date')),
+      phases: []
+    };
+  });
+  const byName = {};
+  projects.forEach(p=> byName[p.name.toLowerCase()] = p);
+
+  // forward-fill Project Name for merged cells (Excel merge leaves blank on the 2nd+ sub-row)
+  let lastProjectName = '';
+  let lastDeliveryDate = '';
+  let lastActualDeliveryDate = '';
+  schedRows.forEach(r=>{
+    const pname = field(r,'Project Name');
+    if(pname && String(pname).trim()){
+      lastProjectName = String(pname).trim();
+    } else {
+      r[normKey('Project Name')] = lastProjectName;
+    }
+    const dd = field(r,'Delivery Date');
+    if(dd){
+      lastDeliveryDate = dd;
+    } else {
+      r[normKey('Delivery Date')] = lastDeliveryDate;
+    }
+    const add = field(r,'Actual Delivery Date');
+    if(add){
+      lastActualDeliveryDate = add;
+    } else {
+      r[normKey('Actual Delivery Date')] = lastActualDeliveryDate;
+    }
+  });
+
+  schedRows.forEach(r=>{
+    const pname = field(r,'Project Name');
+    if(!pname) return;
+    const key = String(pname).trim().toLowerCase();
+    const progressRaw = field(r,'% Complete','Progress');
+    const pct = typeof progressRaw==='number' && progressRaw<=1
+      ? Math.round(progressRaw*100) : Math.round(toNum(progressRaw));
+    const phaseObj = {
+      phase: field(r,'Phase')||'-',
+      start: excelDateToISO(field(r,'Start Date')),
+      end: excelDateToISO(field(r,'End Date')),
+      actualStart: excelDateToISO(field(r,'Actual Start Date')),
+      actualEnd: excelDateToISO(field(r,'Actual End Date')),
+      pct, status: normStatus(field(r,'Status')), remarks: field(r,'Remarks')||''
+    };
+    if(byName[key]){
+      byName[key].phases.push(phaseObj);
+      const dd2 = field(r,'Delivery Date');
+      if(dd2) byName[key].deliveryDate = excelDateToISO(dd2);
+      const add2 = field(r,'Actual Delivery Date');
+      if(add2) byName[key].actualDeliveryDate = excelDateToISO(add2);
+    } else {
+      const np = {name:String(pname).trim(), status:phaseObj.status, type:'external', progress:pct, budget:0, spent:0,
+                  pettyCash:0, collected:0, manHours:0, siteVisitDays:0, inspector:'', preliminary:0, vo:0, ve:0, contractor:'', contractValue:0,
+                  deliveryDate: excelDateToISO(field(r,'Delivery Date')),
+                  actualDeliveryDate: excelDateToISO(field(r,'Actual Delivery Date')),
+                  start:phaseObj.start, end:phaseObj.end, owner:'', remarks:'', masterSchedulePdf:'', phases:[phaseObj]};
+      projects.push(np); byName[key]=np;
+    }
+  });
+  if(!projects.length) throw new Error('No usable project data was found in this file.');
+
+  // Optional third sheet: Site Visit Log (team-wide monthly site visits) — not required
+  let siteVisitLog = [];
+  const visitName = wb.SheetNames.find(n=>n.trim().toLowerCase()==='site visit log');
+  if(visitName){
+    const visitRows = XLSX.utils.sheet_to_json(wb.Sheets[visitName], {range:3, defval:''}).map(buildNormRow);
+    siteVisitLog = visitRows.filter(r=>field(r,'Visit Date','Month') && field(r,'Inspector Name')).map(r=>{
+      let monthVal = field(r,'Visit Date','Month');
+      let monthISO;
+      if(monthVal instanceof Date) monthISO = monthVal.toISOString().slice(0,10);
+      else monthISO = excelDateToISO(monthVal) || String(monthVal);
+      return {
+        month: monthISO,
+        project: String(field(r,'Project Name')||'').trim(),
+        inspector: String(field(r,'Inspector Name')).trim(),
+        hours: toNum(field(r,'Site Visit Hours'))
+      };
+    });
+  }
+
+  // Optional fourth sheet: Internal Work (internal, non-project tasks/initiatives) — not required
+  let internalWork = [];
+  const internalName = wb.SheetNames.find(n=>n.trim().toLowerCase()==='internal work');
+  if(internalName){
+    const internalRows = XLSX.utils.sheet_to_json(wb.Sheets[internalName], {range:3, defval:''}).map(buildNormRow);
+    internalWork = internalRows.filter(r=>field(r,'Topic')).map(r=>({
+      topic: String(field(r,'Topic')).trim(),
+      details: field(r,'Details')||'',
+      start: excelDateToISO(field(r,'Start Date')),
+      end: excelDateToISO(field(r,'End Date')),
+      status: normStatus(field(r,'Status'))
+    }));
+  }
+
+  return { projects, siteVisitLog, internalWork, extraCashAdvance };
+}
+
+/* ===================== CHANGE DETECTION ===================== */
+function diffProjects(oldList, newList){
+  const changes = [];
+  const oldByName = {};
+  oldList.forEach(p=> oldByName[p.name.toLowerCase()] = p);
+  const newNames = new Set(newList.map(p=>p.name.toLowerCase()));
+
+  const fieldDefs = [
+    {key:'status', label:'Status', fmt:v=>statusLabel[v]||v},
+    {key:'type', label:'Project Type', fmt:v=>typeLabel[v]||v},
+    {key:'progress', label:'Progress', fmt:v=>(v||0)+'%'},
+    {key:'budget', label:'Budget', fmt:v=>fmtM(v||0)},
+    {key:'spent', label:'Paid to Contractor', fmt:v=>fmtM(v||0)},
+    {key:'collected', label:'Amount Collected', fmt:v=>fmtM(v||0)},
+    {key:'contractor', label:'Contractor', fmt:v=>v||'-'},
+    {key:'contractValue', label:'Contract Value', fmt:v=>fmtM(v||0)},
+    {key:'end', label:'End Date', fmt:v=>v||'-'},
+    {key:'deliveryDate', label:'Delivery Date', fmt:v=>v||'-'},
+  ];
+
+  newList.forEach(np=>{
+    const op = oldByName[np.name.toLowerCase()];
+    if(!op){
+      changes.push({type:'added', project:np.name, text:`New project added`});
+      return;
+    }
+    fieldDefs.forEach(fd=>{
+      const ov = op[fd.key], nv = np[fd.key];
+      if((ov||'') !== (nv||'') && !(!ov && !nv)){
+        changes.push({type:'changed', project:np.name, text:`${fd.label} changed from ${fd.fmt(ov)} to ${fd.fmt(nv)}`});
+      }
+    });
+  });
+  oldList.forEach(op=>{
+    if(!newNames.has(op.name.toLowerCase())){
+      changes.push({type:'removed', project:op.name, text:`Project removed from the file`});
+    }
+  });
+  return changes;
+}
+
+function showChangeNotification(changes){
+  const box = document.getElementById('changeNotification');
+  if(!changes.length){ box.style.display = 'none'; return; }
+  const MAX = 25;
+  const shown = changes.slice(0, MAX);
+  const extra = changes.length - shown.length;
+  box.innerHTML = `
+    <div class="change-notif-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4m0 4h.01M10.3 3.9 2.7 17a1.6 1.6 0 0 0 1.4 2.4h15.8a1.6 1.6 0 0 0 1.4-2.4L13.7 3.9a1.6 1.6 0 0 0-2.8 0Z"/></svg>
+      <span><b>${changes.length}</b> change${changes.length===1?'':'s'} detected since the last update <span style="color:var(--steel); font-weight:400;">(saved to Change History in the Upload tab)</span></span>
+      <button class="change-notif-close" onclick="document.getElementById('changeNotification').style.display='none';">\u2715</button>
+    </div>
+    <ul class="change-notif-list">
+      ${shown.map(c=>`<li><span class="change-tag ${c.type}">${c.type}</span><b>${c.project}</b> \u2014 ${c.text}</li>`).join('')}
+      ${extra>0 ? `<li class="change-notif-more">+ ${extra} more change${extra===1?'':'s'}</li>` : ''}
+    </ul>
+  `;
+  box.style.display = 'block';
+}
+
+function handleFile(file){
+  const statusEl = document.getElementById('uploadStatus');
+  statusEl.className = 'status-msg'; statusEl.textContent = '';
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:true});
+      const { projects, siteVisitLog, internalWork, extraCashAdvance } = parseWorkbook(wb);
+      const previousProjects = state.projects;
+      const hadPreviousData = previousProjects.length > 0;
+      const changes = hadPreviousData ? diffProjects(previousProjects, projects) : [];
+      state.projects = projects;
+      state.siteVisitLog = siteVisitLog;
+      state.internalWork = internalWork;
+      state.extraCashAdvance = extraCashAdvance;
+      renderAll();
+      showChangeNotification(changes);
+      appendChangeLog(file.name, changes);
+      renderChangeHistory();
+      saveStateToStorage(file.name);
+      const visitNote = siteVisitLog.length ? `, ${siteVisitLog.length} site visit log entries` : '';
+      const changeNote = changes.length ? ` \u2014 ${changes.length} change${changes.length===1?'':'s'} detected, see the notice at the top of the Dashboard tab` : '';
+            document.getElementById('footnoteText').innerHTML = `Currently showing data from <b>${file.name}</b> (${projects.length} projects${visitNote}) — upload a new file anytime from the "Upload Excel Data" tab to refresh this Dashboard.`;
+      statusEl.className = 'status-msg ok';
+      statusEl.textContent = `Upload successful: loaded ${projects.length} projects${visitNote} from "${file.name}"${changeNote}.`;
+    }catch(err){
+      statusEl.className = 'status-msg err';
+      statusEl.textContent = 'Upload failed: ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ===================== REFRESH FROM HOSTED URL ===================== */
+function updateRefreshIndicator(ok, when){
+  const label = document.getElementById('refreshLabel');
+  const sub = document.getElementById('refreshSubLabel');
+  if(!label) return;
+  if(ok){
+    label.textContent = 'Refreshed ' + when.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+    sub.textContent = when.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+  } else {
+    label.textContent = 'Refresh failed';
+    sub.textContent = 'Using last loaded data';
+  }
+}
+
+async function refreshFromURL(url, opts={}){
+  const statusEl = document.getElementById('refreshStatus');
+  if(statusEl){ statusEl.className = 'status-msg'; statusEl.textContent = ''; }
+  if(!url){
+    if(!opts.silent && statusEl){ statusEl.className = 'status-msg err'; statusEl.textContent = 'Please enter a URL to refresh from.'; }
+    return;
+  }
+  try{
+    // Cache-bust: raw.githubusercontent.com (and many other CDNs) cache files at the edge
+    // for several minutes after a commit, independent of the browser's own HTTP cache.
+    // Adding a changing query parameter forces a fresh fetch every time.
+    const bustUrl = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+    const res = await fetch(bustUrl, {cache:'no-store'});
+    if(!res.ok) throw new Error('Server returned ' + res.status + ' \u2014 this usually means the link needs sign-in, isn\u2019t a direct-download link, or isn\u2019t publicly accessible.');
+    const buffer = await res.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buffer), {type:'array', cellDates:true});
+    const { projects, siteVisitLog, internalWork, extraCashAdvance } = parseWorkbook(wb);
+    const previousProjects = state.projects;
+    const hadPreviousData = previousProjects.length > 0;
+    const changes = hadPreviousData ? diffProjects(previousProjects, projects) : [];
+    state.projects = projects;
+    state.siteVisitLog = siteVisitLog;
+    state.internalWork = internalWork;
+    state.extraCashAdvance = extraCashAdvance;
+    renderAll();
+    showChangeNotification(changes);
+    const sourceLabel = url.split('/').pop().split('?')[0];
+    appendChangeLog(sourceLabel, changes);
+    renderChangeHistory();
+    saveStateToStorage(sourceLabel);
+    const now = new Date();
+    updateRefreshIndicator(true, now);
+    const visitNote = siteVisitLog.length ? `, ${siteVisitLog.length} site visit log entries` : '';
+    const changeNote = changes.length ? ` \u2014 ${changes.length} change${changes.length===1?'':'s'} detected` : '';
+    document.getElementById('footnoteText').innerHTML = `Refreshed from hosted file (${projects.length} projects${visitNote}) at ${now.toLocaleString('en-GB')}${changeNote}.`;
+    if(statusEl){
+      statusEl.className = 'status-msg ok';
+      statusEl.textContent = `Refreshed successfully: loaded ${projects.length} projects${visitNote}${changeNote}.`;
+    }
+    const lastTimeEl = document.getElementById('refreshLastTime');
+    if(lastTimeEl) lastTimeEl.textContent = now.toLocaleString('en-GB');
+  }catch(err){
+    updateRefreshIndicator(false, new Date());
+    if(!opts.silent && statusEl){
+      statusEl.className = 'status-msg err';
+      statusEl.textContent = 'Refresh failed: ' + err.message;
+    }
+  }
+}
+
+function resetToSample(){
+  state.projects = JSON.parse(JSON.stringify(SAMPLE_PROJECTS));
+  state.siteVisitLog = JSON.parse(JSON.stringify(SAMPLE_SITE_VISIT_LOG));
+  state.internalWork = JSON.parse(JSON.stringify(SAMPLE_INTERNAL_WORK));
+  state.extraCashAdvance = 250000;
+  renderAll();
+    document.getElementById('footnoteText').innerHTML = 'This view is currently showing <b>sample reference data</b> — upload your own Excel file anytime to replace it, or use "Clear Data" to start over.';
+  document.getElementById('uploadStatus').className = 'status-msg';
+}
+
+function clearData(){
+  state.projects = [];
+  state.siteVisitLog = [];
+  state.internalWork = [];
+  state.extraCashAdvance = 0;
+  renderAll();
+  clearStoredState();
+  document.getElementById('footnoteText').innerHTML = 'No project data loaded yet — go to the "Upload Excel Data" tab to load your project file and populate this Dashboard.';
+  document.getElementById('uploadStatus').className = 'status-msg';
+}
+
+const fileInput = document.getElementById('fileInput');
+fileInput.addEventListener('change', e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+const dropZone = document.getElementById('dropZone');
+['dragenter','dragover'].forEach(evt=> dropZone.addEventListener(evt, e=>{ e.preventDefault(); dropZone.classList.add('dragover'); }));
+['dragleave','drop'].forEach(evt=> dropZone.addEventListener(evt, e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); }));
+dropZone.addEventListener('drop', e=>{ if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+/* ===================== PROJECT DETAIL MODAL ===================== */
+/* ===================== SCHEDULE CHART (Planned vs Actual, per project) ===================== */
+let scheduleChart = null;
+
+function milestoneLabel(phase){
+  if(/first/i.test(phase)) return 'First Fix';
+  if(/second/i.test(phase)) return 'Second Fix';
+  return phase;
+}
+
+/* Classic ease-in/ease-out S-curve shaping function (0->0, 1->1, slow-fast-slow) */
+function smoothstep(t){
+  t = Math.max(0, Math.min(1, t));
+  return t*t*(3 - 2*t);
+}
+
+/* Generate S-curve-shaped points between two (day, %) anchors */
+function sCurvePoints(dayStart, yStart, dayEnd, yEnd, steps=16){
+  const pts = [];
+  if(dayStart==null || dayEnd==null) return pts;
+  if(dayEnd <= dayStart){ pts.push({x:dayStart, y:Math.round(yStart)}); return pts; }
+  for(let i=0; i<=steps; i++){
+    const t = i/steps;
+    const x = dayStart + (dayEnd-dayStart)*t;
+    const y = yStart + (yEnd-yStart)*smoothstep(t);
+    pts.push({x:Math.round(x), y:Math.round(y*10)/10});
+  }
+  return pts;
+}
+
+function buildScheduleCurve(p, phases){
+  if(!phases.length) return null;
+  const segSize = 100 / phases.length;
+
+  const allDates = [];
+  phases.forEach(ph=>{
+    [ph.start, ph.end, ph.actualStart, ph.actualEnd].forEach(d=>{ if(d) allDates.push(new Date(d)); });
+  });
+  if(p.deliveryDate) allDates.push(new Date(p.deliveryDate));
+  if(p.actualDeliveryDate) allDates.push(new Date(p.actualDeliveryDate));
+  if(!allDates.length) return null;
+
+  const origin = new Date(Math.min(...allDates));
+  const dayOf = d => d ? Math.round((new Date(d) - origin) / 86400000) : null;
+
+  const planned = [];
+  const actual = [];
+  const today = new Date();
+
+  phases.forEach((ph, i)=>{
+    const segStart = i * segSize, segEnd = (i + 1) * segSize;
+    if(ph.start && ph.end){
+      planned.push(...sCurvePoints(dayOf(ph.start), segStart, dayOf(ph.end), segEnd));
+    }
+
+    const aStart = ph.actualStart || ph.start;
+    if(ph.actualEnd && aStart){
+      actual.push(...sCurvePoints(dayOf(aStart), segStart, dayOf(ph.actualEnd), segEnd));
+    } else if(aStart){
+      const targetY = segStart + (ph.pct||0)/100*segSize;
+      actual.push(...sCurvePoints(dayOf(aStart), segStart, dayOf(today), targetY));
+    }
+  });
+
+  const milestones = phases.map((ph, i)=>({
+    label: milestoneLabel(ph.phase),
+    plannedDate: ph.end, plannedY: Math.round((i + 1) * segSize),
+    actualDate: ph.actualEnd || null, actualY: ph.actualEnd ? Math.round((i + 1) * segSize) : null
+  }));
+  if(p.deliveryDate || p.actualDeliveryDate){
+    milestones.push({
+      label: 'Delivery',
+      plannedDate: p.deliveryDate || null, plannedY: 100,
+      actualDate: p.actualDeliveryDate || null, actualY: p.actualDeliveryDate ? 100 : null
+    });
+  }
+
+  return { origin, planned, actual, milestones };
+}
+
+function renderScheduleChart(p, phases){
+  const canvas = document.getElementById('modalScheduleChart');
+  const wrap = document.querySelector('#scheduleModalCard .modal-body');
+  if(scheduleChart){ scheduleChart.destroy(); scheduleChart = null; }
+
+  const existingEmpty = wrap.querySelector('.schedule-chart-empty');
+  if(existingEmpty) existingEmpty.remove();
+
+  const curve = buildScheduleCurve(p, phases);
+  if(!curve){
+    canvas.style.display = 'none';
+    wrap.insertAdjacentHTML('beforeend', `<div class="schedule-chart-empty" style="font-size:12.5px; color:var(--steel); font-style:italic;">No schedule date data available to chart for this project.</div>`);
+    return;
+  }
+  canvas.style.display = 'block';
+  const { origin, planned, actual, milestones } = curve;
+  const fmtDay = (dayOffset)=>{
+    const d = new Date(origin.getTime() + dayOffset*86400000);
+    return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+  };
+
+  const plannedMilestonePts = milestones.filter(m=>m.plannedDate).map(m=>({x: Math.round((new Date(m.plannedDate)-origin)/86400000), y: m.plannedY, label: m.label}));
+  const actualMilestonePts = milestones.filter(m=>m.actualDate).map(m=>({x: Math.round((new Date(m.actualDate)-origin)/86400000), y: m.actualY, label: m.label}));
+
+  scheduleChart = new Chart(canvas, {
+    type:'line',
+    data:{
+      datasets:[
+        { label:'Planned', data: planned, borderColor:'#98A5AD', backgroundColor:'#98A5AD', borderDash:[6,4], borderWidth:2, pointRadius:0, tension:0, order:3 },
+        { label:'Actual', data: actual, borderColor:'#E2691F', backgroundColor:'#E2691F', borderWidth:2.5, pointRadius:0, tension:0, order:2 },
+        { label:'Milestone (Planned)', data: plannedMilestonePts, type:'scatter', backgroundColor:'#647480', borderColor:'#647480', pointStyle:'rectRot', pointRadius:6, pointHoverRadius:7, order:1 },
+        { label:'Milestone (Actual)', data: actualMilestonePts, type:'scatter', backgroundColor:'#E2691F', borderColor:'#9a5413', pointStyle:'star', pointRadius:7, pointHoverRadius:8, order:0 }
+      ]
+    },
+    options:{
+      responsive:true,
+      animation: reduceMotion?false:{duration:400},
+      parsing:false,
+      plugins:{
+        legend:{display:false},
+        datalabels:{display:false},
+        tooltip:{
+          callbacks:{
+            title:(items)=> items.length ? fmtDay(items[0].parsed.x) : '',
+            label:(item)=>{
+              const dsLabel = item.dataset.label;
+              const point = item.raw;
+              if(point && point.label) return `${dsLabel}: ${point.label} (${Math.round(point.y)}%)`;
+              return `${dsLabel}: ${Math.round(item.parsed.y)}%`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{ type:'linear', title:{display:true, text:'Date'}, ticks:{ callback:(v)=>fmtDay(v) } },
+        y:{ min:0, max:100, title:{display:true, text:'% Complete'}, ticks:{ callback:(v)=>v+'%' } }
+      }
+    }
+  });
+}
+
+function openProjectModal(name){
+  const p = state.projects.find(x=>x.name===name);
+  if(!p) return;
+  document.getElementById('modalProjectName').textContent = p.name;
+  const typeEl = document.getElementById('modalProjectType');
+  typeEl.className = 'badge-type ' + p.type;
+  typeEl.textContent = typeLabel[p.type];
+  const statusEl = document.getElementById('modalProjectStatus');
+  statusEl.className = 'badge ' + p.status;
+  statusEl.textContent = statusLabel[p.status];
+  const risk = computeRisk(p);
+  const riskEl = document.getElementById('modalProjectRisk');
+  riskEl.className = 'badge-risk ' + risk.cls;
+  riskEl.textContent = risk.daysLate>0 ? `${risk.label} (${risk.daysLate}d)` : risk.label;
+  document.getElementById('modalProgress').textContent = p.progress + '%';
+  document.getElementById('modalEnd').textContent = p.end || '-';
+  document.getElementById('modalDelivery').textContent = p.deliveryDate || '-';
+  document.getElementById('modalBudget').textContent = fmtM(p.budget||0);
+  document.getElementById('modalSpent').textContent = fmtM(p.spent||0);
+  document.getElementById('modalCollected').textContent = fmtM(p.collected||0);
+  const pendingDrawdown = (p.budget||0) - (p.collected||0);
+  document.getElementById('modalPending').textContent = fmtM(pendingDrawdown);
+  document.getElementById('modalSpentPct').textContent = (p.contractValue? Math.round((p.spent||0)/p.contractValue*100):0) + '% of contract value';
+  document.getElementById('modalCollectedPct').textContent = (p.budget? Math.round((p.collected||0)/p.budget*100):0) + '% of budget';
+  document.getElementById('modalPendingPct').textContent = (p.budget? Math.round(pendingDrawdown/p.budget*100):0) + '% of budget';
+  document.getElementById('modalPetty').textContent = fmtM(p.pettyCash||0);
+  document.getElementById('modalManHours').textContent = (p.manHours||0) + ' hrs';
+  document.getElementById('modalSiteVisit').textContent = (p.siteVisitDays||0) + ' days · ' + (p.inspector||'-');
+
+  const pct = p.budget ? (p.spent||0)/p.budget*100 : 0;
+  const finFlag = (pct - (p.progress||0)) > 15;
+  const finFlagEl = document.getElementById('modalFinFlag');
+  finFlagEl.innerHTML = `<span class="badge ${finFlag?'flag':'normal'}">${finFlag?'Over Budget vs Progress':'Normal'}</span>`;
+
+  const notAwarded = !p.contractor || p.contractor==='Not Yet Awarded';
+  document.getElementById('modalContractor').textContent = notAwarded ? 'Not Yet Awarded' : p.contractor;
+  document.getElementById('modalContractValue').textContent = notAwarded ? '-' : fmtM(p.contractValue||0);
+  document.getElementById('modalContractPct').textContent = notAwarded ? '-' : (p.budget ? ((p.contractValue||0)/p.budget*100).toFixed(0)+'%' : '-');
+
+  const trueImpact = (p.vo||0) - (p.ve||0);
+  const netDisplay = (p.ve||0) - (p.vo||0);
+  document.getElementById('modalPrelim').textContent = fmtM(p.preliminary||0);
+  document.getElementById('modalVO').textContent = ((p.vo||0)>0?'-':'') + fmtM(p.vo||0);
+  document.getElementById('modalVE').textContent = ((p.ve||0)>0?'+':'') + fmtM(p.ve||0);
+  document.getElementById('modalNetVar').textContent = (netDisplay>=0?'+':'') + fmtM(netDisplay);
+  document.getElementById('modalAdjusted').textContent = fmtM((p.budget||0) + trueImpact);
+
+  const phases = (p.phases&&p.phases.length) ? p.phases : [];
+
+  function phaseByOrdinal(ordinal){
+    const re = new RegExp('\\b'+ordinal+'\\b');
+    let match = phases.find(ph => re.test(ph.phase) || (ordinal===1 && /first/i.test(ph.phase)) || (ordinal===2 && /second/i.test(ph.phase)));
+    if(!match) match = phases[ordinal-1];
+    return match;
+  }
+  const firstFix = phaseByOrdinal(1);
+  const secondFix = phaseByOrdinal(2);
+  document.getElementById('modalFirstFixDate').textContent = firstFix && firstFix.end ? firstFix.end : '-';
+  document.getElementById('modalSecondFixDate').textContent = secondFix && secondFix.end ? secondFix.end : '-';
+  document.getElementById('modalFirstFixPct').textContent = firstFix ? `${firstFix.pct}% complete` : '';
+  document.getElementById('modalSecondFixPct').textContent = secondFix ? `${secondFix.pct}% complete` : '';
+
+  const pdfWrap = document.getElementById('modalMasterSchedulePdf');
+  pdfWrap.innerHTML = p.masterSchedulePdf
+    ? `<a class="btn secondary" href="${p.masterSchedulePdf}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:7px; text-decoration:none;">📄 View Master Schedule (PDF) ↗</a>`
+    : `<span style="font-size:12px; color:var(--steel); font-style:italic;">No Master Schedule PDF linked for this project.</span>`;
+
+  document.getElementById('modalPhases').innerHTML = phases.length ? phases.map(ph=>`
+    <div class="modal-phase">
+      <span class="badge ${ph.status}" style="min-width:0;">${statusLabel[ph.status]}</span>
+      <span class="ph-name">${ph.phase}</span>
+      <span class="ph-date">${ph.start||'-'} → ${ph.end||'-'} · ${ph.pct}%</span>
+    </div>`).join('') : `<div style="font-size:12.5px; color:var(--steel); font-style:italic;">No work-phase data available for this project.</div>`;
+
+  document.getElementById('modalRemarksWrap').innerHTML = p.remarks ?
+    `<div class="modal-remarks"><b>Remarks:</b> ${p.remarks}</div>` : '';
+
+  currentModalProject = p;
+  currentModalPhases = phases;
+  document.getElementById('modalBackdrop').classList.add('open');
+}
+const closeProjectModal = wireModal('modalBackdrop', 'modalCloseBtn');
+
+let currentModalProject = null;
+let currentModalPhases = [];
+
+function openScheduleModal(){
+  if(!currentModalProject) return;
+  document.getElementById('scheduleModalTitle').textContent = currentModalProject.name;
+  document.getElementById('scheduleModalBackdrop').classList.add('open');
+  renderScheduleChart(currentModalProject, currentModalPhases);
+}
+const closeScheduleModal = wireModal('scheduleModalBackdrop', 'scheduleModalCloseBtn');
+document.getElementById('modalOpenScheduleChartBtn').addEventListener('click', openScheduleModal);
+
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Escape') return;
+  if(document.getElementById('scheduleModalBackdrop').classList.contains('open')) closeScheduleModal();
+  else closeProjectModal();
+});
+document.addEventListener('click', e=>{
+  const link = e.target.closest('.proj-link');
+  if(link){
+    closeBreakdownModal();
+    openProjectModal(link.dataset.name);
+  }
+});
+
+/* ===================== INIT ===================== */
+const remembered = loadStateFromStorage();
+if(remembered && remembered.projects && remembered.projects.length){
+  state.projects = remembered.projects;
+  state.siteVisitLog = remembered.siteVisitLog || [];
+  state.internalWork = remembered.internalWork || [];
+  state.extraCashAdvance = remembered.extraCashAdvance || 0;
+}
+renderAll();
+renderChangeHistory();
+if(remembered && remembered.projects && remembered.projects.length){
+  const savedDate = new Date(remembered.savedAt);
+  document.getElementById('footnoteText').innerHTML = `Showing the last uploaded file <b>${remembered.fileLabel}</b> (${remembered.projects.length} projects), uploaded ${savedDate.toLocaleString('en-GB')} \u2014 this Dashboard remembers it until a new file is uploaded.`;
+}
+
+// Attempt an automatic refresh on page load from the configured source link.
+// This compares against whatever was just restored above, so a change notice will
+// still appear if the hosted file has genuinely changed. This silently fails (no error
+// shown) if the link requires sign-in or blocks cross-origin access — the "Refresh Now"
+// button always lets you retry manually and see the actual error.
+const INITIAL_SOURCE_URL = document.getElementById('refreshUrlInput') ? document.getElementById('refreshUrlInput').value.trim() : '';
+if(INITIAL_SOURCE_URL){
+  refreshFromURL(INITIAL_SOURCE_URL, {silent:true});
+}
+
+</script>
+
+</body>
+</html>
