@@ -670,6 +670,17 @@
         <span><i class="sw" style="background:var(--pulse); width:2px; border-radius:0;"></i> Today</span>
       </div>
     </div>
+
+    <!-- ============ 3. MONTHLY REPORT ============ -->
+    <div class="sec-title" id="sec-monthly-report" style="margin-top:24px;">
+      <span class="eyebrow">Report</span>
+      <h2>Monthly Report</h2>
+      <span class="hint">Data changes detected on each upload/refresh, grouped by month</span>
+      <div class="rule"></div>
+    </div>
+    <div class="panel">
+      <div id="monthlyReportList"></div>
+    </div>
   </div>
 
   <!-- ================= INTERNAL WORK PAGE ================= -->
@@ -1053,6 +1064,7 @@ function appendChangeLog(fileLabel, changes){
 function clearChangeLog(){
   try{ localStorage.removeItem(CHANGE_LOG_KEY); }catch(e){}
   renderChangeHistory();
+  renderMonthlyReport();
 }
 
 function renderChangeHistory(){
@@ -1073,6 +1085,40 @@ function renderChangeHistory(){
       </button>
       <ul class="change-notif-list history-entry-body" id="historyBody_${i}">
         ${entry.changes.map(c=>`<li><span class="change-tag ${c.type}">${c.type}</span><b>${c.project}</b> \u2014 ${c.text}</li>`).join('')}
+      </ul>
+    </div>`;
+  }).join('');
+}
+
+/* Groups the same change-log entries used by Change History into per-month
+   buckets, so a project's month-to-month changes can be reviewed at a glance. */
+function renderMonthlyReport(){
+  const wrap = document.getElementById('monthlyReportList');
+  if(!wrap) return;
+  const log = loadChangeLog();
+  if(!log.length){
+    wrap.innerHTML = `<div style="text-align:center; color:var(--steel); font-style:italic; padding:18px;">No changes recorded yet \u2014 this fills in automatically every time an upload or refresh changes the data.</div>`;
+    return;
+  }
+  const byMonth = {};
+  log.forEach(entry=>{
+    const d = new Date(entry.timestamp);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    (byMonth[key] = byMonth[key] || []).push(...entry.changes);
+  });
+  const monthKeys = Object.keys(byMonth).sort().reverse();
+  wrap.innerHTML = monthKeys.map((key, i)=>{
+    const [y,m] = key.split('-');
+    const label = new Date(Number(y), Number(m)-1, 1).toLocaleDateString('en-GB', {month:'long', year:'numeric'});
+    const changes = byMonth[key];
+    return `
+    <div class="history-entry">
+      <button class="history-entry-head" onclick="document.getElementById('monthlyReportBody_${i}').classList.toggle('open');">
+        <span><b>${label}</b></span>
+        <span class="history-count">${changes.length} change${changes.length===1?'':'s'}</span>
+      </button>
+      <ul class="change-notif-list history-entry-body${i===0?' open':''}" id="monthlyReportBody_${i}">
+        ${changes.map(c=>`<li><span class="change-tag ${c.type}">${c.type}</span><b>${c.project}</b> \u2014 ${c.text}</li>`).join('')}
       </ul>
     </div>`;
   }).join('');
@@ -1826,7 +1872,7 @@ function renderInternalWork(){
     </div>`).join('') : `<div style="text-align:center; color:var(--steel); font-style:italic; padding:24px;">No internal work items loaded yet — go to the "Upload Excel Data" tab to load your Internal Work sheet.</div>`;
 }
 
-function renderAll(){ renderOverview(); renderConstructionTable(); renderSiteVisitChart(); renderGantt(); renderContractors(); renderFinance(); renderVariations(); renderInternalWork(); }
+function renderAll(){ renderOverview(); renderConstructionTable(); renderSiteVisitChart(); renderGantt(); renderContractors(); renderFinance(); renderVariations(); renderInternalWork(); renderMonthlyReport(); }
 
 /* ===================== EXCEL IMPORT ===================== */
 function excelDateToISO(val){
