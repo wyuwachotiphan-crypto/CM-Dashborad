@@ -11,18 +11,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
-    --ink:#0E2238;        /* blueprint ink — primary dark surface */
-    --ink-soft:#163655;    /* secondary dark surface (tab bar) */
+    --ink:#2B3A67;         /* portal navy — primary dark surface */
+    --ink-soft:#37456F;    /* secondary dark surface (tab bar) */
     --grid:#3E7CA6;        /* blueprint gridline blue */
-    --heading:#154BA6;     /* section heading blue */
+    --heading:#2B3A67;     /* section heading — portal navy */
     --paper:#FFFFFF;       /* card surface */
-    --canvas:#FFFFFF;      /* page background */
-    --accent:#E2691F;      /* survey-flag orange — primary accent */
+    --canvas:#F7F6F3;      /* page background — portal warm off-white */
+    --accent:#E2691F;      /* Construction Team orange — primary accent */
     --accent-soft:#F3D9C2; /* tint of accent */
     --pulse:#4FB8D6;       /* blueprint cyan — ambient / live signature */
-    --text:#16202C;        /* body ink */
-    --steel:#647480;       /* secondary text */
-    --line:#DEDACD;        /* hairline border on paper */
+    --text:#37352F;        /* body ink — portal warm dark */
+    --steel:#787774;       /* secondary text — portal muted */
+    --line:#E3E2DE;        /* hairline border — portal border tone */
     --green:#3E8F63;
     --red:#C2493C;
     --gray:#98A5AD;
@@ -193,14 +193,6 @@
   .badge-type.external{color:var(--steel); border-color:rgba(100,116,128,0.3); background:rgba(100,116,128,0.06);}
   .badge-type.external::before{background:var(--gray);}
 
-  /* ================= TYPE SPLIT (Project Overview) ================= */
-  .type-split-panel{margin-top:14px;}
-  .type-split-bar{display:flex; height:14px; border-radius:7px; overflow:hidden; background:var(--line); margin-bottom:12px;}
-  .type-split-bar span{height:100%; transition:width .4s ease;}
-  .type-split-legend{display:flex; gap:22px; flex-wrap:wrap; font-size:12px;}
-  .type-split-legend div{display:flex; align-items:center; gap:7px;}
-  .type-split-legend .sw{width:8px; height:8px; border-radius:50%; display:inline-block;}
-
   /* ================= CHART DRILL-DOWN ================= */
   .chart-hint{display:block; font-size:11.5px; color:var(--steel); margin:-8px 0 10px; font-style:italic;}
   .breakdown-rows{display:flex; flex-direction:column; gap:8px; max-height:60vh; overflow-y:auto;}
@@ -210,9 +202,12 @@
   .breakdown-bar span{display:block; height:100%; border-radius:4px;}
   .breakdown-val{font-family:'IBM Plex Mono'; text-align:right; color:var(--ink); white-space:nowrap;}
   .breakdown-empty{font-size:12px; color:var(--steel); font-style:italic;}
-  .breakdown-row-simple{display:grid; grid-template-columns:minmax(110px,1fr) 84px 104px; align-items:center; gap:12px; font-size:12.5px; padding:10px 4px; border-bottom:1px solid var(--line);}
-  .breakdown-row-simple-2col{grid-template-columns:minmax(110px,1fr) 104px;}
-  .breakdown-row-simple-4col{grid-template-columns:minmax(70px,1fr) 92px 46px 66px; gap:8px; transition:background .12s ease; cursor:pointer;}
+  .breakdown-row-simple{display:grid; grid-template-columns:minmax(110px,1fr) 84px 150px; align-items:center; gap:12px; font-size:12.5px; padding:10px 4px; border-bottom:1px solid var(--line);}
+  .breakdown-row-simple-2col{grid-template-columns:minmax(110px,1fr) 150px;}
+  .breakdown-row-simple-dates{grid-template-columns:minmax(110px,1fr) 290px;}
+  .breakdown-row-simple-dates:not(.breakdown-row-simple-head) span:last-child{white-space:nowrap; overflow:visible; text-overflow:clip;}
+  .breakdown-pct{color:var(--steel); font-weight:500;}
+  .breakdown-row-simple-4col{grid-template-columns:minmax(70px,1fr) 92px 46px 100px; gap:8px; transition:background .12s ease; cursor:pointer;}
   .breakdown-row-simple-4col:hover{background:rgba(226,105,31,0.045);}
   .breakdown-row-simple-4col.open{background:rgba(226,105,31,0.06);}
   .breakdown-row-simple-4col .badge, .breakdown-row-simple-4col .badge-risk{padding:3px 7px 3px 6px; gap:4px; white-space:nowrap;}
@@ -227,7 +222,7 @@
   .breakdown-row-simple span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text);}
   .breakdown-row-simple:not(.breakdown-row-simple-head) span:nth-child(2){font-family:'IBM Plex Mono'; color:var(--steel);}
   .breakdown-row-simple:not(.breakdown-row-simple-head) span:last-child{font-family:'IBM Plex Mono'; color:var(--ink); text-align:right;}
-  .visit-row{display:grid; grid-template-columns:100px 1fr 1fr 70px; align-items:center; gap:10px; font-size:12.5px; padding:8px 0; border-bottom:1px solid var(--line);}
+  .visit-row{display:grid; grid-template-columns:100px 1fr 1fr 1.3fr 70px; align-items:center; gap:10px; font-size:12.5px; padding:8px 0; border-bottom:1px solid var(--line);}
   .visit-row:last-child{border-bottom:none;}
   .visit-row-head{font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel); border-bottom:1.5px solid var(--ink); padding-bottom:8px;}
   .visit-row span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text);}
@@ -270,31 +265,49 @@
   .sv-chart-footer b{color:var(--ink); font-family:'Space Grotesk';}
   .contractor-summary{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 280px)); gap:14px; margin-bottom:18px;}
 
-  .gantt-wrap{overflow-x:auto;}
-  .gantt{min-width:1000px; position:relative;}
-  .gantt-header{display:grid; grid-template-columns:220px 1fr; margin-bottom:8px;}
-  .gantt-header .months{position:relative; font-family:'IBM Plex Mono'; font-size:11px; color:var(--steel); border-bottom:1.5px solid var(--ink); height:22px;}
-  .gantt-header .months div.cur-month{color:var(--accent); position:relative;}
-  .gantt-header .months div.cur-month::after{content:''; position:absolute; left:10%; right:10%; bottom:-1.5px; height:2.5px; background:var(--accent); border-radius:2px;}
+  .gantt-toolbar{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:14px;}
+  .gantt-toolbar-hint{font-size:11.5px; color:var(--steel); font-style:italic;}
+  .gantt-zoom-controls{display:flex; align-items:center; gap:8px;}
+  .gantt-zoom-icon{font-family:'IBM Plex Mono'; font-size:13px; color:var(--steel); user-select:none;}
+  .gantt-zoom-controls input[type="range"]{
+    width:120px; accent-color:var(--accent); cursor:pointer;
+  }
+  .gantt-zoom-controls button{
+    font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--ink); background:var(--paper);
+    border:1.5px solid var(--line); border-radius:7px; padding:6px 11px; cursor:pointer; transition:all .15s; line-height:1;
+  }
+  .gantt-zoom-controls button:hover{border-color:var(--accent); color:var(--accent);}
+  .gantt-zoom-controls button#ganttJumpToday{color:var(--pulse); border-color:var(--pulse);}
+  .gantt-scroll{overflow-x:auto; padding-bottom:6px;}
+  .gantt{position:relative;}
+  .gantt-header{display:grid; margin-bottom:8px;}
+  .gantt-header-spacer{position:sticky; left:0; z-index:3; background:var(--paper);}
+  .gantt-header .months{position:relative; font-family:'IBM Plex Mono'; font-size:11px; color:var(--steel); border-bottom:1.5px solid var(--ink); height:24px;}
+  .gantt-header .months div.month-seg{position:absolute; top:0; height:100%; display:flex; align-items:center; justify-content:center; border-left:1px solid var(--line); box-sizing:border-box;}
+  .gantt-header .months div.month-seg.month-alt{background:rgba(62,124,166,0.05);}
+  .gantt-header .months div.cur-month{color:var(--accent); font-weight:700;}
+  .gantt-header .months div.cur-month::after{content:''; position:absolute; left:14%; right:14%; bottom:0; height:2.5px; background:var(--accent); border-radius:2px;}
+  .gantt-header .weeks{position:relative; font-family:'IBM Plex Mono'; font-size:9.5px; color:var(--steel); border-bottom:1px solid var(--line); height:18px;}
+  .gantt-header .weeks div.week-seg{
+    position:absolute; top:0; height:100%; display:flex; align-items:center; justify-content:center;
+    border-left:1px solid var(--line); box-sizing:border-box; opacity:.85; white-space:nowrap; overflow:hidden;
+  }
+  .gantt-header .weeks div.cur-week{color:var(--pulse); font-weight:700; opacity:1;}
   .gantt-row{
-    display:grid; grid-template-columns:220px 1fr; grid-template-rows:auto auto; align-items:center; row-gap:5px;
+    display:grid; align-items:center;
     border-bottom:1px solid var(--line); padding:10px 0; transition:background .12s;
   }
   .gantt-row:hover{background:rgba(62,124,166,0.045);}
-  .gantt-row .pname{grid-column:1; grid-row:1/3; font-size:12.5px; font-weight:600; padding-right:10px; line-height:1.3; color:var(--text); align-self:center;}
-  .gantt-track{grid-column:2; grid-row:1; position:relative; height:26px; background-image:repeating-linear-gradient(90deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent calc(100%/var(--weeks)));}
-  .pdates{grid-column:2; grid-row:2; display:flex; gap:16px; flex-wrap:wrap; font-size:10.5px; font-family:'IBM Plex Mono'; color:var(--steel);}
-  .pdate-item{display:inline-flex; align-items:center; gap:5px;}
-  .pdate-item .dot{width:7px; height:7px; border-radius:50%; flex-shrink:0; display:inline-block;}
-  .pdate-item .dot.construction{background:var(--accent);}
-  .pdate-item .dot.completed{background:var(--green);}
-  .pdate-item .dot.planning{background:var(--gray);}
-  .pdate-item .dot.on_hold{background:var(--red);}
-  .pdate-item .dot.delivery{background:var(--ink);}
-  .pdate-item.pdate-delivery{font-weight:600; color:var(--ink);}
+  .gantt-row .pname{
+    grid-column:1; font-size:12.5px; font-weight:600; padding-right:10px; line-height:1.3; color:var(--text); align-self:center;
+    position:sticky; left:0; z-index:2; background:var(--paper); border-right:1px solid var(--line);
+  }
+  .gantt-row:hover .pname{background:#F7F6F3;}
+  .gantt-track{grid-column:2; position:relative; height:26px; background-image:repeating-linear-gradient(90deg, var(--line) 0, var(--line) 1px, transparent 1px, transparent calc(var(--day-px, 6px)*7));}
   .gantt-bar{
     position:absolute; top:4px; height:18px; border-radius:9px; font-size:9.5px; color:#fff; display:flex; align-items:center;
     padding:0 8px; white-space:nowrap; overflow:hidden; font-family:'IBM Plex Mono'; transition:filter .12s, transform .12s; box-shadow:0 1px 3px rgba(14,34,56,0.18);
+    cursor:pointer;
   }
   .gantt-bar:hover{filter:brightness(1.08); transform:scaleY(1.12); z-index:3;}
   .gantt-bar.construction{background:linear-gradient(90deg, var(--accent), #ec8138); color:#fff;}
@@ -378,21 +391,14 @@
 
   /* ================= FILTERS ================= */
   .filter-bar{display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:14px;}
-  .chip-groups{display:flex; flex-direction:column; gap:8px;}
-  .chip-group{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
-  .chip-group-label{font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel); width:44px; flex-shrink:0;}
-  .chips{display:flex; gap:8px; flex-wrap:wrap;}
-  .chip{
-    display:inline-flex; align-items:center; gap:7px; background:var(--paper); border:1.5px solid var(--line); color:var(--steel);
-    font-family:'IBM Plex Sans'; font-weight:600; font-size:12.5px; padding:7px 13px; border-radius:20px; cursor:pointer;
-    transition:all .15s;
+  .filter-select-groups{display:flex; gap:20px; flex-wrap:wrap;}
+  .filter-select-group{display:flex; align-items:center; gap:10px;}
+  .filter-select-label{font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel);}
+  .filter-select{
+    font-family:'IBM Plex Sans'; font-weight:600; font-size:12.5px; color:var(--ink); background:var(--paper);
+    border:1.5px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer;
   }
-  .chip .sw{width:8px; height:8px; border-radius:50%; background:var(--chip-color, var(--steel)); opacity:0.4;}
-  .chip .chip-count{font-family:'IBM Plex Mono'; font-size:11px; opacity:0.7;}
-  .chip.active{border-color:var(--chip-color, var(--ink)); color:var(--ink); background:color-mix(in srgb, var(--chip-color, var(--ink)) 8%, var(--paper));}
-  .chip.active .sw{opacity:1;}
-  .chip:hover{border-color:var(--chip-color, var(--ink));}
-  .chip-reset{background:transparent; border-style:dashed; color:var(--steel);}
+  .filter-select:hover{border-color:var(--ink);}
   .search-box{display:flex; align-items:center; gap:8px; background:var(--paper); border:1.5px solid var(--line); border-radius:20px; padding:7px 14px; min-width:220px;}
   .search-box svg{width:15px; height:15px; color:var(--steel); flex-shrink:0;}
   .search-box input{border:none; outline:none; background:transparent; font-family:'IBM Plex Sans'; font-size:12.5px; color:var(--text); width:100%;}
@@ -514,12 +520,6 @@
       </div>
     </div>
 
-    <div class="panel type-split-panel">
-      <h3 style="margin-bottom:10px;">Internal vs External</h3>
-      <div class="type-split-bar" id="typeSplitBar"></div>
-      <div class="type-split-legend" id="typeSplitLegend"></div>
-    </div>
-
     <!-- ============ 2. FINANCIAL OVERVIEW ============ -->
     <div class="sec-title" id="sec-financial-overview">
       <span class="eyebrow">Financials</span>
@@ -596,9 +596,25 @@
       <div class="rule"></div>
     </div>
     <div class="filter-bar">
-      <div class="chip-groups">
-        <div class="chip-group"><span class="chip-group-label">Status</span><div class="chips" id="filterChips"></div></div>
-        <div class="chip-group"><span class="chip-group-label">Type</span><div class="chips" id="typeFilterChips"></div></div>
+      <div class="filter-select-groups">
+        <div class="filter-select-group">
+          <label class="filter-select-label" for="statusFilterSelect">Status</label>
+          <select id="statusFilterSelect" class="filter-select">
+            <option value="all">All</option>
+            <option value="construction">Construction</option>
+            <option value="completed">Completed</option>
+            <option value="planning">Planning</option>
+            <option value="on_hold">Hold</option>
+          </select>
+        </div>
+        <div class="filter-select-group">
+          <label class="filter-select-label" for="typeFilterSelect">Type</label>
+          <select id="typeFilterSelect" class="filter-select">
+            <option value="all">All</option>
+            <option value="internal">Internal</option>
+            <option value="external">External</option>
+          </select>
+        </div>
       </div>
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -619,10 +635,32 @@
       <div class="rule"></div>
     </div>
     <div class="panel gantt-wrap">
+      <div class="gantt-toolbar">
+        <span class="gantt-toolbar-hint">Drag/scroll horizontally to move through months &middot; use zoom to see day-level detail</span>
+        <div class="gantt-zoom-controls">
+          <select id="ganttYearSelect" class="filter-select" title="Year">
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+          </select>
+          <select id="ganttMonthFrom" class="filter-select" title="From month"></select>
+          <span class="gantt-zoom-icon" aria-hidden="true">&ndash;</span>
+          <select id="ganttMonthTo" class="filter-select" title="To month"></select>
+          <span class="gantt-zoom-icon" aria-hidden="true">&minus;</span>
+          <input type="range" id="ganttZoomSlider" min="1.2" max="40" step="0.1" value="6" title="Zoom">
+          <span class="gantt-zoom-icon" aria-hidden="true">+</span>
+          <button type="button" id="ganttZoomFit" title="Fit to screen">Fit</button>
+          <button type="button" id="ganttJumpToday" title="Jump to today">Today</button>
+        </div>
+      </div>
+      <div class="gantt-scroll">
       <div class="gantt">
-        <div class="gantt-header"><div></div><div class="months" id="monthHeader"></div></div>
+        <div class="gantt-header">
+          <div class="gantt-header-spacer"></div><div class="months" id="monthHeader"></div>
+          <div class="gantt-header-spacer"></div><div class="weeks" id="weekHeader"></div>
+        </div>
         <div id="ganttBody"></div>
         <div class="today-marker" id="todayMarker"><div class="line"></div><div class="tag">Today</div></div>
+      </div>
       </div>
       <div class="gantt-legend">
         <span><i class="sw" style="background:var(--accent)"></i> Construction</span>
@@ -727,11 +765,11 @@
       <div class="panel" style="margin-top:14px;">
         <h3>Sheet: Site Visit Log (optional — 1 row = 1 site visit)</h3>
         <table>
-          <thead><tr><th>Visit Date</th><th>Project Name</th><th>Inspector Name</th><th>Site Visit Hours</th></tr></thead>
-          <tbody><tr><td>2026-01-05</td><td>Northgate Tower</td><td>Somchai Jaidee</td><td>4</td></tr></tbody>
+          <thead><tr><th>Visit Date</th><th>Project Name</th><th>Inspector Name</th><th>Purpose</th><th>Site Visit Hours</th></tr></thead>
+          <tbody><tr><td>2026-01-05</td><td>Northgate Tower</td><td>Somchai Jaidee</td><td>Progress Inspection</td><td>4</td></tr></tbody>
         </table>
         <p style="font-size:12.5px; color:var(--steel); margin-top:10px;">
-          Powers the <b>Monthly Site Visit Overview</b> chart — a team-wide view of off-site work execution by month, in hours. Add one row per visit (one team member, one site, one day). <b>Visit Date</b> = the exact day of the visit &middot; <b>Project Name</b> = which project/site was visited (leave blank if not tied to a specific project) — click a bar on the chart to see each visit's date, project, and inspector. If this sheet is missing, the chart will simply show no data.
+          Powers the <b>Monthly Site Visit Overview</b> chart — a team-wide view of off-site work execution by month, in hours. Add one row per visit (one team member, one site, one day). <b>Visit Date</b> = the exact day of the visit &middot; <b>Project Name</b> = which project/site was visited (leave blank if not tied to a specific project) &middot; <b>Purpose</b> = what the visit was for (e.g. Progress Inspection, Safety Audit, Client Walkthrough) — click a bar on the chart to see each visit's date, project, inspector, and purpose. If this sheet is missing, the chart will simply show no data.
         </p>
       </div>
 
@@ -804,8 +842,6 @@
 
       <div class="modal-section-title">Delivery Schedule</div>
       <div class="modal-list">
-        <div class="modal-list-row"><span class="label">First Fix</span><span class="value"><span id="modalFirstFixDate">-</span><span class="sub" id="modalFirstFixPct"></span></span></div>
-        <div class="modal-list-row"><span class="label">Second Fix</span><span class="value"><span id="modalSecondFixDate">-</span><span class="sub" id="modalSecondFixPct"></span></span></div>
         <div class="modal-list-row"><span class="label">Delivery Date</span><span class="value" id="modalDelivery">-</span></div>
       </div>
 
@@ -912,43 +948,43 @@ const SAMPLE_PROJECTS = [
 
 // Monthly team site-visit log: one row per inspector per month
 const SAMPLE_SITE_VISIT_LOG = [
-  {month:'2026-01-06', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:8},
-  {month:'2026-01-14', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:8},
-  {month:'2026-01-22', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:8},
-  {month:'2026-01-09', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:9},
-  {month:'2026-01-23', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:9},
-  {month:'2026-01-15', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', hours:12},
-  {month:'2026-02-04', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:10},
-  {month:'2026-02-18', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:10},
-  {month:'2026-02-27', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:10},
-  {month:'2026-02-11', project:'Hillcrest Office Park', inspector:'Wipa Thongkham', hours:12},
-  {month:'2026-02-25', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:12},
-  {month:'2026-02-13', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', hours:16},
-  {month:'2026-02-10', project:'Central Business Hub', inspector:'Arunee Pong', hours:6},
-  {month:'2026-03-05', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:12},
-  {month:'2026-03-19', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:12},
-  {month:'2026-03-26', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:12},
-  {month:'2026-03-12', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', hours:18},
-  {month:'2026-03-06', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', hours:24},
-  {month:'2026-03-20', project:'Lakeview Bridge Repair', inspector:'Wichai Promma', hours:28},
-  {month:'2026-04-02', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:14},
-  {month:'2026-04-16', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:14},
-  {month:'2026-04-09', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:15},
-  {month:'2026-04-23', project:'Hillcrest Office Park', inspector:'Wipa Thongkham', hours:15},
-  {month:'2026-04-17', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', hours:12},
-  {month:'2026-04-08', project:'Central Business Hub', inspector:'Arunee Pong', hours:8},
-  {month:'2026-05-07', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:20},
-  {month:'2026-05-21', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:20},
-  {month:'2026-05-14', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:16},
-  {month:'2026-05-11', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', hours:22},
-  {month:'2026-05-28', project:'Lakeview Bridge Repair', inspector:'Wichai Promma', hours:34},
-  {month:'2026-06-03', project:'Northgate Tower', inspector:'Somchai Jaidee', hours:16},
-  {month:'2026-06-17', project:'Metro Station Extension', inspector:'Somchai Jaidee', hours:16},
-  {month:'2026-06-10', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', hours:14},
-  {month:'2026-06-24', project:'Hillcrest Office Park', inspector:'Wipa Thongkham', hours:14},
-  {month:'2026-06-05', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', hours:16},
-  {month:'2026-06-19', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', hours:12},
-  {month:'2026-06-12', project:'Central Business Hub', inspector:'Arunee Pong', hours:10},
+  {month:'2026-01-06', project:'Northgate Tower', inspector:'Somchai Jaidee', purpose:'Progress Inspection', hours:8},
+  {month:'2026-01-14', project:'Metro Station Extension', inspector:'Somchai Jaidee', purpose:'Safety Audit', hours:8},
+  {month:'2026-01-22', project:'Northgate Tower', inspector:'Somchai Jaidee', purpose:'Quality Check', hours:8},
+  {month:'2026-01-09', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', purpose:'Progress Inspection', hours:9},
+  {month:'2026-01-23', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', purpose:'Client Walkthrough', hours:9},
+  {month:'2026-01-15', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', purpose:'Structural Inspection', hours:12},
+  {month:'2026-02-04', project:'Northgate Tower', inspector:'Somchai Jaidee', purpose:'Progress Inspection', hours:10},
+  {month:'2026-02-18', project:'Metro Station Extension', inspector:'Somchai Jaidee', purpose:'MEP Inspection', hours:10},
+  {month:'2026-02-27', project:'Metro Station Extension', inspector:'Somchai Jaidee', purpose:'Safety Audit', hours:10},
+  {month:'2026-02-11', project:'Hillcrest Office Park', inspector:'Wipa Thongkham', purpose:'Progress Inspection', hours:12},
+  {month:'2026-02-25', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', purpose:'Punch List Review', hours:12},
+  {month:'2026-02-13', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', purpose:'Quality Check', hours:16},
+  {month:'2026-02-10', project:'Central Business Hub', inspector:'Arunee Pong', purpose:'Material Delivery Check', hours:6},
+  {month:'2026-03-05', project:'Northgate Tower', inspector:'Somchai Jaidee', purpose:'Progress Inspection', hours:12},
+  {month:'2026-03-19', project:'Metro Station Extension', inspector:'Somchai Jaidee', purpose:'Structural Inspection', hours:12},
+  {month:'2026-03-26', project:'Metro Station Extension', inspector:'Somchai Jaidee', purpose:'Safety Audit', hours:12},
+  {month:'2026-03-12', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', purpose:'Progress Inspection', hours:18},
+  {month:'2026-03-06', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', purpose:'Client Walkthrough', hours:24},
+  {month:'2026-03-20', project:'Lakeview Bridge Repair', inspector:'Wichai Promma', purpose:'Structural Inspection', hours:28},
+  {month:'2026-04-02', project:'Northgate Tower', inspector:'Somchai Jaidee', purpose:'Quality Check', hours:14},
+  {month:'2026-04-16', project:'Metro Station Extension', inspector:'Somchai Jaidee', purpose:'Progress Inspection', hours:14},
+  {month:'2026-04-09', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', purpose:'Punch List Review', hours:15},
+  {month:'2026-04-23', project:'Hillcrest Office Park', inspector:'Wipa Thongkham', purpose:'MEP Inspection', hours:15},
+  {month:'2026-04-17', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', purpose:'Safety Audit', hours:12},
+  {month:'2026-04-08', project:'Central Business Hub', inspector:'Arunee Pong', purpose:'Material Delivery Check', hours:8},
+  {month:'2026-05-07', project:'Northgate Tower', inspector:'Somchai Jaidee', purpose:'Progress Inspection', hours:20},
+  {month:'2026-05-21', project:'Metro Station Extension', inspector:'Somchai Jaidee', purpose:'Client Walkthrough', hours:20},
+  {month:'2026-05-14', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', purpose:'Quality Check', hours:16},
+  {month:'2026-05-11', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', purpose:'Structural Inspection', hours:22},
+  {month:'2026-05-28', project:'Lakeview Bridge Repair', inspector:'Wichai Promma', purpose:'Progress Inspection', hours:34},
+  {month:'2026-06-03', project:'Northgate Tower', inspector:'Somchai Jaidee', purpose:'Punch List Review', hours:16},
+  {month:'2026-06-17', project:'Metro Station Extension', inspector:'Somchai Jaidee', purpose:'Safety Audit', hours:16},
+  {month:'2026-06-10', project:'Riverside Mall Renovation', inspector:'Wipa Thongkham', purpose:'Progress Inspection', hours:14},
+  {month:'2026-06-24', project:'Hillcrest Office Park', inspector:'Wipa Thongkham', purpose:'Quality Check', hours:14},
+  {month:'2026-06-05', project:'Greenfield Logistics Park', inspector:'Prayuth Boonmee', purpose:'MEP Inspection', hours:16},
+  {month:'2026-06-19', project:'Sunrise Residences Phase 2', inspector:'Manop Srisuk', purpose:'Client Walkthrough', hours:12},
+  {month:'2026-06-12', project:'Central Business Hub', inspector:'Arunee Pong', purpose:'Material Delivery Check', hours:10},
 ];
 
 const SAMPLE_INTERNAL_WORK = [
@@ -1042,7 +1078,7 @@ function renderChangeHistory(){
   }).join('');
 }
 
-let filterState = { statuses: new Set(['construction','completed','planning','on_hold']), types: new Set(['internal','external']), search:'' };
+let filterState = { status: 'all', type: 'all', search:'' };
 
 const statusLabel = {construction:'Construction', completed:'Completed', planning:'Planning', on_hold:'Hold'};
 const statusColor = {construction:'#E2691F', completed:'#3E8F63', planning:'#98A5AD', on_hold:'#C2493C'};
@@ -1118,15 +1154,25 @@ document.querySelectorAll('.tabs button').forEach(btn=>{
     document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('page-'+btn.dataset.page).classList.add('active');
+    const page = document.getElementById('page-'+btn.dataset.page);
+    page.classList.add('active');
+    // Charts drawn while their tab was hidden can measure a 0-size canvas and
+    // never recover on their own — force a resize now that the tab is visible.
+    page.querySelectorAll('canvas').forEach(canvas=>{
+      const chart = Chart.getChart(canvas);
+      if(chart) chart.resize();
+    });
+    // Same issue for the Gantt: its auto-fit width is measured from a hidden
+    // (0-width) container on first load, so recompute once the tab is shown.
+    if(btn.dataset.page==='projects' && ganttPxPerDay===null) renderGantt();
   });
 });
 
 /* ===================== FILTER ===================== */
 function getFilteredProjects(){
   return state.projects.filter(p=>
-    filterState.statuses.has(p.status) &&
-    filterState.types.has(p.type) &&
+    (filterState.status==='all' || p.status===filterState.status) &&
+    (filterState.type==='all' || p.type===filterState.type) &&
     (!filterState.search || p.name.toLowerCase().includes(filterState.search))
   );
 }
@@ -1137,54 +1183,19 @@ function emptyStateMsg(){
     : 'No projects match the selected filters.';
 }
 
-function renderFilterChips(){
-  const counts = {construction:0, completed:0, planning:0, on_hold:0};
-  const typeCounts = {internal:0, external:0};
-  state.projects.forEach(x=>{ counts[x.status]++; typeCounts[x.type]++; });
-  const order = ['construction','completed','planning','on_hold'];
-  const typeOrder = ['internal','external'];
+const rerenderFiltered = ()=>{ renderConstructionTable(); renderSiteVisitChart(); renderGantt(); renderContractors(); renderFinance(); renderVariations(); };
 
-  const statusBar = document.getElementById('filterChips');
-  statusBar.innerHTML = order.map(k=>
-    `<button class="chip ${filterState.statuses.has(k)?'active':''}" data-status="${k}" style="--chip-color:${statusColor[k]}">
-       <i class="sw"></i>${statusLabel[k]} <span class="chip-count">${counts[k]}</span>
-     </button>`).join('');
-
-  const typeBar = document.getElementById('typeFilterChips');
-  typeBar.innerHTML = typeOrder.map(k=>
-    `<button class="chip ${filterState.types.has(k)?'active':''}" data-type="${k}" style="--chip-color:${typeColor[k]}">
-       <i class="sw"></i>${typeLabel[k]} <span class="chip-count">${typeCounts[k]}</span>
-     </button>`).join('') +
-   `<button class="chip chip-reset" id="chipResetAll">Show All</button>`;
-
-  const rerenderAll = ()=>{ renderFilterChips(); renderConstructionTable(); renderSiteVisitChart(); renderGantt(); renderContractors(); renderFinance(); renderVariations(); };
-
-  statusBar.querySelectorAll('.chip[data-status]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const k = btn.dataset.status;
-      if(filterState.statuses.has(k)) filterState.statuses.delete(k); else filterState.statuses.add(k);
-      if(filterState.statuses.size===0) filterState.statuses = new Set(order); // avoid empty dead-end
-      rerenderAll();
-    });
-  });
-  typeBar.querySelectorAll('.chip[data-type]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const k = btn.dataset.type;
-      if(filterState.types.has(k)) filterState.types.delete(k); else filterState.types.add(k);
-      if(filterState.types.size===0) filterState.types = new Set(typeOrder); // avoid empty dead-end
-      rerenderAll();
-    });
-  });
-  document.getElementById('chipResetAll').addEventListener('click', ()=>{
-    filterState.statuses = new Set(order); filterState.types = new Set(typeOrder); filterState.search='';
-    document.getElementById('projectSearch').value='';
-    rerenderAll();
-  });
-}
-
+document.getElementById('statusFilterSelect').addEventListener('change', e=>{
+  filterState.status = e.target.value;
+  rerenderFiltered();
+});
+document.getElementById('typeFilterSelect').addEventListener('change', e=>{
+  filterState.type = e.target.value;
+  rerenderFiltered();
+});
 document.getElementById('projectSearch').addEventListener('input', e=>{
   filterState.search = e.target.value.trim().toLowerCase();
-  renderConstructionTable(); renderSiteVisitChart(); renderGantt(); renderContractors(); renderFinance(); renderVariations();
+  rerenderFiltered();
 });
 
 
@@ -1207,22 +1218,6 @@ function renderOverview(){
   });
   document.getElementById('donutLegend').innerHTML = Object.keys(counts).map(k=>
     `<div><span class="sw" style="background:${statusColor[k]}"></span>${statusLabel[k]} <b style="color:var(--ink); font-family:'IBM Plex Mono';">${counts[k]}</b><span style="color:var(--steel); margin-left:3px;">(${p.length? Math.round(counts[k]/p.length*100):0}%)</span></div>`).join('');
-}
-
-/* ===================== RENDER: INTERNAL / EXTERNAL SPLIT ===================== */
-function renderTypeOverview(){
-  const p = state.projects;
-  const typeCounts = {internal:0, external:0};
-  p.forEach(x=>typeCounts[x.type]++);
-  const total = p.length;
-  const order = ['internal','external'];
-
-  document.getElementById('typeSplitBar').innerHTML = total ? order.map(k=>
-    `<span style="width:${typeCounts[k]/total*100}%; background:${typeColor[k]}" title="${typeLabel[k]}: ${typeCounts[k]}"></span>`).join('')
-    : `<span style="width:100%; background:var(--line);"></span>`;
-
-  document.getElementById('typeSplitLegend').innerHTML = order.map(k=>
-    `<div><span class="sw" style="background:${typeColor[k]}"></span>${typeLabel[k]} <b style="color:var(--ink); font-family:'IBM Plex Mono';">${typeCounts[k]}</b><span style="color:var(--steel); margin-left:3px;">(${total? Math.round(typeCounts[k]/total*100):0}%)</span></div>`).join('');
 }
 
 /* ===================== RENDER: PROJECT LIST ===================== */
@@ -1259,91 +1254,171 @@ function fmtShortDate(dateStr){
   return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
 }
 
-function computeGanttRange(rows){
-  let dates = [];
-  rows.forEach(p=> (p.phases&&p.phases.length ? p.phases : [{start:p.start,end:p.end}]).forEach(ph=>{
-    if(ph.start) dates.push(new Date(ph.start));
-    if(ph.end) dates.push(new Date(ph.end));
-  }));
-  const today = new Date();
-  if(!dates.length) dates = [today];
-  let min = new Date(Math.min(...dates));
-  let max = new Date(Math.max(...dates));
-  // pad one week each side, and snap to Monday-start weeks for clean gridlines
-  min.setDate(min.getDate() - ((min.getDay()+6)%7) - 7);
-  max.setDate(max.getDate() + (7-((max.getDay()+6)%7)) + 7);
-  return {min, max, totalDays: Math.round((max-min)/86400000)};
+function phaseByOrdinal(phases, ordinal){
+  const re = new RegExp('\\b'+ordinal+'\\b');
+  let match = phases.find(ph => re.test(ph.phase) || (ordinal===1 && /first/i.test(ph.phase)) || (ordinal===2 && /second/i.test(ph.phase)));
+  if(!match) match = phases[ordinal-1];
+  return match;
+}
+function fmtPhaseRange(ph){
+  return ph && ph.start && ph.end ? `${fmtShortDate(ph.start)} → ${fmtShortDate(ph.end)}` : '-';
 }
 
-function renderGantt(){
-  const rows = getFilteredProjects();
-  const {min:rangeStart, max:rangeEnd, totalDays} = computeGanttRange(rows);
-  const totalWeeks = Math.max(1, Math.round(totalDays/7));
+const MONTHS_FULL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  function posPct(dateStr){
+function ganttDateRange(year, fromMonth, toMonth){
+  const min = new Date(year, fromMonth, 1);
+  const max = new Date(year, toMonth+1, 0); // last day of toMonth
+  return {min, max, totalDays: Math.round((max-min)/86400000)+1};
+}
+
+const GANTT_NAME_COL = 220;
+let ganttPxPerDay = null; // null = auto-fit to available width
+let ganttLastPxPerDay = 6;
+
+function renderGantt(){
+  const ganttYear = parseInt(document.getElementById('ganttYearSelect').value, 10);
+  const fromMonth = parseInt(document.getElementById('ganttMonthFrom').value, 10);
+  const toMonth = parseInt(document.getElementById('ganttMonthTo').value, 10);
+  const {min:rangeStart, max:rangeEnd, totalDays} = ganttDateRange(ganttYear, fromMonth, toMonth);
+  const rows = getFilteredProjects().filter(p=>
+    (p.phases&&p.phases.length ? p.phases : [{start:p.start,end:p.end}]).some(ph=>
+      ph.start && ph.end && new Date(ph.end)>=rangeStart && new Date(ph.start)<=rangeEnd)
+  );
+  const rangeLabel = fromMonth===0 && toMonth===11 ? `${ganttYear}` : `${MONTHS_FULL[fromMonth]}–${MONTHS_FULL[toMonth]} ${ganttYear}`;
+  document.getElementById('ganttYearTitle').textContent = `Master Schedule — ${rangeLabel}`;
+
+  const scrollEl = document.querySelector('.gantt-scroll');
+  const availWidth = scrollEl.clientWidth > 0 ? Math.max(200, scrollEl.clientWidth - GANTT_NAME_COL) : 760;
+  const fitPxPerDay = Math.max(1.2, availWidth/totalDays);
+  const pxPerDay = ganttPxPerDay || fitPxPerDay;
+  ganttLastPxPerDay = pxPerDay;
+  document.getElementById('ganttZoomSlider').value = pxPerDay;
+  const trackWidth = Math.round(totalDays*pxPerDay);
+  const colTemplate = `${GANTT_NAME_COL}px ${trackWidth}px`;
+
+  const ganttEl = document.querySelector('.gantt');
+  ganttEl.style.width = (GANTT_NAME_COL+trackWidth)+'px';
+  ganttEl.style.setProperty('--day-px', pxPerDay+'px');
+  document.querySelector('.gantt-header').style.gridTemplateColumns = colTemplate;
+
+  function posPx(dateStr){
     if(!dateStr) return 0;
     let d = new Date(dateStr);
     if(d < rangeStart) d = new Date(rangeStart);
     if(d > rangeEnd) d = new Date(rangeEnd);
-    return Math.max(0, Math.min(100, (d-rangeStart)/86400000/totalDays*100));
+    return Math.max(0, Math.min(trackWidth, (d-rangeStart)/86400000*pxPerDay));
   }
 
-  // Month header labels, positioned by actual date proportion (handles multi-year ranges)
+  // Month header labels, positioned by actual date proportion (handles multi-year ranges).
+  // Week header labels count "Week 1"..."Week N" within each month (resets every month).
   const monthHeader = document.getElementById('monthHeader');
-  monthHeader.innerHTML = '';
+  const weekHeader = document.getElementById('weekHeader');
   monthHeader.style.position = 'relative';
-  monthHeader.style.height = '22px';
+  weekHeader.style.position = 'relative';
   const now = new Date();
   let cursor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
   const monthDivs = [];
+  const weekDivs = [];
+  let monthIdx = 0;
   while(cursor <= rangeEnd){
     const next = new Date(cursor.getFullYear(), cursor.getMonth()+1, 1);
     const segStart = cursor < rangeStart ? rangeStart : cursor;
     const segEnd = next > rangeEnd ? rangeEnd : next;
-    const left = posPct(segStart.toISOString().slice(0,10));
-    const width = Math.max(posPct(segEnd.toISOString().slice(0,10)) - left, 0);
+    const left = posPx(segStart.toISOString().slice(0,10));
+    const width = Math.max(posPx(segEnd.toISOString().slice(0,10)) - left, 0);
     const isCur = (now.getFullYear()===cursor.getFullYear() && now.getMonth()===cursor.getMonth());
     const label = cursor.toLocaleDateString('en-GB', {month:'short'}) + (cursor.getMonth()===0 ? ` '${String(cursor.getFullYear()).slice(2)}` : '');
-    monthDivs.push(`<div class="${isCur?'cur-month':''}" style="position:absolute; left:${left}%; width:${width}%; top:0; text-align:center; font-weight:${isCur?600:500};">${label}</div>`);
+    const altCls = monthIdx%2 ? ' month-alt' : '';
+    monthDivs.push(`<div class="month-seg${isCur?' cur-month':''}${altCls}" style="left:${left}px; width:${width}px; font-weight:${isCur?700:500};">${label}</div>`);
+
+    let weekNum = 1;
+    let chunkStart = new Date(cursor);
+    while(chunkStart < next){
+      const chunkEnd = new Date(chunkStart); chunkEnd.setDate(chunkEnd.getDate()+7);
+      const wEnd = chunkEnd > next ? next : chunkEnd;
+      const wSegStart = chunkStart < rangeStart ? rangeStart : chunkStart;
+      const wSegEnd = wEnd > rangeEnd ? rangeEnd : wEnd;
+      if(wSegStart <= wSegEnd){
+        const wLeft = posPx(wSegStart.toISOString().slice(0,10));
+        const wWidth = Math.max(posPx(wSegEnd.toISOString().slice(0,10)) - wLeft, 0);
+        const isCurWeek = (now>=chunkStart && now<wEnd);
+        weekDivs.push(`<div class="week-seg${isCurWeek?' cur-week':''}" style="left:${wLeft}px; width:${wWidth}px;">Week ${weekNum}</div>`);
+      }
+      chunkStart = chunkEnd;
+      weekNum++;
+    }
+
     cursor = next;
+    monthIdx++;
   }
   monthHeader.innerHTML = monthDivs.join('');
-  monthHeader.style.setProperty('--weeks', totalWeeks);
+  weekHeader.innerHTML = weekDivs.join('');
 
-  const todayPct = (now>=rangeStart && now<=rangeEnd) ? posPct(now.toISOString().slice(0,10)) : null;
+  const todayPx = (now>=rangeStart && now<=rangeEnd) ? posPx(now.toISOString().slice(0,10)) : null;
   const body = document.getElementById('ganttBody');
   body.innerHTML = rows.length ? rows.map(p=>{
     const phases = (p.phases&&p.phases.length) ? p.phases : [{phase:p.status, start:p.start, end:p.end, pct:p.progress, status:p.status}];
     const bars = phases.map(ph=>{
-      const left = posPct(ph.start);
-      const width = Math.max(posPct(ph.end)-left, 1.2);
+      const left = posPx(ph.start);
+      const width = Math.max(posPx(ph.end)-left, 10);
       const m = ph.phase.match(/Period\s*\d+/i);
       const shortLabel = m ? m[0] : ph.phase;
-      const tooltip = `${ph.phase} · ${fmtShortDate(ph.start)} \u2192 ${fmtShortDate(ph.end)} · ${ph.pct}%`;
-      return `<div class="gantt-bar ${ph.status}" style="left:${left}%; width:${width}%;" title="${tooltip}">${shortLabel} ${ph.pct}%</div>`;
+      const tooltip = `${ph.phase} · ${ph.pct}%`;
+      return `<div class="gantt-bar ${ph.status}" data-name="${p.name}" style="left:${left}px; width:${width}px;" title="${tooltip}">${shortLabel} ${ph.pct}%</div>`;
     }).join('');
-    const captions = phases.map((ph,i)=>{
-      const m = ph.phase.match(/Period\s*\d+/i);
-      const shortLabel = m ? m[0] : ph.phase;
-      return `<span class="pdate-item"><i class="dot ${ph.status}"></i>${shortLabel}: ${fmtShortDate(ph.start)} \u2192 ${fmtShortDate(ph.end)}</span>`;
-    }).join('') + (p.deliveryDate ? `<span class="pdate-item pdate-delivery"><i class="dot delivery"></i>Delivery Date: ${fmtShortDate(p.deliveryDate)}</span>` : '');
-    return `<div class="gantt-row" style="--weeks:${totalWeeks};">
+    return `<div class="gantt-row" style="grid-template-columns:${colTemplate};">
       <div class="pname"><span class="proj-link" data-name="${p.name}">${p.name}</span></div>
-      <div class="gantt-track" style="--weeks:${totalWeeks};">${bars}</div>
-      <div class="pdates">${captions}</div>
+      <div class="gantt-track">${bars}</div>
     </div>`;
   }).join('') : `<div style="padding:18px; text-align:center; color:var(--steel); font-style:italic;">${emptyStateMsg()}</div>`;
 
   const marker = document.getElementById('todayMarker');
-  if(todayPct===null){
+  if(todayPx===null){
     marker.style.display = 'none';
   } else {
     marker.style.display = '';
-    marker.style.left = `calc(220px + (100% - 220px) * ${todayPct/100})`;
+    marker.style.left = `${GANTT_NAME_COL + todayPx}px`;
     marker.style.top = '0';
     marker.style.bottom = '0';
   }
 }
+
+document.getElementById('ganttYearSelect').value = String(new Date().getFullYear());
+const ganttMonthFromEl = document.getElementById('ganttMonthFrom');
+const ganttMonthToEl = document.getElementById('ganttMonthTo');
+ganttMonthFromEl.innerHTML = MONTHS_FULL.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+ganttMonthToEl.innerHTML = MONTHS_FULL.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+ganttMonthToEl.value = '11';
+
+document.getElementById('ganttYearSelect').addEventListener('change', ()=>{
+  ganttPxPerDay = null; // re-fit to the newly selected range
+  renderGantt();
+});
+ganttMonthFromEl.addEventListener('change', ()=>{
+  if(parseInt(ganttMonthFromEl.value,10) > parseInt(ganttMonthToEl.value,10)) ganttMonthToEl.value = ganttMonthFromEl.value;
+  ganttPxPerDay = null;
+  renderGantt();
+});
+ganttMonthToEl.addEventListener('change', ()=>{
+  if(parseInt(ganttMonthToEl.value,10) < parseInt(ganttMonthFromEl.value,10)) ganttMonthFromEl.value = ganttMonthToEl.value;
+  ganttPxPerDay = null;
+  renderGantt();
+});
+document.getElementById('ganttZoomSlider').addEventListener('input', e=>{
+  ganttPxPerDay = parseFloat(e.target.value);
+  renderGantt();
+});
+document.getElementById('ganttZoomFit').addEventListener('click', ()=>{
+  ganttPxPerDay = null;
+  renderGantt();
+});
+document.getElementById('ganttJumpToday').addEventListener('click', ()=>{
+  const marker = document.getElementById('todayMarker');
+  if(marker.style.display === 'none') return;
+  const scrollEl = document.querySelector('.gantt-scroll');
+  scrollEl.scrollLeft = parseFloat(marker.style.left) - scrollEl.clientWidth/2;
+});
 
 /* ===================== RENDER: FINANCE ===================== */
 function fmtM(n){ return '\u0e3f'+Math.round(n||0).toLocaleString('en-US'); }
@@ -1360,7 +1435,7 @@ function renderChartBreakdown(title, rows, valueFn, colorHex, opts){
   const simple = opts.simple || !!dateFn;
   document.getElementById('breakdownModalTitle').textContent = title;
   const rowsEl = document.getElementById('breakdownModalRows');
-  const items = rows.map(p=>({name:p.name, value:valueFn(p), date:dateFn?dateFn(p):null})).filter(x=>x.value)
+  const items = rows.map(p=>({name:p.name, value:valueFn(p), date:dateFn?dateFn(p):null, pct:opts.pctFn?opts.pctFn(p):null})).filter(x=>x.value)
     .sort((a,b)=>Math.abs(b.value)-Math.abs(a.value));
   if(!items.length){
     rowsEl.innerHTML = `<div class="breakdown-empty">No project-level data for this bar.</div>`;
@@ -1374,7 +1449,7 @@ function renderChartBreakdown(title, rows, valueFn, colorHex, opts){
         <div class="breakdown-row-simple${colClass}">
           <span title="${x.name}">${x.name}</span>
           ${dateFn ? `<span>${x.date || '-'}</span>` : ''}
-          <span>${fmtM(Math.abs(x.value))}</span>
+          <span>${fmtM(Math.abs(x.value))}${x.pct!=null ? ` <span class="breakdown-pct">(${x.pct}%)</span>` : ''}</span>
         </div>`).join('');
   } else {
     const maxAbs = Math.max(...items.map(x=>Math.abs(x.value)));
@@ -1451,6 +1526,30 @@ function wireModal(backdropId, closeBtnId){
 const closeBreakdownModal = wireModal('breakdownModalBackdrop', 'breakdownModalCloseBtn');
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeBreakdownModal(); });
 
+function openScheduleDatesPopup(name){
+  const p = state.projects.find(x=>x.name===name);
+  if(!p) return;
+  const phases = (p.phases&&p.phases.length) ? p.phases : [];
+  const firstFix = phaseByOrdinal(phases, 1);
+  const secondFix = phaseByOrdinal(phases, 2);
+  document.getElementById('breakdownModalTitle').textContent = `${p.name} — Delivery Schedule`;
+  document.getElementById('breakdownModalRows').innerHTML = `
+    <div class="breakdown-row-simple breakdown-row-simple-head breakdown-row-simple-dates">
+      <span>Milestone</span><span>Date</span>
+    </div>
+    <div class="breakdown-row-simple breakdown-row-simple-dates">
+      <span>First Fix</span><span>${fmtPhaseRange(firstFix)}</span>
+    </div>
+    <div class="breakdown-row-simple breakdown-row-simple-dates">
+      <span>Second Fix</span><span>${fmtPhaseRange(secondFix)}</span>
+    </div>
+    <div class="breakdown-row-simple breakdown-row-simple-dates">
+      <span>Delivery Date</span><span>${fmtShortDate(p.deliveryDate)}</span>
+    </div>
+  `;
+  document.getElementById('breakdownModalBackdrop').classList.add('open');
+}
+
 function renderVisitBreakdown(title, records){
   document.getElementById('breakdownModalTitle').textContent = title;
   const rowsEl = document.getElementById('breakdownModalRows');
@@ -1460,13 +1559,14 @@ function renderVisitBreakdown(title, records){
     const sorted = [...records].sort((a,b)=> new Date(a.month) - new Date(b.month));
     rowsEl.innerHTML = `
       <div class="visit-row visit-row-head">
-        <span>Date</span><span>Project / Site</span><span>Inspector</span><span>Hours</span>
+        <span>Date</span><span>Project / Site</span><span>Inspector</span><span>Activity</span><span>Hours</span>
       </div>
       ` + sorted.map(r=>`
         <div class="visit-row">
           <span>${fmtShortDate(r.month)}</span>
           <span title="${r.project||''}">${r.project || '—'}</span>
           <span>${r.inspector||'-'}</span>
+          <span title="${r.purpose||''}">${r.purpose || '—'}</span>
           <span>${r.hours||0} hrs</span>
         </div>`).join('');
   }
@@ -1483,9 +1583,9 @@ function renderFinance(){
 
   const finDefs = [
     {label:'Revenue', color:'#163655', fn:x=>x.budget||0, dateFn:x=>x.dataReceivedDate||''},
-    {label:'Paid to Contractor', color:'#E2691F', fn:x=>x.spent||0},
-    {label:'Pending Drawdown', color:'#98A5AD', fn:x=>(x.budget||0)-(x.collected||0)},
-    {label:'Amount Collected', color:'#3E8F63', fn:x=>x.collected||0},
+    {label:'Paid to Contractor', color:'#E2691F', fn:x=>x.spent||0, pctFn:x=>x.contractValue? Math.round((x.spent||0)/x.contractValue*100):0},
+    {label:'Pending Drawdown', color:'#98A5AD', fn:x=>(x.budget||0)-(x.collected||0), pctFn:x=>x.budget? Math.round(((x.budget||0)-(x.collected||0))/x.budget*100):0},
+    {label:'Amount Collected', color:'#3E8F63', fn:x=>x.collected||0, pctFn:x=>x.budget? Math.round((x.collected||0)/x.budget*100):0},
     {label:'Total Contractor Value', color:'#4FB8D6', fn:x=>hasContractor(x) ? (x.contractValue||0) : 0}
   ];
 
@@ -1507,7 +1607,7 @@ function renderFinance(){
       onClick:(evt, elements)=>{
         if(!elements.length) return;
         const d = finDefs[elements[0].index];
-        renderChartBreakdown(d.label, p, d.fn, d.color, {simple:true, dateFn:d.dateFn});
+        renderChartBreakdown(d.label, p, d.fn, d.color, {simple:true, dateFn:d.dateFn, pctFn:d.pctFn});
       },
       onHover:(evt, elements)=>{ evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
       plugins:{ legend:{display:false},
@@ -1530,7 +1630,6 @@ function renderFinance(){
 /* ===================== RENDER: SITE VISIT SUMMARY (whole team, months 1-12) ===================== */
 let siteVisitChart = null;
 const INSPECTOR_PALETTE = ['#E2691F','#3E8F63','#4FB8D6','#C2493C','#98A5AD','#163655','#9a5413','#6B8E23'];
-const MONTHS_FULL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function renderSiteVisitChart(){
   const log = state.siteVisitLog || [];
@@ -1626,7 +1725,7 @@ function renderVariations(){
       onClick:(evt, elements)=>{
         if(!elements.length) return;
         const d = varDefs[elements[0].index];
-        renderChartBreakdown(d.label, p, d.fn, d.color);
+        renderChartBreakdown(d.label, p, d.fn, d.color, {simple:true});
       },
       onHover:(evt, elements)=>{ evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
       plugins:{ legend:{display:false},
@@ -1698,7 +1797,7 @@ function renderContractors(){
         onClick:(evt, elements)=>{
           if(!elements.length) return;
           const [name, d] = ranked[elements[0].index];
-          renderChartBreakdown(name, d.projects, x=>x.contractValue||0, '#4FB8D6');
+          renderChartBreakdown(name, d.projects, x=>x.contractValue||0, '#4FB8D6', {simple:true});
         },
         onHover:(evt, elements)=>{ evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
         plugins:{ legend:{display:false},
@@ -1727,11 +1826,17 @@ function renderInternalWork(){
     </div>`).join('') : `<div style="text-align:center; color:var(--steel); font-style:italic; padding:24px;">No internal work items loaded yet — go to the "Upload Excel Data" tab to load your Internal Work sheet.</div>`;
 }
 
-function renderAll(){ renderFilterChips(); renderOverview(); renderTypeOverview(); renderConstructionTable(); renderSiteVisitChart(); renderGantt(); renderContractors(); renderFinance(); renderVariations(); renderInternalWork(); }
+function renderAll(){ renderOverview(); renderConstructionTable(); renderSiteVisitChart(); renderGantt(); renderContractors(); renderFinance(); renderVariations(); renderInternalWork(); }
 
 /* ===================== EXCEL IMPORT ===================== */
 function excelDateToISO(val){
-  if(val instanceof Date) return val.toISOString().slice(0,10);
+  if(val instanceof Date){
+    // XLSX's cellDates parsing can land a few seconds off the intended local
+    // midnight (floating-point drift), which flips the calendar day near the
+    // boundary — round to the nearest minute before reading local Y/M/D.
+    const t = new Date(Math.round(val.getTime()/60000)*60000);
+    return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  }
   if(typeof val === 'number'){
     const d = XLSX.SSF.parse_date_code(val);
     return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
@@ -1893,14 +1998,13 @@ function parseWorkbook(wb){
   if(visitName){
     const visitRows = XLSX.utils.sheet_to_json(wb.Sheets[visitName], {range:3, defval:''}).map(buildNormRow);
     siteVisitLog = visitRows.filter(r=>field(r,'Visit Date','Month') && field(r,'Inspector Name')).map(r=>{
-      let monthVal = field(r,'Visit Date','Month');
-      let monthISO;
-      if(monthVal instanceof Date) monthISO = monthVal.toISOString().slice(0,10);
-      else monthISO = excelDateToISO(monthVal) || String(monthVal);
+      const monthVal = field(r,'Visit Date','Month');
+      const monthISO = excelDateToISO(monthVal) || String(monthVal);
       return {
         month: monthISO,
         project: String(field(r,'Project Name')||'').trim(),
         inspector: String(field(r,'Inspector Name')).trim(),
+        purpose: String(field(r,'Purpose','Activity','Work Done')||'').trim(),
         hours: toNum(field(r,'Site Visit Hours'))
       };
     });
@@ -2300,19 +2404,6 @@ function openProjectModal(name){
 
   const phases = (p.phases&&p.phases.length) ? p.phases : [];
 
-  function phaseByOrdinal(ordinal){
-    const re = new RegExp('\\b'+ordinal+'\\b');
-    let match = phases.find(ph => re.test(ph.phase) || (ordinal===1 && /first/i.test(ph.phase)) || (ordinal===2 && /second/i.test(ph.phase)));
-    if(!match) match = phases[ordinal-1];
-    return match;
-  }
-  const firstFix = phaseByOrdinal(1);
-  const secondFix = phaseByOrdinal(2);
-  document.getElementById('modalFirstFixDate').textContent = firstFix && firstFix.end ? firstFix.end : '-';
-  document.getElementById('modalSecondFixDate').textContent = secondFix && secondFix.end ? secondFix.end : '-';
-  document.getElementById('modalFirstFixPct').textContent = firstFix ? `${firstFix.pct}% complete` : '';
-  document.getElementById('modalSecondFixPct').textContent = secondFix ? `${secondFix.pct}% complete` : '';
-
   const pdfWrap = document.getElementById('modalMasterSchedulePdf');
   pdfWrap.innerHTML = p.masterSchedulePdf
     ? `<a class="btn secondary" href="${p.masterSchedulePdf}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:7px; text-decoration:none;">📄 View Master Schedule (PDF) ↗</a>`
@@ -2352,6 +2443,11 @@ document.addEventListener('keydown', e=>{
   else closeProjectModal();
 });
 document.addEventListener('click', e=>{
+  const bar = e.target.closest('.gantt-bar');
+  if(bar){
+    openScheduleDatesPopup(bar.dataset.name);
+    return;
+  }
   const link = e.target.closest('.proj-link');
   if(link){
     closeBreakdownModal();
