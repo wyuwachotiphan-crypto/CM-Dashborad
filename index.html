@@ -1595,7 +1595,7 @@ function renderFinance(){
     data:{
       labels: finDefs.map(d=>d.label),
       datasets:[{
-        data:[totalRevenue, totalSpent, pendingDrawdown, totalCollected, totalContractorValue],
+        data: finDefs.map(d=> p.reduce((s,x)=>s+d.fn(x),0)),
         backgroundColor: finDefs.map(d=>d.color),
         borderRadius:5, maxBarThickness:34
       }]
