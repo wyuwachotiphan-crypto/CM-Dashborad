@@ -529,7 +529,7 @@
     </div>
     <div class="fin-overview-grid">
       <div class="panel">
-        <h3>Revenue Breakdown (All Filtered Projects)</h3>
+        <h3>Financial Chart</h3>
         <span class="chart-hint">Click a bar to see the breakdown by project</span>
         <canvas id="financialOverviewChart" height="170"></canvas>
       </div>
@@ -1583,10 +1583,10 @@ function renderFinance(){
 
   const finDefs = [
     {label:'Revenue', color:'#163655', fn:x=>x.budget||0, dateFn:x=>x.dataReceivedDate||''},
-    {label:'Paid to Contractor', color:'#E2691F', fn:x=>x.spent||0, pctFn:x=>x.contractValue? Math.round((x.spent||0)/x.contractValue*100):0},
-    {label:'Pending Drawdown', color:'#98A5AD', fn:x=>(x.budget||0)-(x.collected||0), pctFn:x=>x.budget? Math.round(((x.budget||0)-(x.collected||0))/x.budget*100):0},
     {label:'Amount Collected', color:'#3E8F63', fn:x=>x.collected||0, pctFn:x=>x.budget? Math.round((x.collected||0)/x.budget*100):0},
-    {label:'Total Contractor Value', color:'#4FB8D6', fn:x=>hasContractor(x) ? (x.contractValue||0) : 0}
+    {label:'Pending Drawdown', color:'#98A5AD', fn:x=>(x.budget||0)-(x.collected||0), pctFn:x=>x.budget? Math.round(((x.budget||0)-(x.collected||0))/x.budget*100):0},
+    {label:'Total Contractor Value', color:'#4FB8D6', fn:x=>hasContractor(x) ? (x.contractValue||0) : 0},
+    {label:'Paid to Contractor', color:'#E2691F', fn:x=>x.spent||0, pctFn:x=>x.contractValue? Math.round((x.spent||0)/x.contractValue*100):0}
   ];
 
   if(financialOverviewChart) financialOverviewChart.destroy();
