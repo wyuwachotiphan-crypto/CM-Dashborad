@@ -1639,13 +1639,10 @@ function openScheduleDatesPopup(name){
   document.getElementById('breakdownModalBackdrop').classList.add('open');
 }
 
-/* Formats decimal hours as hours.minutes — 2.5 -> "2.30" (2 hr 30 min), 3 -> "3" */
+/* Rounds hours to the nearest half hour — 2.7 -> "2.5", 2.42 -> "2.5", 3 -> "3" */
 function fmtHours(h){
-  h = h || 0;
-  let hrs = Math.floor(h);
-  let mins = Math.round((h - hrs) * 60);
-  if(mins === 60){ hrs += 1; mins = 0; }
-  return mins ? `${hrs}.${String(mins).padStart(2,'0')}` : `${hrs}`;
+  const r = Math.round((h || 0) * 2) / 2;
+  return r % 1 ? r.toFixed(1) : String(r);
 }
 
 function renderVisitBreakdown(title, records){
