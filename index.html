@@ -492,6 +492,15 @@
     <div class="sec-title" id="sec-overview">
       <span class="eyebrow">Overview</span>
       <h2>Project Overview</h2>
+      <span style="float:right; display:inline-flex; align-items:center; gap:8px;">
+        <label class="filter-select-label" for="overviewYearSelect">Finish Year</label>
+        <select id="overviewYearSelect" class="filter-select year-filter">
+          <option value="all">All Years</option>
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
+        </select>
+      </span>
       <div class="rule"></div>
     </div>
     <div class="overview">
@@ -613,6 +622,15 @@
             <option value="all">All</option>
             <option value="internal">Internal</option>
             <option value="external">External</option>
+          </select>
+        </div>
+        <div class="filter-select-group">
+          <label class="filter-select-label" for="projectYearSelect">Finish Year</label>
+          <select id="projectYearSelect" class="filter-select year-filter">
+            <option value="all">All Years</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
           </select>
         </div>
       </div>
@@ -1125,7 +1143,7 @@ function renderMonthlyReport(){
   }).join('');
 }
 
-let filterState = { status: 'all', type: 'all', search:'' };
+let filterState = { status: 'all', type: 'all', year: 'all', search:'' };
 
 const statusLabel = {construction:'Construction', completed:'Completed', planning:'Planning', on_hold:'Hold'};
 const statusColor = {construction:'#E2691F', completed:'#3E8F63', planning:'#98A5AD', on_hold:'#C2493C'};
@@ -1216,10 +1234,23 @@ document.querySelectorAll('.tabs button').forEach(btn=>{
 });
 
 /* ===================== FILTER ===================== */
+/* The year a project is due to finish: End Date, falling back to Delivery Date */
+function finishYearOf(p){
+  const d = new Date(p.end || p.deliveryDate);
+  return isNaN(d) ? null : String(d.getFullYear());
+}
+function matchesYear(p){
+  return filterState.year==='all' || finishYearOf(p)===filterState.year;
+}
+/* Projects narrowed by the Finish Year filter only (used by Project Overview) */
+function getYearProjects(){
+  return state.projects.filter(matchesYear);
+}
 function getFilteredProjects(){
   return state.projects.filter(p=>
     (filterState.status==='all' || p.status===filterState.status) &&
     (filterState.type==='all' || p.type===filterState.type) &&
+    matchesYear(p) &&
     (!filterState.search || p.name.toLowerCase().includes(filterState.search))
   );
 }
@@ -1244,10 +1275,20 @@ document.getElementById('projectSearch').addEventListener('input', e=>{
   filterState.search = e.target.value.trim().toLowerCase();
   rerenderFiltered();
 });
+// Finish Year filter appears on both the Overview and Projects pages — keep the
+// two dropdowns in sync and re-render everything (Overview KPIs included).
+document.querySelectorAll('.year-filter').forEach(sel=>{
+  sel.addEventListener('change', e=>{
+    filterState.year = e.target.value;
+    document.querySelectorAll('.year-filter').forEach(s=>{ s.value = filterState.year; });
+    renderOverview();
+    rerenderFiltered();
+  });
+});
 
 
 function renderOverview(){
-  const p = state.projects;
+  const p = getYearProjects();
   countUp(document.getElementById('kTotal'), p.length);
   countUp(document.getElementById('kConstruction'), p.filter(x=>x.status==='construction').length);
   countUp(document.getElementById('kCompleted'), p.filter(x=>x.status==='completed').length);
@@ -1556,7 +1597,8 @@ function renderProjectListPopup(title, projects){
 document.querySelectorAll('.kpi-clickable').forEach(el=>{
   el.addEventListener('click', ()=>{
     const kind = el.dataset.kpi;
-    const list = kind==='all' ? state.projects : state.projects.filter(p=>p.status===kind);
+    const base = getYearProjects();
+    const list = kind==='all' ? base : base.filter(p=>p.status===kind);
     const titleMap = {all:'All Projects', construction:'Construction', completed:'Completed', on_hold:'Requires Attention (On Hold)'};
     renderProjectListPopup(titleMap[kind], list);
   });
