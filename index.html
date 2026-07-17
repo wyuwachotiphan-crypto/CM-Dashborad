@@ -1639,6 +1639,15 @@ function openScheduleDatesPopup(name){
   document.getElementById('breakdownModalBackdrop').classList.add('open');
 }
 
+/* Formats decimal hours as hours.minutes — 2.5 -> "2.30" (2 hr 30 min), 3 -> "3" */
+function fmtHours(h){
+  h = h || 0;
+  let hrs = Math.floor(h);
+  let mins = Math.round((h - hrs) * 60);
+  if(mins === 60){ hrs += 1; mins = 0; }
+  return mins ? `${hrs}.${String(mins).padStart(2,'0')}` : `${hrs}`;
+}
+
 function renderVisitBreakdown(title, records){
   document.getElementById('breakdownModalTitle').textContent = title;
   const rowsEl = document.getElementById('breakdownModalRows');
@@ -1656,7 +1665,7 @@ function renderVisitBreakdown(title, records){
           <span title="${r.project||''}">${r.project || '—'}</span>
           <span>${r.inspector||'-'}</span>
           <span title="${r.purpose||''}">${r.purpose || '—'}</span>
-          <span>${r.hours||0} hrs</span>
+          <span>${fmtHours(r.hours)} hrs</span>
         </div>`).join('');
   }
   document.getElementById('breakdownModalBackdrop').classList.add('open');
@@ -1745,6 +1754,7 @@ function renderSiteVisitChart(){
     const d = new Date(r.month);
     if(d.getFullYear() == year) monthlyTotals[d.getMonth()] += (r.hours||0);
   });
+  const fmtHrs = v => `${fmtHours(v)} hrs`;
 
   siteVisitChart = new Chart(canvas, {
     type:'bar',
@@ -1765,18 +1775,18 @@ function renderSiteVisitChart(){
         renderVisitBreakdown(`${MONTHS_FULL[monthIdx]} ${year} — Site Visits`, records);
       },
       onHover:(evt, elements)=>{ evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
-      plugins:{ legend:{display:false} },
+      plugins:{ legend:{display:false},
+        tooltip:{callbacks:{label:(item)=> fmtHrs(item.parsed.y)}} },
       scales:{ x:{grid:{display:false}}, y:{beginAtZero:true, ticks:{precision:0}, title:{display:true, text:'Hours'}} }
     }
   });
 
   const inspectors = [...new Set(log.map(r=>r.inspector).filter(Boolean))];
   const totalHours = monthlyTotals.reduce((s,v)=>s+v,0);
-  const avgPerMonth = (totalHours/12).toFixed(1);
   footer.innerHTML = `
-    <span>Total (${year}, all team members): <b>${totalHours} hrs</b></span>
+    <span>Total (${year}, all team members): <b>${fmtHrs(totalHours)}</b></span>
     <span>Team members logging visits: <b>${inspectors.length}</b></span>
-    <span>Avg. per month: <b>${avgPerMonth} hrs</b></span>
+    <span>Avg. per month: <b>${fmtHrs(totalHours/12)}</b></span>
   `;
 }
 
