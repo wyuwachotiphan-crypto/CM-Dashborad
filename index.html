@@ -1145,6 +1145,19 @@ function renderBucketedReport(wrapId, idPrefix, bucketKeyFn, bucketLabelFn){
   const keys = Object.keys(byBucket).sort().reverse();
   wrap.innerHTML = keys.map((key, i)=>{
     const changes = byBucket[key];
+    // Same project, same upload, same change type -> one line listing every
+    // detail together, instead of a separate line per changed field.
+    const grouped = [];
+    const groupIndex = {};
+    changes.forEach(c=>{
+      const gKey = `${c.timestamp}|${c.project}|${c.type}`;
+      if(groupIndex[gKey]===undefined){
+        groupIndex[gKey] = grouped.length;
+        grouped.push({type:c.type, project:c.project, timestamp:c.timestamp, texts:[c.text]});
+      } else {
+        grouped[groupIndex[gKey]].texts.push(c.text);
+      }
+    });
     return `
     <div class="history-entry">
       <button class="history-entry-head" onclick="document.getElementById('${idPrefix}${i}').classList.toggle('open');">
@@ -1152,7 +1165,7 @@ function renderBucketedReport(wrapId, idPrefix, bucketKeyFn, bucketLabelFn){
         <span class="history-count">${changes.length} change${changes.length===1?'':'s'}</span>
       </button>
       <ul class="change-notif-list history-entry-body${i===0?' open':''}" id="${idPrefix}${i}">
-        ${changes.map(c=>`<li><span class="change-date">${new Date(c.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span><span class="change-tag ${c.type}">${c.type}</span><b>${c.project}</b> \u2014 ${c.text}</li>`).join('')}
+        ${grouped.map(g=>`<li><span class="change-date">${new Date(g.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span><span class="change-tag ${g.type}">${g.type}</span><b>${g.project}</b> \u2014 ${g.texts.join('; ')}</li>`).join('')}
       </ul>
     </div>`;
   }).join('');
@@ -2609,4 +2622,3 @@ if(INITIAL_SOURCE_URL){
 
 </body>
 </html>
-<!-- redeploy trigger 2026-07-20T03:13:33Z -->
