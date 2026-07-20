@@ -364,6 +364,15 @@
   .history-count{font-family:'IBM Plex Mono'; font-size:11px; color:var(--steel); background:var(--canvas); padding:2px 8px; border-radius:10px; flex-shrink:0;}
   .history-entry-body{display:none; margin:0 0 12px; padding:0;}
   .history-entry-body.open{display:block;}
+  .report-table-wrap{max-height:340px; overflow-y:auto;}
+  .report-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .report-table th{
+    font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel);
+    text-align:left; padding:0 10px 8px; border-bottom:1.5px solid var(--ink); position:sticky; top:0; background:var(--paper);
+  }
+  .report-table td{padding:8px 10px; border-bottom:1px solid var(--line); color:var(--text); vertical-align:top;}
+  .report-table td.report-date{font-family:'IBM Plex Mono'; color:var(--steel); white-space:nowrap;}
+  .report-table tbody tr:last-child td{border-bottom:none;}
 
   /* ================= UPLOAD PAGE ================= */
   .upload-box{
@@ -1145,28 +1154,38 @@ function renderBucketedReport(wrapId, idPrefix, bucketKeyFn, bucketLabelFn){
   const keys = Object.keys(byBucket).sort().reverse();
   wrap.innerHTML = keys.map((key, i)=>{
     const changes = byBucket[key];
-    // Same project, same upload, same change type -> one line listing every
-    // detail together, instead of a separate line per changed field.
+    // Same project, same upload, same change type -> one grouped block of
+    // table rows (Date/Project cells span the group) instead of a separate,
+    // disconnected line per changed field.
     const grouped = [];
     const groupIndex = {};
     changes.forEach(c=>{
       const gKey = `${c.timestamp}|${c.project}|${c.type}`;
       if(groupIndex[gKey]===undefined){
         groupIndex[gKey] = grouped.length;
-        grouped.push({type:c.type, project:c.project, timestamp:c.timestamp, texts:[c.text]});
-      } else {
-        grouped[groupIndex[gKey]].texts.push(c.text);
+        grouped.push({type:c.type, project:c.project, timestamp:c.timestamp, rows:[]});
       }
+      grouped[groupIndex[gKey]].rows.push({field:c.field||c.text, oldValue:c.oldValue||'-', newValue:c.newValue||'-'});
     });
+    const bodyRows = grouped.map(g=>{
+      const dateStr = new Date(g.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+      return g.rows.map((r,ri)=> ri===0
+        ? `<tr><td rowspan="${g.rows.length}" class="report-date">${dateStr}</td><td rowspan="${g.rows.length}"><span class="change-tag ${g.type}">${g.type}</span> <b>${g.project}</b></td><td>${r.field}</td><td>${r.oldValue}</td><td>${r.newValue}</td></tr>`
+        : `<tr><td>${r.field}</td><td>${r.oldValue}</td><td>${r.newValue}</td></tr>`
+      ).join('');
+    }).join('');
     return `
     <div class="history-entry">
       <button class="history-entry-head" onclick="document.getElementById('${idPrefix}${i}').classList.toggle('open');">
         <span><b>${bucketLabelFn(key)}</b></span>
         <span class="history-count">${changes.length} change${changes.length===1?'':'s'}</span>
       </button>
-      <ul class="change-notif-list history-entry-body${i===0?' open':''}" id="${idPrefix}${i}">
-        ${grouped.map(g=>`<li><span class="change-date">${new Date(g.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span><span class="change-tag ${g.type}">${g.type}</span><b>${g.project}</b> \u2014 ${g.texts.join('; ')}</li>`).join('')}
-      </ul>
+      <div class="report-table-wrap history-entry-body${i===0?' open':''}" id="${idPrefix}${i}">
+        <table class="report-table">
+          <thead><tr><th>Date</th><th>Project</th><th>Field</th><th>Before</th><th>After</th></tr></thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      </div>
     </div>`;
   }).join('');
 }
@@ -2194,7 +2213,7 @@ function diffProjects(oldList, newList){
     fieldDefs.forEach(fd=>{
       const ov = op[fd.key], nv = np[fd.key];
       if((ov||'') !== (nv||'') && !(!ov && !nv)){
-        changes.push({type:'changed', project:np.name, text:`${fd.label} changed from ${fd.fmt(ov)} to ${fd.fmt(nv)}`});
+        changes.push({type:'changed', project:np.name, field:fd.label, oldValue:fd.fmt(ov), newValue:fd.fmt(nv), text:`${fd.label} changed from ${fd.fmt(ov)} to ${fd.fmt(nv)}`});
       }
     });
   });
