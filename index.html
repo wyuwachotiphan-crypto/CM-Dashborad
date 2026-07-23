@@ -2433,10 +2433,11 @@ const defectStatusLabel = {open:'Open', waiting:'Waiting', in_progress:'In Progr
 const defectStatusColor = {open:'#C2493C', waiting:'#669BBC', in_progress:'#E2691F', resolved:'#3E8F63', other:'#98A5AD'};
 function normDefectStatus(raw, hasCompletedDate){
   const s = String(raw||'').trim();
-  if(hasCompletedDate || /เสร็จ|closed|resolved|complete|done/i.test(s)) return 'resolved';
+  if(/เสร็จ|closed|resolved|complete|done/i.test(s)) return 'resolved';
   if(/กำลัง|progress|ongoing/i.test(s)) return 'in_progress';
   if(/รอ|wait|pending/i.test(s)) return 'waiting';
   if(/เปิด|open|new/i.test(s)) return 'open';
+  if(hasCompletedDate) return 'resolved';
   return s ? 'other' : 'open';
 }
 
