@@ -70,6 +70,13 @@
   @media (prefers-reduced-motion: reduce){ .dot{animation:none;} }
   .clock{font-family:'IBM Plex Mono'; font-size:12.5px; color:var(--steel); text-align:right;}
   .clock b{color:var(--ink); font-size:15px; display:block; font-weight:500;}
+  .icon-btn{
+    display:flex; align-items:center; justify-content:center; width:32px; height:32px;
+    background:transparent; border:1px solid var(--line); border-radius:7px; color:var(--steel);
+    cursor:pointer; transition:color .15s, border-color .15s, background .15s;
+  }
+  .icon-btn:hover{color:var(--ink); border-color:var(--ink); background:var(--canvas);}
+  .icon-btn svg{width:17px; height:17px;}
 
   /* Tabs */
   .tabs{position:relative; z-index:1; display:flex; gap:4px; background:var(--paper); border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
@@ -506,6 +513,9 @@
       <div class="live-pill"><span class="dot"></span> LIVE</div>
       <div class="clock" style="margin-right:4px;"><b id="refreshLabel">Manual</b><span id="refreshSubLabel">Upload / Refresh</span></div>
       <div class="clock"><b id="clockTime">--:--:--</b><span id="clockDate">-</span></div>
+      <button id="uploadIconBtn" class="icon-btn" title="Upload Excel Data" aria-label="Upload Excel Data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+      </button>
     </div>
   </div>
   <div class="wrap">
@@ -515,7 +525,6 @@
       <button data-page="internal">Internal Work</button>
       <button data-page="defects">Report Project</button>
       <button data-page="survey">Customer Survey</button>
-      <button data-page="upload">Upload Excel Data</button>
     </div>
   </div>
 </header>
@@ -1317,24 +1326,26 @@ function tickClock(){
 setInterval(tickClock,1000); tickClock();
 
 /* ===================== TABS ===================== */
-document.querySelectorAll('.tabs button').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    btn.classList.add('active');
-    const page = document.getElementById('page-'+btn.dataset.page);
-    page.classList.add('active');
-    // Charts drawn while their tab was hidden can measure a 0-size canvas and
-    // never recover on their own — force a resize now that the tab is visible.
-    page.querySelectorAll('canvas').forEach(canvas=>{
-      const chart = Chart.getChart(canvas);
-      if(chart) chart.resize();
-    });
-    // Same issue for the Gantt: its auto-fit width is measured from a hidden
-    // (0-width) container on first load, so recompute once the tab is shown.
-    if(btn.dataset.page==='projects' && ganttPxPerDay===null) renderGantt();
+function switchToPage(pageKey, activeBtn){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  if(activeBtn) activeBtn.classList.add('active');
+  const page = document.getElementById('page-'+pageKey);
+  page.classList.add('active');
+  // Charts drawn while their tab was hidden can measure a 0-size canvas and
+  // never recover on their own — force a resize now that the tab is visible.
+  page.querySelectorAll('canvas').forEach(canvas=>{
+    const chart = Chart.getChart(canvas);
+    if(chart) chart.resize();
   });
+  // Same issue for the Gantt: its auto-fit width is measured from a hidden
+  // (0-width) container on first load, so recompute once the tab is shown.
+  if(pageKey==='projects' && ganttPxPerDay===null) renderGantt();
+}
+document.querySelectorAll('.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchToPage(btn.dataset.page, btn));
 });
+document.getElementById('uploadIconBtn').addEventListener('click', ()=> switchToPage('upload', null));
 
 /* ===================== FILTER ===================== */
 /* The year a project is due to finish: End Date, falling back to Delivery Date */
