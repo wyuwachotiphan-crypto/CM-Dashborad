@@ -1665,17 +1665,16 @@ function renderProjectListPopup(title, projects){
   } else {
     rowsEl.innerHTML = `
       <div class="breakdown-row-simple breakdown-row-simple-head breakdown-row-simple-4col">
-        <span>Project</span><span>Status</span><span>Prog.</span><span>Risk</span>
+        <span>Project</span><span>Status</span><span>Prog.</span><span>Delivery</span>
       </div>
       ` + projects.map((p,i)=>{
-        const risk = computeRisk(p);
         const notAwarded = !p.contractor || p.contractor==='Not Yet Awarded';
         return `
         <div class="breakdown-row-simple breakdown-row-simple-4col kpi-proj-row" data-idx="${i}">
           <span title="${p.name}">${p.name}</span>
           <span><span class="badge ${p.status}" style="font-size:10px;">${statusLabel[p.status]}</span></span>
           <span>${p.progress}%</span>
-          <span><span class="badge-risk ${risk.cls}" style="font-size:10px;">${risk.label}</span></span>
+          <span>${p.deliveryDate || '-'}</span>
         </div>
         <div class="kpi-proj-detail" id="kpiProjDetail${i}">
           <span><span class="label">Budget</span><span class="value">${fmtM(p.budget||0)}</span></span>
@@ -2442,7 +2441,7 @@ function normDefectStatus(raw, hasCompletedDate){
 }
 
 function parseDefectWorkbook(wb){
-  const sheetName = wb.SheetNames.find(n=>/defect/i.test(n)) || wb.SheetNames[0];
+  const sheetName = wb.SheetNames.find(n=>/defect|project problem/i.test(n)) || wb.SheetNames[0];
   const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {range:2, defval:''}).map(buildNormRow);
   const defects = rows.filter(r =>
     field(r,'Project') || field(r,'จุด/พื้นที่','Location') || field(r,'รายละเอียด','Description')
