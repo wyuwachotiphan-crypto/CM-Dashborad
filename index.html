@@ -161,6 +161,8 @@
   .badge.sev-other::before{background:var(--gray);}
   .badge.dstatus-open{color:var(--red); border-color:rgba(194,73,60,0.35); background:rgba(194,73,60,0.07);}
   .badge.dstatus-open::before{background:var(--red);}
+  .badge.dstatus-waiting{color:#2B5A82; border-color:rgba(102,155,188,0.4); background:rgba(102,155,188,0.09);}
+  .badge.dstatus-waiting::before{background:var(--grid);}
   .badge.dstatus-in_progress{color:#9a5413; border-color:rgba(226,105,31,0.35); background:rgba(226,105,31,0.08);}
   .badge.dstatus-in_progress::before{background:var(--accent);}
   .badge.dstatus-resolved{color:var(--green); border-color:rgba(62,143,99,0.35); background:rgba(62,143,99,0.07);}
@@ -834,6 +836,7 @@
           <select id="defectStatusFilter" class="filter-select">
             <option value="all">All</option>
             <option value="open">Open</option>
+            <option value="waiting">Waiting</option>
             <option value="in_progress">In Progress</option>
             <option value="resolved">Resolved</option>
             <option value="other">Other</option>
@@ -2523,13 +2526,14 @@ function normSeverity(raw){
   return 'other';
 }
 
-const defectStatusLabel = {open:'Open', in_progress:'In Progress', resolved:'Resolved', other:'Other'};
-const defectStatusColor = {open:'#C2493C', in_progress:'#E2691F', resolved:'#3E8F63', other:'#98A5AD'};
+const defectStatusLabel = {open:'Open', waiting:'Waiting', in_progress:'In Progress', resolved:'Resolved', other:'Other'};
+const defectStatusColor = {open:'#C2493C', waiting:'#669BBC', in_progress:'#E2691F', resolved:'#3E8F63', other:'#98A5AD'};
 function normDefectStatus(raw, hasCompletedDate){
   const s = String(raw||'').trim();
   if(hasCompletedDate || /เสร็จ|closed|resolved|complete|done/i.test(s)) return 'resolved';
   if(/กำลัง|progress|ongoing/i.test(s)) return 'in_progress';
-  if(/เปิด|open|pending|new|รอ/i.test(s)) return 'open';
+  if(/รอ|wait|pending/i.test(s)) return 'waiting';
+  if(/เปิด|open|new/i.test(s)) return 'open';
   return s ? 'other' : 'open';
 }
 
@@ -2623,7 +2627,7 @@ function renderDefects(){
   countUp(document.getElementById('dOverdue'), overdue);
   countUp(document.getElementById('dResolved'), resolved);
 
-  const statusCounts = {open:0, in_progress:0, resolved:0, other:0};
+  const statusCounts = {open:0, waiting:0, in_progress:0, resolved:0, other:0};
   list.forEach(d=>statusCounts[d.status]++);
   if(defectStatusChart) defectStatusChart.destroy();
   defectStatusChart = new Chart(document.getElementById('defectStatusDonut'), {
