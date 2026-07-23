@@ -151,6 +151,22 @@
   .badge.flag::before{background:var(--red);}
   .badge.normal{color:var(--green); border-color:rgba(62,143,99,0.35); background:rgba(62,143,99,0.07);}
   .badge.normal::before{background:var(--green);}
+  .badge.sev-high{color:var(--red); border-color:rgba(194,73,60,0.4); background:rgba(194,73,60,0.09);}
+  .badge.sev-high::before{background:var(--red);}
+  .badge.sev-medium{color:#9a5413; border-color:rgba(226,105,31,0.35); background:rgba(226,105,31,0.08);}
+  .badge.sev-medium::before{background:var(--accent);}
+  .badge.sev-low{color:var(--green); border-color:rgba(62,143,99,0.35); background:rgba(62,143,99,0.07);}
+  .badge.sev-low::before{background:var(--green);}
+  .badge.sev-other{color:var(--steel); border-color:rgba(100,116,128,0.3); background:rgba(100,116,128,0.06);}
+  .badge.sev-other::before{background:var(--gray);}
+  .badge.dstatus-open{color:var(--red); border-color:rgba(194,73,60,0.35); background:rgba(194,73,60,0.07);}
+  .badge.dstatus-open::before{background:var(--red);}
+  .badge.dstatus-in_progress{color:#9a5413; border-color:rgba(226,105,31,0.35); background:rgba(226,105,31,0.08);}
+  .badge.dstatus-in_progress::before{background:var(--accent);}
+  .badge.dstatus-resolved{color:var(--green); border-color:rgba(62,143,99,0.35); background:rgba(62,143,99,0.07);}
+  .badge.dstatus-resolved::before{background:var(--green);}
+  .badge.dstatus-other{color:var(--steel); border-color:rgba(100,116,128,0.3); background:rgba(100,116,128,0.06);}
+  .badge.dstatus-other::before{background:var(--gray);}
 
   .progress-cell{display:flex; align-items:center; gap:9px;}
   .pbar{flex:1; height:7px; background:var(--line); border-radius:4px; overflow:hidden; min-width:70px;}
@@ -186,6 +202,17 @@
   .internal-row:last-child{border-bottom:none;}
   .internal-dates{font-family:'IBM Plex Mono'; font-size:12px; color:var(--steel);}
   .sc-sub.risk-danger{color:var(--red); font-weight:600;}
+  .defect-list-head{
+    display:grid; grid-template-columns:minmax(160px,1fr) minmax(220px,1.4fr) 100px 110px 140px 150px 110px; gap:16px; align-items:center;
+    min-width:1080px; padding:0 8px 10px; border-bottom:1.5px solid var(--ink);
+    font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--steel);
+  }
+  .defect-row{
+    display:grid; grid-template-columns:minmax(160px,1fr) minmax(220px,1.4fr) 100px 110px 140px 150px 110px; gap:16px; align-items:center;
+    padding:13px 8px; border-bottom:1px solid var(--line); min-width:1080px; font-size:13px;
+  }
+  .defect-row:last-child{border-bottom:none;}
+  .defect-row a{color:var(--grid); font-weight:600;}
   .badge-type{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600; padding:4px 10px 4px 8px; border-radius:20px; white-space:nowrap; border:1px solid transparent;}
   .badge-type::before{content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0;}
   .badge-type.internal{color:#2B5A82; border-color:rgba(62,124,166,0.35); background:rgba(62,124,166,0.08);}
@@ -486,6 +513,7 @@
       <button data-page="projects">Projects &amp; Schedule</button>
       <button data-page="internal">Internal Work</button>
       <button data-page="reports">Reports</button>
+      <button data-page="defects">Defect Report</button>
       <button data-page="survey">Customer Survey</button>
       <button data-page="upload">Upload Excel Data</button>
     </div>
@@ -738,6 +766,115 @@
     </div>
     <div class="panel">
       <div id="monthlyReportList"></div>
+    </div>
+  </div>
+
+  <!-- ================= DEFECT REPORT PAGE ================= -->
+  <div class="page" id="page-defects">
+    <div class="sec-title">
+      <span class="eyebrow">Quality Control</span>
+      <h2>Defect Report</h2>
+      <span class="hint">Source: Defect_Report.xlsx &middot; auto-loaded from GitHub, refreshed on every page load</span>
+      <div class="rule"></div>
+    </div>
+
+    <div class="overview">
+      <div class="kpi total">
+        <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 9v4m0 4h.01M10.3 3.9 2.7 17a1.6 1.6 0 0 0 1.4 2.4h15.8a1.6 1.6 0 0 0 1.4-2.4L13.7 3.9a1.6 1.6 0 0 0-2.8 0Z"/></svg></div>
+        <div class="label">Total Defects</div><div class="value value-lg" id="dTotal">0</div><div class="sub">All Records</div>
+      </div>
+      <div class="kpi attention">
+        <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+        <div class="label">Open</div><div class="value value-lg" id="dOpen">0</div><div class="sub">Not Yet Resolved</div>
+      </div>
+      <div class="kpi construction">
+        <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-9-9"/><path d="M21 3v6h-6"/></svg></div>
+        <div class="label">Overdue</div><div class="value value-lg" id="dOverdue">0</div><div class="sub">Past Due Date</div>
+      </div>
+      <div class="kpi completed">
+        <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 7L9 19l-5.5-5.5"/></svg></div>
+        <div class="label">Resolved</div><div class="value value-lg" id="dResolved">0</div><div class="sub">Fixed &amp; Closed</div>
+      </div>
+      <div class="donut-panel">
+        <div class="donut-wrap">
+          <canvas id="defectStatusDonut"></canvas>
+          <div class="donut-center"><b id="defectStatusDonutCenter">0</b><span>Defects</span></div>
+        </div>
+        <div class="donut-legend" id="defectStatusLegend"></div>
+      </div>
+    </div>
+
+    <div class="fin-overview-grid" style="margin-top:24px;">
+      <div class="panel">
+        <h3>Defects by Severity</h3>
+        <canvas id="defectSeverityChart" height="90"></canvas>
+      </div>
+    </div>
+    <div class="fin-overview-grid" style="margin-top:14px;">
+      <div class="panel">
+        <h3>Defects by Contractor</h3>
+        <span class="chart-hint">Top 10 contractors by defect count</span>
+        <canvas id="defectContractorChart" height="150"></canvas>
+      </div>
+    </div>
+
+    <div class="sec-title" style="margin-top:30px;">
+      <span class="eyebrow">Records</span>
+      <h2>Defect List</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-select-groups">
+        <div class="filter-select-group">
+          <label class="filter-select-label" for="defectProjectFilter">Project</label>
+          <select id="defectProjectFilter" class="filter-select"><option value="all">All</option></select>
+        </div>
+        <div class="filter-select-group">
+          <label class="filter-select-label" for="defectStatusFilter">Status</label>
+          <select id="defectStatusFilter" class="filter-select">
+            <option value="all">All</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="filter-select-group">
+          <label class="filter-select-label" for="defectSeverityFilter">Severity</label>
+          <select id="defectSeverityFilter" class="filter-select">
+            <option value="all">All</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="filter-select-group">
+          <label class="filter-select-label" for="defectContractorFilter">Contractor</label>
+          <select id="defectContractorFilter" class="filter-select"><option value="all">All</option></select>
+        </div>
+      </div>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="defectSearch" placeholder="Search project, location, description...">
+      </div>
+    </div>
+    <div class="panel project-list-wrap">
+      <div class="defect-list-head">
+        <div>Project / Location</div><div>Description</div><div>Severity</div><div>Status</div><div>Contractor</div><div>Due &rarr; Completed</div><div>Photos</div>
+      </div>
+      <div class="status-grid" id="defectTable" style="min-width:1080px;"></div>
+    </div>
+
+    <div class="panel" style="margin-top:14px;">
+      <span style="font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--steel); font-family:'IBM Plex Mono'; display:block; margin-bottom:6px;">Refresh</span>
+      <button class="btn secondary" onclick="refreshDefectData()">&#8635; Refresh Now</button>
+      <span class="status-msg" id="defectRefreshStatus"></span>
+      <p style="font-size:12px; color:var(--steel); margin-top:10px;">Last refreshed: <b id="defectLastRefresh">never</b></p>
+    </div>
+
+    <div class="footnote" id="defectFootnote">
+      No defect data loaded yet.
     </div>
   </div>
 
@@ -2370,6 +2507,188 @@ const dropZone = document.getElementById('dropZone');
 ['dragenter','dragover'].forEach(evt=> dropZone.addEventListener(evt, e=>{ e.preventDefault(); dropZone.classList.add('dragover'); }));
 ['dragleave','drop'].forEach(evt=> dropZone.addEventListener(evt, e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); }));
 dropZone.addEventListener('drop', e=>{ if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+/* ===================== DEFECT REPORT ===================== */
+const DEFECT_SOURCE_URL = 'https://raw.githubusercontent.com/wyuwachotiphan-crypto/CM-Dashborad/main/Defect_Report.xlsx';
+let defectState = { defects: [] };
+let defectStatusChart = null, defectSeverityChart = null, defectContractorChart = null;
+
+const severityLabel = {high:'High', medium:'Medium', low:'Low', other:'Unspecified'};
+const severityColor = {high:'#C1121F', medium:'#E2691F', low:'#3E8F63', other:'#98A5AD'};
+function normSeverity(raw){
+  const s = String(raw||'').trim();
+  if(/สูง|high|critical|urgent/i.test(s)) return 'high';
+  if(/กลาง|medium|moderate/i.test(s)) return 'medium';
+  if(/ต่ำ|low|minor/i.test(s)) return 'low';
+  return 'other';
+}
+
+const defectStatusLabel = {open:'Open', in_progress:'In Progress', resolved:'Resolved', other:'Other'};
+const defectStatusColor = {open:'#C2493C', in_progress:'#E2691F', resolved:'#3E8F63', other:'#98A5AD'};
+function normDefectStatus(raw, hasCompletedDate){
+  const s = String(raw||'').trim();
+  if(hasCompletedDate || /เสร็จ|closed|resolved|complete|done/i.test(s)) return 'resolved';
+  if(/กำลัง|progress|ongoing/i.test(s)) return 'in_progress';
+  if(/เปิด|open|pending|new|รอ/i.test(s)) return 'open';
+  return s ? 'other' : 'open';
+}
+
+function parseDefectWorkbook(wb){
+  const sheetName = wb.SheetNames.find(n=>/defect/i.test(n)) || wb.SheetNames[0];
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {range:2, defval:''}).map(buildNormRow);
+  const defects = rows.filter(r =>
+    field(r,'Project') || field(r,'จุด/พื้นที่','Location') || field(r,'รายละเอียด','Description')
+  ).map(r=>{
+    const completedDate = excelDateToISO(field(r,'วันที่แก้เสร็จ','Completion Date','Date Completed'));
+    return {
+      date: excelDateToISO(field(r,'วันที่','Date')),
+      project: String(field(r,'Project')||'').trim(),
+      location: String(field(r,'จุด/พื้นที่','Location')||'').trim(),
+      description: String(field(r,'รายละเอียด','Description')||'').trim(),
+      severity: normSeverity(field(r,'ความรุนแรง','Severity')),
+      status: normDefectStatus(field(r,'สถานะ','Status'), !!completedDate),
+      contractor: String(field(r,'Contractor')||'').trim(),
+      dueDate: excelDateToISO(field(r,'กำหนดแก้','Due Date')),
+      completedDate,
+      remarks: String(field(r,'หมายเหตุ','Remarks')||'').trim(),
+      photoBefore: String(field(r,'รูป ก่อนแก้','Photo Before')||'').trim(),
+      photoAfter: String(field(r,'รูป หลังแก้','Photo After')||'').trim(),
+    };
+  });
+  return defects;
+}
+
+function isOverdueDefect(d){
+  if(d.status==='resolved' || !d.dueDate) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return new Date(d.dueDate) < today;
+}
+
+function fillDefectSelect(id, values){
+  const el = document.getElementById(id);
+  const current = el.value;
+  el.innerHTML = '<option value="all">All</option>' + values.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if(values.includes(current)) el.value = current;
+}
+function populateDefectFilterOptions(){
+  const distinct = key => [...new Set(defectState.defects.map(d=>d[key]).filter(Boolean))].sort();
+  fillDefectSelect('defectProjectFilter', distinct('project'));
+  fillDefectSelect('defectContractorFilter', distinct('contractor'));
+}
+
+function getFilteredDefects(){
+  const project = document.getElementById('defectProjectFilter').value;
+  const status = document.getElementById('defectStatusFilter').value;
+  const severity = document.getElementById('defectSeverityFilter').value;
+  const contractor = document.getElementById('defectContractorFilter').value;
+  const q = document.getElementById('defectSearch').value.trim().toLowerCase();
+  return defectState.defects.filter(d=>{
+    if(project!=='all' && d.project!==project) return false;
+    if(status!=='all' && d.status!==status) return false;
+    if(severity!=='all' && d.severity!==severity) return false;
+    if(contractor!=='all' && d.contractor!==contractor) return false;
+    if(q && !(d.description.toLowerCase().includes(q) || d.location.toLowerCase().includes(q) || d.project.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function renderDefectTable(list){
+  const wrap = document.getElementById('defectTable');
+  wrap.innerHTML = list.length ? list.map(d=>{
+    const photos = [
+      /^https?:\/\//i.test(d.photoBefore) ? `<a href="${d.photoBefore}" target="_blank" rel="noopener">Before</a>` : '',
+      /^https?:\/\//i.test(d.photoAfter) ? `<a href="${d.photoAfter}" target="_blank" rel="noopener">After</a>` : ''
+    ].filter(Boolean).join(' &middot; ') || '-';
+    return `
+    <div class="defect-row">
+      <div><span class="sc-name">${d.project||'-'}</span><span class="sc-sub">${d.location||'-'}</span></div>
+      <div>${d.description||'-'}</div>
+      <div><span class="badge sev-${d.severity}">${severityLabel[d.severity]}</span></div>
+      <div><span class="badge dstatus-${d.status}">${defectStatusLabel[d.status]}</span></div>
+      <div>${d.contractor||'-'}</div>
+      <div class="internal-dates">${fmtShortDate(d.dueDate)} &rarr; ${d.completedDate?fmtShortDate(d.completedDate):'-'}</div>
+      <div>${photos}</div>
+    </div>`;
+  }).join('') : `<div style="text-align:center; color:var(--steel); font-style:italic; padding:24px;">No defect records match the current filters.</div>`;
+}
+
+function renderDefects(){
+  const list = getFilteredDefects();
+  const total = list.length;
+  const resolved = list.filter(d=>d.status==='resolved').length;
+  const overdue = list.filter(isOverdueDefect).length;
+  const open = total - resolved;
+  countUp(document.getElementById('dTotal'), total);
+  countUp(document.getElementById('dOpen'), open);
+  countUp(document.getElementById('dOverdue'), overdue);
+  countUp(document.getElementById('dResolved'), resolved);
+
+  const statusCounts = {open:0, in_progress:0, resolved:0, other:0};
+  list.forEach(d=>statusCounts[d.status]++);
+  if(defectStatusChart) defectStatusChart.destroy();
+  defectStatusChart = new Chart(document.getElementById('defectStatusDonut'), {
+    type:'doughnut',
+    data:{ labels:Object.keys(statusCounts).map(k=>defectStatusLabel[k]),
+      datasets:[{data:Object.values(statusCounts), backgroundColor:Object.keys(statusCounts).map(k=>defectStatusColor[k]), borderWidth:2, borderColor:'#FBF8F1'}]},
+    options:{plugins:{legend:{display:false}}, cutout:'68%', animation:reduceMotion?false:{duration:500}}
+  });
+  document.getElementById('defectStatusDonutCenter').textContent = total;
+  document.getElementById('defectStatusLegend').innerHTML = Object.keys(statusCounts).map(k=>
+    `<div><span class="sw" style="background:${defectStatusColor[k]}"></span>${defectStatusLabel[k]} <b style="color:var(--ink); font-family:'IBM Plex Mono';">${statusCounts[k]}</b></div>`).join('');
+
+  const sevCounts = {high:0, medium:0, low:0, other:0};
+  list.forEach(d=>sevCounts[d.severity]++);
+  if(defectSeverityChart) defectSeverityChart.destroy();
+  defectSeverityChart = new Chart(document.getElementById('defectSeverityChart'), {
+    type:'bar',
+    data:{labels:Object.keys(sevCounts).map(k=>severityLabel[k]), datasets:[{data:Object.values(sevCounts), backgroundColor:Object.keys(sevCounts).map(k=>severityColor[k]), borderRadius:4}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}}, animation:reduceMotion?false:{duration:500}}
+  });
+
+  const contractorCounts = {};
+  list.forEach(d=>{ const c = d.contractor || 'Unassigned'; contractorCounts[c] = (contractorCounts[c]||0)+1; });
+  const sortedContractors = Object.entries(contractorCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if(defectContractorChart) defectContractorChart.destroy();
+  defectContractorChart = new Chart(document.getElementById('defectContractorChart'), {
+    type:'bar',
+    data:{labels:sortedContractors.map(x=>x[0]), datasets:[{data:sortedContractors.map(x=>x[1]), backgroundColor:'#669BBC', borderRadius:4}]},
+    options:{indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{precision:0}}}, animation:reduceMotion?false:{duration:500}}
+  });
+
+  renderDefectTable(list);
+  const footEl = document.getElementById('defectFootnote');
+  footEl.innerHTML = defectState.defects.length
+    ? `Showing ${list.length} of ${defectState.defects.length} defect record(s) from <b>Defect_Report.xlsx</b>.`
+    : 'No defect data loaded yet &mdash; the dashboard auto-loads Defect_Report.xlsx once it contains rows, or click "Refresh Now" below.';
+}
+
+async function refreshDefectData(opts={}){
+  const statusEl = document.getElementById('defectRefreshStatus');
+  if(statusEl){ statusEl.className = 'status-msg'; statusEl.textContent = ''; }
+  try{
+    const bustUrl = DEFECT_SOURCE_URL + (DEFECT_SOURCE_URL.includes('?')?'&':'?') + '_cb=' + Date.now();
+    const res = await fetch(bustUrl, {cache:'no-store'});
+    if(!res.ok) throw new Error('Server returned ' + res.status);
+    const buffer = await res.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buffer), {type:'array', cellDates:true});
+    defectState.defects = parseDefectWorkbook(wb);
+    populateDefectFilterOptions();
+    renderDefects();
+    const now = new Date();
+    const lastEl = document.getElementById('defectLastRefresh');
+    if(lastEl) lastEl.textContent = now.toLocaleString('en-GB');
+    if(statusEl){ statusEl.className = 'status-msg ok'; statusEl.textContent = `Loaded ${defectState.defects.length} defect record(s).`; }
+  }catch(err){
+    if(!opts.silent && statusEl){ statusEl.className = 'status-msg err'; statusEl.textContent = 'Refresh failed: ' + err.message; }
+  }
+}
+
+['defectProjectFilter','defectStatusFilter','defectSeverityFilter','defectContractorFilter'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', renderDefects);
+});
+document.getElementById('defectSearch').addEventListener('input', renderDefects);
+renderDefects();
+refreshDefectData({silent:true});
 
 /* ===================== PROJECT DETAIL MODAL ===================== */
 /* ===================== SCHEDULE CHART (Planned vs Actual, per project) ===================== */
