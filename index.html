@@ -38,18 +38,18 @@
 
   /* ================= HEADER ================= */
   header{
-    position:relative; background:var(--ink); color:#fff; padding:20px 0 0; overflow:hidden;
-    box-shadow:0 1px 0 rgba(0,0,0,0.25);
+    position:relative; background:var(--paper); color:var(--ink); padding:20px 0 0; overflow:hidden;
+    box-shadow:0 1px 0 rgba(0,0,0,0.06);
   }
   header::before{
     content:''; position:absolute; inset:0; pointer-events:none; opacity:0.5;
     background-image:
-      repeating-linear-gradient(0deg, rgba(79,184,214,0.10) 0, rgba(79,184,214,0.10) 1px, transparent 1px, transparent 26px),
-      repeating-linear-gradient(90deg, rgba(79,184,214,0.10) 0, rgba(79,184,214,0.10) 1px, transparent 1px, transparent 26px);
+      repeating-linear-gradient(0deg, rgba(0,48,73,0.05) 0, rgba(0,48,73,0.05) 1px, transparent 1px, transparent 26px),
+      repeating-linear-gradient(90deg, rgba(0,48,73,0.05) 0, rgba(0,48,73,0.05) 1px, transparent 1px, transparent 26px);
   }
   .scanline{
     position:absolute; left:0; right:0; height:46px; top:-46px;
-    background:linear-gradient(180deg, transparent, rgba(79,184,214,0.16), transparent);
+    background:linear-gradient(180deg, transparent, rgba(102,155,188,0.14), transparent);
     animation:scan 7s linear infinite; pointer-events:none;
   }
   @keyframes scan{ 0%{top:-46px;} 100%{top:160px;} }
@@ -58,29 +58,28 @@
   .head-row{position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; padding-bottom:18px;}
   .brand{display:flex; align-items:center; gap:14px;}
   .brand-logo-wrap{
-    background:#fff; border-radius:8px; padding:7px 14px; display:flex; align-items:center; flex-shrink:0;
-    box-shadow:0 2px 8px rgba(0,0,0,0.18);
+    background:#fff; border:1px solid var(--line); border-radius:8px; padding:7px 14px; display:flex; align-items:center; flex-shrink:0;
   }
   .brand-logo{height:42px; width:auto; display:block;}
   .brand h1{font-family:'Space Grotesk'; font-weight:600; font-size:21px; letter-spacing:0.2px;}
-  .brand p{font-size:12.5px; color:#9FB3C4; margin-top:3px; font-family:'IBM Plex Mono'; letter-spacing:0.2px;}
+  .brand p{font-size:12.5px; color:var(--steel); margin-top:3px; font-family:'IBM Plex Mono'; letter-spacing:0.2px;}
   .head-right{display:flex; align-items:center; gap:16px;}
-  .live-pill{display:flex; align-items:center; gap:8px; background:rgba(79,184,214,0.10); border:1px solid var(--pulse); padding:6px 13px; border-radius:20px; font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--pulse); letter-spacing:0.3px;}
+  .live-pill{display:flex; align-items:center; gap:8px; background:rgba(102,155,188,0.10); border:1px solid var(--pulse); padding:6px 13px; border-radius:20px; font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--pulse); letter-spacing:0.3px;}
   .dot{width:7px; height:7px; border-radius:50%; background:var(--pulse); animation:pulse 1.8s infinite;}
   @keyframes pulse{0%{opacity:1; box-shadow:0 0 0 0 rgba(79,184,214,0.5);} 70%{opacity:0.5; box-shadow:0 0 0 5px rgba(79,184,214,0);} 100%{opacity:1;}}
   @media (prefers-reduced-motion: reduce){ .dot{animation:none;} }
-  .clock{font-family:'IBM Plex Mono'; font-size:12.5px; color:#9FB3C4; text-align:right;}
-  .clock b{color:#fff; font-size:15px; display:block; font-weight:500;}
+  .clock{font-family:'IBM Plex Mono'; font-size:12.5px; color:var(--steel); text-align:right;}
+  .clock b{color:var(--ink); font-size:15px; display:block; font-weight:500;}
 
   /* Tabs */
-  .tabs{position:relative; z-index:1; display:flex; gap:4px; background:var(--ink-soft); border-top:1px solid rgba(255,255,255,0.06);}
+  .tabs{position:relative; z-index:1; display:flex; gap:4px; background:var(--paper); border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
   .tabs button{
-    flex:none; background:transparent; border:none; color:#fff; padding:13px 22px;
+    flex:none; background:transparent; border:none; color:var(--steel); padding:13px 22px;
     font-family:'IBM Plex Sans'; font-weight:600; font-size:13px; cursor:pointer;
     border-bottom:2.5px solid transparent; transition:color .15s, border-color .15s;
   }
-  .tabs button.active{color:#fff; border-bottom-color:var(--accent);}
-  .tabs button:hover{color:#fff;}
+  .tabs button.active{color:var(--ink); border-bottom-color:var(--accent);}
+  .tabs button:hover{color:var(--ink);}
 
   .page{display:none;}
   .page.active{display:block; animation:fadeIn .25s ease;}
