@@ -759,7 +759,7 @@
     <div class="overview">
       <div class="kpi total">
         <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 9v4m0 4h.01M10.3 3.9 2.7 17a1.6 1.6 0 0 0 1.4 2.4h15.8a1.6 1.6 0 0 0 1.4-2.4L13.7 3.9a1.6 1.6 0 0 0-2.8 0Z"/></svg></div>
-        <div class="label">Total Defects</div><div class="value value-lg" id="dTotal">0</div><div class="sub">All Records</div>
+        <div class="label">Total Project Problems</div><div class="value value-lg" id="dTotal">0</div><div class="sub">All Records</div>
       </div>
       <div class="kpi attention">
         <div class="icon-wrap"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
@@ -776,7 +776,7 @@
       <div class="donut-panel">
         <div class="donut-wrap">
           <canvas id="defectStatusDonut"></canvas>
-          <div class="donut-center"><b id="defectStatusDonutCenter">0</b><span>Defects</span></div>
+          <div class="donut-center"><b id="defectStatusDonutCenter">0</b><span>Problems</span></div>
         </div>
         <div class="donut-legend" id="defectStatusLegend"></div>
       </div>
@@ -784,21 +784,21 @@
 
     <div class="fin-overview-grid" style="margin-top:24px;">
       <div class="panel">
-        <h3>Defects by Severity</h3>
+        <h3>Project Problems by Severity</h3>
         <canvas id="defectSeverityChart" height="90"></canvas>
       </div>
     </div>
     <div class="fin-overview-grid" style="margin-top:14px;">
       <div class="panel">
-        <h3>Defects by Contractor</h3>
-        <span class="chart-hint">Top 10 contractors by defect count</span>
+        <h3>Project Problems by Contractor</h3>
+        <span class="chart-hint">Top 10 contractors by project problem count</span>
         <canvas id="defectContractorChart" height="150"></canvas>
       </div>
     </div>
 
     <div class="sec-title" style="margin-top:30px;">
       <span class="eyebrow">Records</span>
-      <h2>Defect List</h2>
+      <h2>Project Problems List</h2>
       <div class="rule"></div>
     </div>
     <div class="filter-bar">
@@ -853,7 +853,7 @@
     </div>
 
     <div class="footnote" id="defectFootnote">
-      No defect data loaded yet.
+      No project problem data loaded yet.
     </div>
   </div>
 
@@ -2517,7 +2517,7 @@ function renderDefectTable(list){
       <div class="internal-dates">${fmtShortDate(d.dueDate)} &rarr; ${d.completedDate?fmtShortDate(d.completedDate):'-'}</div>
       <div>${photos}</div>
     </div>`;
-  }).join('') : `<div style="text-align:center; color:var(--steel); font-style:italic; padding:24px;">No defect records match the current filters.</div>`;
+  }).join('') : `<div style="text-align:center; color:var(--steel); font-style:italic; padding:24px;">No project problem records match the current filters.</div>`;
 }
 
 function renderDefects(){
@@ -2566,8 +2566,8 @@ function renderDefects(){
   renderDefectTable(list);
   const footEl = document.getElementById('defectFootnote');
   footEl.innerHTML = defectState.defects.length
-    ? `Showing ${list.length} of ${defectState.defects.length} defect record(s) from <b>Defect_Report.xlsx</b>.`
-    : 'No defect data loaded yet &mdash; the dashboard auto-loads Defect_Report.xlsx once it contains rows, or click "Refresh Now" below.';
+    ? `Showing ${list.length} of ${defectState.defects.length} project problem record(s) from <b>Defect_Report.xlsx</b>.`
+    : 'No project problem data loaded yet &mdash; the dashboard auto-loads Defect_Report.xlsx once it contains rows, or click "Refresh Now" below.';
 }
 
 async function refreshDefectData(opts={}){
@@ -2585,7 +2585,7 @@ async function refreshDefectData(opts={}){
     const now = new Date();
     const lastEl = document.getElementById('defectLastRefresh');
     if(lastEl) lastEl.textContent = now.toLocaleString('en-GB');
-    if(statusEl){ statusEl.className = 'status-msg ok'; statusEl.textContent = `Loaded ${defectState.defects.length} defect record(s).`; }
+    if(statusEl){ statusEl.className = 'status-msg ok'; statusEl.textContent = `Loaded ${defectState.defects.length} project problem record(s).`; }
   }catch(err){
     if(!opts.silent && statusEl){ statusEl.className = 'status-msg err'; statusEl.textContent = 'Refresh failed: ' + err.message; }
   }
