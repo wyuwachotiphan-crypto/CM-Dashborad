@@ -2464,7 +2464,7 @@ function parseDefectWorkbook(wb){
       description: String(field(r,'รายละเอียด','Description')||'').trim(),
       severity: normSeverity(field(r,'ความรุนแรง','Severity')),
       status: normDefectStatus(field(r,'สถานะ','Status'), !!completedDate),
-      contractor: String(field(r,'Contractor')||'').trim(),
+      contractor: String(field(r,'Responsible Person','Responsible','Contractor')||'').trim(),
       dueDate: excelDateToISO(field(r,'กำหนดแก้','Due Date')),
       completedDate,
       remarks: String(field(r,'หมายเหตุ','Remarks')||'').trim(),
