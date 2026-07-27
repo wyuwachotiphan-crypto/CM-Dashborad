@@ -2486,52 +2486,26 @@ function parseDefectWorkbook(wb){
   return defects;
 }
 
-const DEFECT_SNAPSHOT_KEY = 'defectSnapshot_v1';
-const DEFECT_CHANGELOG_KEY = 'defectChangeLog_v1';
-const DEFECT_WATCHED_FIELDS = ['description','severity','status','contractor','dueDate','completedDate','remarks'];
+const DEFECT_CHANGELOG_URL = 'https://raw.githubusercontent.com/wyuwachotiphan-crypto/CM-Dashborad/main/defect_changelog.json';
+let defectChangeLog = [];
 
 function defectMatchKey(d){ return normKey(d.project) + '|' + normKey(d.location || d.description); }
-function loadDefectSnapshot(){ try{ return JSON.parse(localStorage.getItem(DEFECT_SNAPSHOT_KEY)||'{}'); }catch(e){ return {}; } }
-function loadDefectChangeLog(){ try{ return JSON.parse(localStorage.getItem(DEFECT_CHANGELOG_KEY)||'[]'); }catch(e){ return []; } }
 
-/* Compares the freshly-parsed defect list against the snapshot saved on the
-   previous load, and appends any differences to a persistent change log
-   (localStorage) so "what changed" can be filtered/highlighted later, even
-   across page reloads. Skips logging entirely on the very first-ever load
-   (no snapshot yet) so it doesn't flag every existing row as "new". */
-function diffDefects(newList){
-  const prevSnapshot = loadDefectSnapshot();
-  const hadPrevious = Object.keys(prevSnapshot).length > 0;
-  const now = Date.now();
-  const newEntries = [];
-  const nextSnapshot = {};
-  newList.forEach(d=>{
-    const key = defectMatchKey(d);
-    const prev = prevSnapshot[key];
-    if(hadPrevious){
-      if(!prev){
-        newEntries.push({ts:now, key, field:'new'});
-      } else {
-        DEFECT_WATCHED_FIELDS.forEach(f=>{
-          const ov = prev[f] || '', nv = d[f] || '';
-          if(String(ov) !== String(nv)) newEntries.push({ts:now, key, field:f, from:ov, to:nv});
-        });
-      }
-    }
-    const snap = {}; DEFECT_WATCHED_FIELDS.forEach(f=> snap[f] = d[f] || ''); nextSnapshot[key] = snap;
-  });
-  try{ localStorage.setItem(DEFECT_SNAPSHOT_KEY, JSON.stringify(nextSnapshot)); }catch(e){}
-  if(newEntries.length){
-    const cutoff = now - 90*86400000;
-    const log = loadDefectChangeLog().concat(newEntries).filter(e=>e.ts>=cutoff);
-    try{ localStorage.setItem(DEFECT_CHANGELOG_KEY, JSON.stringify(log)); }catch(e){}
-  }
+/* The change log itself is computed once at deploy time (see
+   update_dashboard.ps1), not per browser, so every device/viewer sees the
+   same "what changed" history regardless of local storage. */
+async function loadDefectChangeLogFromRemote(){
+  try{
+    const bustUrl = DEFECT_CHANGELOG_URL + '?_cb=' + Date.now();
+    const res = await fetch(bustUrl, {cache:'no-store'});
+    if(res.ok) defectChangeLog = await res.json();
+  }catch(e){ /* keep whatever was loaded last; the "Changed" filter/highlights just won't update this time */ }
 }
 
 function getDefectChangesByKey(days){
   const cutoff = Date.now() - days*86400000;
   const byKey = {};
-  loadDefectChangeLog().filter(e=>e.ts>=cutoff).forEach(e=>{ (byKey[e.key] = byKey[e.key]||[]).push(e); });
+  defectChangeLog.filter(e=>e.ts>=cutoff).forEach(e=>{ (byKey[e.key] = byKey[e.key]||[]).push(e); });
   return byKey;
 }
 
@@ -2657,7 +2631,7 @@ async function refreshDefectData(opts={}){
     const buffer = await res.arrayBuffer();
     const wb = XLSX.read(new Uint8Array(buffer), {type:'array', cellDates:true});
     defectState.defects = parseDefectWorkbook(wb);
-    diffDefects(defectState.defects);
+    await loadDefectChangeLogFromRemote();
     populateDefectFilterOptions();
     renderDefects();
     const now = new Date();
