@@ -1832,7 +1832,7 @@ function renderFinance(){
       plugins:{ legend:{display:false},
         tooltip:{callbacks:{label:(item)=> fmtM(item.parsed.x) }},
         datalabels:{display:true, color:'#16243A', anchor:'end', align:'end', offset:4, font:{family:"'IBM Plex Mono'", size:10.5, weight:600}, formatter:(v)=>fmtM(v)} },
-      layout:{padding:{right:60}},
+      layout:{padding:{right:90}},
       scales:{ x:{beginAtZero:true, ticks:{callback:(v)=>fmtM(v)}}, y:{grid:{display:false}} }
     }
   });
@@ -1951,7 +1951,7 @@ function renderVariations(){
       plugins:{ legend:{display:false},
         tooltip:{callbacks:{label:(item)=> fmtM(Math.abs(item.parsed.x)) }},
         datalabels:{display:true, color:'#16243A', anchor:'end', align:(ctx)=> ctx.dataset.data[ctx.dataIndex]<0 ? 'start' : 'end', offset:4, font:{family:"'IBM Plex Mono'", size:10.5, weight:600}, formatter:(v)=>fmtM(Math.abs(v))} },
-      layout:{padding:{left:60, right:60}},
+      layout:{padding:{left:90, right:90}},
       scales:{
         x:{ ticks:{callback:(v)=>fmtM(Math.abs(v))}, grid:{color:(ctx)=> ctx.tick.value===0 ? '#0E2238' : 'rgba(0,0,0,0.06)'} },
         y:{grid:{display:false}}
@@ -2023,7 +2023,7 @@ function renderContractors(){
         plugins:{ legend:{display:false},
           tooltip:{callbacks:{label:(item)=> fmtM(item.parsed.x) }},
           datalabels:{display:true, color:'#16243A', anchor:'end', align:'end', offset:4, font:{family:"'IBM Plex Mono'", size:10.5, weight:600}, formatter:(v)=>fmtM(v)} },
-        layout:{padding:{right:60}},
+        layout:{padding:{right:90}},
         scales:{ x:{beginAtZero:true, ticks:{callback:(v)=>fmtM(v)}}, y:{grid:{display:false}} }
       }
     });
