@@ -20,6 +20,8 @@
   button:active{background:#0d47a1}
   .quick{background:#e3eaf1;color:#1a1a1a;font-size:17px;padding:8px 14px;width:auto;
        margin:6px 6px 0 0;border-radius:20px}
+  .alt{background:#e3eaf1;color:#1a1a1a;margin-top:12px}
+  .alt:active{background:#c9d2da}
   .hint{font-size:16px;color:#5a6570;margin-top:4px}
   #ok{text-align:center;color:#1b7f3b;font-weight:700;height:24px;margin-top:10px}
 </style>
@@ -57,9 +59,11 @@
   <button class="quick" onclick="setP('คนงานไม่พอ')">คนงานไม่พอ</button>
 </div>
 
-<button onclick="copy()">📤 คัดลอก แล้วส่งเข้า LINE</button>
+<button onclick="save()">💾 บันทึก แล้วคัดลอกส่ง LINE</button>
 <div id="ok"></div>
-<p class="hint">ข้อมูลจะถูกเก็บไว้ในเครื่องอัตโนมัติ ปิดหน้าไปแล้วกลับมาก็ยังอยู่</p>
+
+<button class="alt" onclick="xls()">📊 ดาวน์โหลดไฟล์ Excel</button>
+<p class="hint" id="count"></p>
 
 <script>
 const F = ['project','name','date','today','tomorrow','problem'];
@@ -73,6 +77,41 @@ F.forEach(id => {
 if (!$('date').value) $('date').value = new Date().toLocaleDateString('sv');
 
 function setP(t){ $('problem').value = t; localStorage.setItem('dr_problem', t); }
+
+// ---- ประวัติรายงาน ----
+const hist = () => JSON.parse(localStorage.getItem('dr_history') || '[]');
+
+function showCount(){
+  const n = hist().length;
+  $('count').textContent = n ? `มีรายงานเก็บไว้ ${n} วัน` : 'ยังไม่มีรายงานที่บันทึกไว้';
+}
+showCount();
+
+function save(){
+  const row = {};
+  F.forEach(id => row[id] = $(id).value);
+  if (!row.problem) row.problem = 'ไม่มี';
+  const h = hist().filter(r => !(r.date === row.date && r.name === row.name)); // กรอกซ้ำวันเดิม = ทับของเดิม
+  h.push(row);
+  h.sort((a, b) => a.date.localeCompare(b.date));
+  localStorage.setItem('dr_history', JSON.stringify(h));
+  showCount();
+  copy();
+}
+
+function xls(){
+  const h = hist();
+  if (!h.length) { alert('ยังไม่มีข้อมูล กด "บันทึก" ก่อนอย่างน้อย 1 ครั้ง'); return; }
+  const head = ['วันที่','โครงการ','ผู้รายงาน','สิ่งที่ทำไปวันนี้','สิ่งที่จะทำพรุ่งนี้','ปัญหาที่พบ'];
+  const cell = v => '"' + String(v || '').replace(/"/g, '""') + '"';
+  const csv = '﻿' + [head.map(cell).join(',')].concat(
+        h.map(r => [r.date, r.project, r.name, r.today, r.tomorrow, r.problem].map(cell).join(','))
+      ).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
+  a.download = 'รายงานประจำวัน.csv';
+  a.click();
+}
 
 function copy(){
   const d = new Date($('date').value).toLocaleDateString('th-TH',
@@ -91,7 +130,7 @@ ${$('tomorrow').value}
 ⚠️ ปัญหา
 ${$('problem').value || 'ไม่มี'}`;
   navigator.clipboard.writeText(text)
-    .then(() => { $('ok').textContent = '✔ คัดลอกแล้ว — ไปวางใน LINE ได้เลย'; })
+    .then(() => { $('ok').textContent = '✔ บันทึกและคัดลอกแล้ว — ไปวางใน LINE ได้เลย'; })
     .catch(() => { prompt('คัดลอกข้อความนี้:', text); });
 }
 </script>
