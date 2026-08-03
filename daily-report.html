@@ -28,6 +28,9 @@
 
 <h1>📋 รายงานประจำวัน</h1>
 
+<label for="project">ชื่อโครงการ</label>
+<input id="project" placeholder="เช่น อาคารสำนักงาน ABC">
+
 <div class="row">
   <div>
     <label for="name">ชื่อ</label>
@@ -59,7 +62,7 @@
 <p class="hint">ข้อมูลจะถูกเก็บไว้ในเครื่องอัตโนมัติ ปิดหน้าไปแล้วกลับมาก็ยังอยู่</p>
 
 <script>
-const F = ['name','date','today','tomorrow','problem'];
+const F = ['project','name','date','today','tomorrow','problem'];
 const $ = id => document.getElementById(id);
 
 // โหลดค่าที่เคยกรอก
@@ -76,6 +79,7 @@ function copy(){
       {day:'numeric', month:'long', year:'numeric'});
   const text =
 `รายงานประจำวัน ${d}
+โครงการ: ${$('project').value}
 ผู้รายงาน: ${$('name').value}
 
 ✅ ทำวันนี้
