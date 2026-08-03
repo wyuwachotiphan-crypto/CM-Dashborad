@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>รายงานประจำวัน</title>
+<style>
+  body{font-family:"Sarabun","Segoe UI",Tahoma,sans-serif;font-size:20px;line-height:1.6;
+       max-width:640px;margin:0 auto;padding:16px;background:#f4f6f8;color:#1a1a1a}
+  h1{font-size:26px;margin:8px 0 16px;text-align:center}
+  label{display:block;font-weight:700;margin:18px 0 6px}
+  input,textarea{width:100%;font:inherit;padding:12px;border:2px solid #c9d2da;
+       border-radius:10px;box-sizing:border-box;background:#fff}
+  textarea{min-height:120px;resize:vertical}
+  input:focus,textarea:focus{border-color:#1565c0;outline:none}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1}
+  button{font:inherit;font-weight:700;padding:14px;border:0;border-radius:10px;
+       background:#1565c0;color:#fff;width:100%;margin-top:20px;cursor:pointer}
+  button:active{background:#0d47a1}
+  .quick{background:#e3eaf1;color:#1a1a1a;font-size:17px;padding:8px 14px;width:auto;
+       margin:6px 6px 0 0;border-radius:20px}
+  .hint{font-size:16px;color:#5a6570;margin-top:4px}
+  #ok{text-align:center;color:#1b7f3b;font-weight:700;height:24px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<h1>📋 รายงานประจำวัน</h1>
+
+<div class="row">
+  <div>
+    <label for="name">ชื่อ</label>
+    <input id="name" placeholder="ชื่อของคุณ">
+  </div>
+  <div>
+    <label for="date">วันที่</label>
+    <input id="date" type="date">
+  </div>
+</div>
+
+<label for="today">1. สิ่งที่ทำไปวันนี้</label>
+<textarea id="today" placeholder="เช่น&#10;- ตรวจงานเสาชั้น 3&#10;- ประชุมกับผู้รับเหมา"></textarea>
+
+<label for="tomorrow">2. สิ่งที่จะทำพรุ่งนี้</label>
+<textarea id="tomorrow" placeholder="เช่น&#10;- เทคอนกรีตพื้นชั้น 3"></textarea>
+
+<label for="problem">3. ปัญหาที่พบ</label>
+<textarea id="problem" placeholder="ถ้าไม่มี กดปุ่มด้านล่าง"></textarea>
+<div>
+  <button class="quick" onclick="setP('ไม่มี')">ไม่มีปัญหา</button>
+  <button class="quick" onclick="setP('ฝนตก ทำงานไม่ได้')">ฝนตก</button>
+  <button class="quick" onclick="setP('รอวัสดุ')">รอวัสดุ</button>
+  <button class="quick" onclick="setP('คนงานไม่พอ')">คนงานไม่พอ</button>
+</div>
+
+<button onclick="copy()">📤 คัดลอก แล้วส่งเข้า LINE</button>
+<div id="ok"></div>
+<p class="hint">ข้อมูลจะถูกเก็บไว้ในเครื่องอัตโนมัติ ปิดหน้าไปแล้วกลับมาก็ยังอยู่</p>
+
+<script>
+const F = ['name','date','today','tomorrow','problem'];
+const $ = id => document.getElementById(id);
+
+// โหลดค่าที่เคยกรอก
+F.forEach(id => {
+  $(id).value = localStorage.getItem('dr_' + id) || '';
+  $(id).addEventListener('input', () => localStorage.setItem('dr_' + id, $(id).value));
+});
+if (!$('date').value) $('date').value = new Date().toLocaleDateString('sv');
+
+function setP(t){ $('problem').value = t; localStorage.setItem('dr_problem', t); }
+
+function copy(){
+  const d = new Date($('date').value).toLocaleDateString('th-TH',
+      {day:'numeric', month:'long', year:'numeric'});
+  const text =
+`รายงานประจำวัน ${d}
+ผู้รายงาน: ${$('name').value}
+
+✅ ทำวันนี้
+${$('today').value}
+
+📌 พรุ่งนี้
+${$('tomorrow').value}
+
+⚠️ ปัญหา
+${$('problem').value || 'ไม่มี'}`;
+  navigator.clipboard.writeText(text)
+    .then(() => { $('ok').textContent = '✔ คัดลอกแล้ว — ไปวางใน LINE ได้เลย'; })
+    .catch(() => { prompt('คัดลอกข้อความนี้:', text); });
+}
+</script>
+
+</body>
+</html>
