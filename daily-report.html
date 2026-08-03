@@ -100,18 +100,125 @@ function save(){
   copy();
 }
 
+// ---- สร้างไฟล์ .xlsx เอง (ไม่ใช้ library ภายนอก) ----
+// xlsx = ไฟล์ zip ที่ข้างในเป็น xml หลายไฟล์ จึงเขียน zip แบบไม่บีบอัดขึ้นมาตรง ๆ
+const CRCT = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    t[i] = c;
+  }
+  return t;
+})();
+const crc32 = u8 => {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < u8.length; i++) c = CRCT[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+};
+
+function zip(files){
+  const enc = new TextEncoder();
+  const b2 = n => [n & 255, (n >> 8) & 255];
+  const b4 = n => [n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255];
+  const local = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), data = enc.encode(f.data), c = crc32(data);
+    const head = [...b4(0x04034b50), ...b2(20), ...b2(0x800), ...b2(0), ...b2(0), ...b2(0),
+                  ...b4(c), ...b4(data.length), ...b4(data.length), ...b2(name.length), ...b2(0)];
+    local.push(new Uint8Array(head), name, data);
+    central.push(new Uint8Array([...b4(0x02014b50), ...b2(20), ...b2(20), ...b2(0x800), ...b2(0),
+                  ...b2(0), ...b2(0), ...b4(c), ...b4(data.length), ...b4(data.length),
+                  ...b2(name.length), ...b2(0), ...b2(0), ...b2(0), ...b2(0), ...b4(0), ...b4(offset)]), name);
+    offset += head.length + name.length + data.length;
+  }
+  const cdSize = central.reduce((n, p) => n + p.length, 0);
+  const end = new Uint8Array([...b4(0x06054b50), ...b2(0), ...b2(0),
+                ...b2(files.length), ...b2(files.length), ...b4(cdSize), ...b4(offset), ...b2(0)]);
+  return new Blob([...local, ...central, end], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+
+const esc = v => String(v == null ? '' : v)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/\r?\n/g, '&#10;');
+
 function xls(){
   const h = hist();
   if (!h.length) { alert('ยังไม่มีข้อมูล กด "บันทึก" ก่อนอย่างน้อย 1 ครั้ง'); return; }
+
   const head = ['วันที่','โครงการ','ผู้รายงาน','สิ่งที่ทำไปวันนี้','สิ่งที่จะทำพรุ่งนี้','ปัญหาที่พบ'];
-  const cell = v => '"' + String(v || '').replace(/"/g, '""') + '"';
-  const csv = '﻿' + [head.map(cell).join(',')].concat(
-        h.map(r => [r.date, r.project, r.name, r.today, r.tomorrow, r.problem].map(cell).join(','))
-      ).join('\r\n');
+  const widths = [13, 22, 16, 46, 42, 30];
+  const col = i => String.fromCharCode(65 + i);
+  const cell = (i, r, s, v) => `<c r="${col(i)}${r}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+
+  const rows = [
+    `<row r="1" ht="30" customHeight="1">${head.map((v, i) => cell(i, 1, 1, v)).join('')}</row>`,
+    ...h.map((r, n) => {
+      const band = n % 2 ? 3 : 0;                    // แถวสลับสีอ่อน
+      const vals = [r.date, r.project, r.name, r.today, r.tomorrow, r.problem];
+      return `<row r="${n + 2}">` + vals.map((v, i) =>
+        cell(i, n + 2, (i < 3 ? 2 : 4) + band, v)).join('') + '</row>';
+    })
+  ].join('');
+
+  const ref = `A1:F${h.length + 1}`;
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="${ref}"/>` +
+`<sheetViews><sheetView tabSelected="1" workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
+`<sheetFormatPr defaultRowHeight="16"/><cols>` +
+widths.map((w, i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('') +
+`</cols><sheetData>${rows}</sheetData><autoFilter ref="${ref}"/>` +
+`<pageMargins left="0.4" right="0.4" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>` +
+`<pageSetup orientation="landscape" fitToWidth="1" paperSize="9"/></worksheet>`;
+
+  const F_ = '<name val="Tahoma"/>';
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+`<fonts count="2"><font><sz val="11"/><color rgb="FF1A1A1A"/>${F_}</font>` +
+`<font><b/><sz val="11"/><color rgb="FFFFFFFF"/>${F_}</font></fonts>` +
+`<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>` +
+`<fill><patternFill patternType="solid"><fgColor rgb="FF1565C0"/><bgColor indexed="64"/></patternFill></fill>` +
+`<fill><patternFill patternType="solid"><fgColor rgb="FFEDF3FA"/><bgColor indexed="64"/></patternFill></fill></fills>` +
+`<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>` +
+`<border>${['left','right','top','bottom'].map(s => `<${s} style="thin"><color rgb="FFC5D0DC"/></${s}>`).join('')}<diagonal/></border></borders>` +
+`<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7">` +
+`<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
+`<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>` +
+`<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top" wrapText="1"/></xf>` +
+`<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top" wrapText="1"/></xf>` +
+`<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>` +
+`<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>` +
+`<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>` +
+`</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+
+  const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  const blob = zip([
+    {name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+`<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+`<Default Extension="xml" ContentType="application/xml"/>` +
+`<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
+`<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>` +
+`<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
+    {name: '_rels/.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+`<Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name: 'xl/workbook.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${R}">` +
+`<sheets><sheet name="รายงานประจำวัน" sheetId="1" r:id="rId1"/></sheets></workbook>`},
+    {name: 'xl/_rels/workbook.xml.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+`<Relationship Id="rId1" Type="${R}/worksheet" Target="worksheets/sheet1.xml"/>` +
+`<Relationship Id="rId2" Type="${R}/styles" Target="styles.xml"/></Relationships>`},
+    {name: 'xl/styles.xml', data: styles},
+    {name: 'xl/worksheets/sheet1.xml', data: sheet}
+  ]);
+
   const stamp = new Date().toLocaleString('sv').replace(/[-: ]/g, '').slice(0, 12);
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
-  a.download = `รายงานประจำวัน_${$('name').value || 'ไม่ระบุชื่อ'}_${stamp}.csv`;
+  a.href = URL.createObjectURL(blob);
+  a.download = `รายงานประจำวัน_${$('name').value || 'ไม่ระบุชื่อ'}_${stamp}.xlsx`;
   a.click();
 
   // ส่งออกแล้ว = เริ่มนับใหม่ (ข้อมูลอยู่ในไฟล์ที่เพิ่งโหลดแล้ว)
