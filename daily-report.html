@@ -155,8 +155,9 @@ function xls(){
   const rows = [
     `<row r="1" ht="30" customHeight="1">${head.map((v, i) => cell(i, 1, 1, v)).join('')}</row>`,
     ...h.map((r, n) => {
-      const band = n % 2 ? 3 : 0;                    // แถวสลับสีอ่อน
+      const band = n % 2;                            // แถวคู่สลับสีอ่อน
       const vals = [r.date, r.project, r.name, r.today, r.tomorrow, r.problem];
+      // 2/3 = จัดกลาง (ปกติ/สลับสี), 4/5 = ชิดซ้าย (ปกติ/สลับสี)
       return `<row r="${n + 2}">` + vals.map((v, i) =>
         cell(i, n + 2, (i < 3 ? 2 : 4) + band, v)).join('') + '</row>';
     })
@@ -182,12 +183,11 @@ widths.map((w, i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1
 `<fill><patternFill patternType="solid"><fgColor rgb="FFEDF3FA"/><bgColor indexed="64"/></patternFill></fill></fills>` +
 `<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>` +
 `<border>${['left','right','top','bottom'].map(s => `<${s} style="thin"><color rgb="FFC5D0DC"/></${s}>`).join('')}<diagonal/></border></borders>` +
-`<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7">` +
+`<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6">` +
 `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
 `<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>` +
 `<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top" wrapText="1"/></xf>` +
 `<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top" wrapText="1"/></xf>` +
-`<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>` +
 `<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>` +
 `<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>` +
 `</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
