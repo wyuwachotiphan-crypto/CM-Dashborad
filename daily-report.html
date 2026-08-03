@@ -64,6 +64,7 @@
 
 <button class="alt" onclick="xls()">📊 ดาวน์โหลดไฟล์ Excel</button>
 <p class="hint" id="count"></p>
+<p class="hint">ดาวน์โหลดแล้วระบบจะเริ่มนับใหม่ ไฟล์ครั้งถัดไปจะมีเฉพาะรายงานหลังจากนี้</p>
 
 <script>
 const F = ['project','name','date','today','tomorrow','problem'];
@@ -107,10 +108,16 @@ function xls(){
   const csv = '﻿' + [head.map(cell).join(',')].concat(
         h.map(r => [r.date, r.project, r.name, r.today, r.tomorrow, r.problem].map(cell).join(','))
       ).join('\r\n');
+  const stamp = new Date().toLocaleString('sv').replace(/[-: ]/g, '').slice(0, 12);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
-  a.download = 'รายงานประจำวัน.csv';
+  a.download = `รายงานประจำวัน_${$('name').value || 'ไม่ระบุชื่อ'}_${stamp}.csv`;
   a.click();
+
+  // ส่งออกแล้ว = เริ่มนับใหม่ (ข้อมูลอยู่ในไฟล์ที่เพิ่งโหลดแล้ว)
+  localStorage.removeItem('dr_history');
+  showCount();
+  $('ok').textContent = `✔ ส่งออก ${h.length} วันแล้ว — เริ่มนับใหม่`;
 }
 
 function copy(){
