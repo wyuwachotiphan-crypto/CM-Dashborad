@@ -21,6 +21,7 @@
        opposites, and staying off slot-2 orange keeps the two charts apart */
     --series-rev:     #2a78d6;
     --series-exp:     #e34948;
+    --plot-money:     170px;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
@@ -140,8 +141,10 @@
   .xaxis b { flex: 1 1 0; text-align: center; font-size: 11px; font-weight: 400; color: var(--text-muted); }
 
   /* ---- money chart: two bars per month, side by side ---- */
-  .yaxis.money { width: 40px; }
-  .cols.money { height: 170px; }
+  /* The axis and the plot MUST share one height or the tick labels drift off
+     the gridlines - hence the shared custom property rather than two literals. */
+  .yaxis.money { width: 40px; height: var(--plot-money); }
+  .cols.money { height: var(--plot-money); }
   .cols.money + .xaxis, .xaxis.money { margin-left: 50px; }
   .pair { display: flex; align-items: flex-end; gap: 2px; width: 100%; height: 100%; }
   .bar { flex: 1 1 0; min-height: 0; border-radius: 3px 3px 0 0; }
