@@ -220,15 +220,15 @@
 
   <div class="section-head">
     <h2>รับรู้รายได้รายเดือน</h2>
-    <p>นับตามเดือนที่<strong>จบงาน</strong> (End Date) ของแต่ละงวด — เทียบรายรับกับรายจ่าย</p>
+    <p>เมื่อโครงการ<strong>เริ่มงาน</strong> (Start Date ของ First Fix) รับรู้รายได้ <strong>40% ของ Sale Price</strong> ทันที — อีก 60% ยังไม่แสดง</p>
   </div>
 
   <section class="tiles" id="revtiles"></section>
 
   <div class="toolbar">
     <div class="legend">
-      <span><i class="swatch rev"></i>รายรับ (Volume)</span>
-      <span><i class="swatch exp"></i>รายจ่าย (Spent)</span>
+      <span><i class="swatch rev"></i>รายรับ (40% ของ Sale Price)</span>
+      <span><i class="swatch exp"></i>รายจ่าย (40% ของ Spent)</span>
     </div>
     <div class="spacer"></div>
     <button id="revtoggle" aria-expanded="false" aria-controls="revtableview">แสดงตาราง</button>
@@ -252,10 +252,10 @@
 const GEN = {
 "DATA": {"2025":[[0,0],[0,0],[2,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"2026":[[0,0],[0,0],[4,1],[0,1],[1,1],[4,4],[1,1],[2,2],[4,0],[0,3],[0,2],[1,0]],"2027":[[1,1],[0,2],[0,0],[0,0],[0,1],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]},
 "DETAIL": {"2025-3":[["25-17_Ekamai 28 (K'Phong)",1],["Khun Sarut's House",1]],"2026-3":[["Granpix",1],["บ้านคุณอู BUGAAN พัฒนาการ",1],["Sukhumvit 77 Prawet Residence",1],["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",1],["บ้านคุณอู BUGAAN พัฒนาการ",2]],"2026-4":[["Granpix",2]],"2026-5":[["บ้านคุณอิสระ",1],["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",2]],"2026-6":[["S’rin House",1],["PhanasonSamutprakhan Residence",1],["P'Gummy @Sildrom Residence FL.21",1],["Ventier courtyard ชั้น 3",1],["P'Gummy @Sildrom Residence FL.21",2],["Sukhumvit 77 Prawet Residence",2],["Ventier courtyard ชั้น 3",2],["บ้านคุณอิสระ",2]],"2026-7":[["The Grand Pinklao",1],["PhanasonSamutprakhan Residence",2]],"2026-8":[["คุณเต้ย หมู่บ้านรัตนา",1],["บ้านบางบอน5ซอย7",1],["25-17_Ekamai 28 (K'Phong)",2],["Khun Sarut's House",2]],"2026-9":[["คุณทวีชัย สมุทปราการ",1],["Achalaboon Residence",1],["หมู่บ้านมัณฑนา",1],["HUAY KWANG RESIDENCE",1]],"2026-10":[["คุณเต้ย หมู่บ้านรัตนา",2],["S’rin House",2],["หมู่บ้านมัณฑนา",2]],"2026-11":[["HUAY KWANG RESIDENCE",2],["บ้านบางบอน5ซอย7",2]],"2026-12":[["บ้านคุณปุกกี้",1]],"2027-1":[["บ้านคุณยู้เขาใหญ่",1],["บ้านคุณปุกกี้",2]],"2027-2":[["Achalaboon Residence",2],["บ้านคุณยู้เขาใหญ่",2]],"2027-5":[["คุณทวีชัย สมุทปราการ",2]]},
-"REV": {"2025":[[0,0],[0,0],[403175,86997],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"2026":[[0,0],[0,0],[601116,254446],[310715,122458],[0,0],[953630,228640],[1100472,450007],[656342,62349],[961164,45883],[915266,50367],[338123,10800],[237646,0]],"2027":[[434132,0],[286099,0],[0,0],[0,0],[92000,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]},
-"REVDETAIL": {"2025-3":[["25-17_Ekamai 28 (K'Phong)",1,266680,58299],["Khun Sarut's House",1,136495,28698]],"2026-3":[["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",1,230527,112000],["Granpix",1,180000,70458],["บ้านคุณอู BUGAAN พัฒนาการ",1,127059,47992],["บ้านคุณอู BUGAAN พัฒนาการ",2,63530,23996]],"2026-4":[["Granpix",2,180000,70458],["Sukhumvit 77 Prawet Residence",1,130715,52000]],"2026-6":[["S’rin House",1,346833,25200],["บ้านคุณอิสระ",1,135380,44160],["Ventier courtyard ชั้น 3",1,129184,35600],["Ventier courtyard ชั้น 3",2,129184,35600],["P'Gummy @Sildrom Residence FL.21",1,80000,40000],["บ้านคุณอิสระ",2,67690,22080],["Sukhumvit 77 Prawet Residence",2,65357,26000]],"2026-7":[["PhanasonSamutprakhan Residence",1,682836,262672],["PhanasonSamutprakhan Residence",2,341418,131336],["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",2,76219,56000]],"2026-8":[["คุณเต้ย หมู่บ้านรัตนา",1,333125,33600],["บ้านบางบอน5ซอย7",1,130841,14400],["The Grand Pinklao",1,124128,0],["Khun Sarut's House",2,68247,14349]],"2026-9":[["HUAY KWANG RESIDENCE",1,479984,0],["คุณทวีชัย สมุทปราการ",1,184000,0],["หมู่บ้านมัณฑนา",1,163840,16734],["25-17_Ekamai 28 (K'Phong)",2,133340,29150]],"2026-10":[["S’rin House",2,346833,25200],["Achalaboon Residence",1,319950,0],["คุณเต้ย หมู่บ้านรัตนา",2,166563,16800],["หมู่บ้านมัณฑนา",2,81920,8367]],"2026-11":[["HUAY KWANG RESIDENCE",2,239992,0],["บ้านบางบอน5ซอย7",2,98131,10800]],"2026-12":[["บ้านคุณปุกกี้",1,237646,0]],"2027-1":[["บ้านคุณยู้เขาใหญ่",1,315310,0],["บ้านคุณปุกกี้",2,118823,0]],"2027-2":[["Achalaboon Residence",2,159975,0],["บ้านคุณยู้เขาใหญ่",2,126124,0]],"2027-5":[["คุณทวีชัย สมุทปราการ",2,92000,0]]},
-"REVMETA": {"rows":38,"noEnd":[["The Grand Pinklao","Second Fix"]],"noJoin":[]},
-"META": {"projects":20,"rows":39,"generated":"2026-08-06 14:55","missing":[["The Grand Pinklao","Second Fix"]]}
+"REV": {"2025":[[0,0],[0,0],[403175,86997],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"2026":[[0,0],[0,0],[728301,305936],[0,0],[135380,44160],[1306465,347872],[82752,0],[463966,48000],[1147774,16734],[0,0],[0,0],[237646,0]],"2027":[[252248,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]},
+"REVDETAIL": {"2025-3":[["25-17_Ekamai 28 (K'Phong)",1,266680,58299],["Khun Sarut's House",1,136495,28698]],"2026-3":[["Granpix",1,240000,93944],["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",1,230527,112000],["Sukhumvit 77 Prawet Residence",1,130715,52000],["บ้านคุณอู BUGAAN พัฒนาการ",1,127059,47992]],"2026-5":[["บ้านคุณอิสระ",1,135380,44160]],"2026-6":[["PhanasonSamutprakhan Residence",1,682836,262672],["S’rin House",1,462444,33600],["Ventier courtyard ชั้น 3",1,129184,35600],["P'Gummy @Sildrom Residence FL.21",1,32000,16000]],"2026-7":[["The Grand Pinklao",1,82752,0]],"2026-8":[["คุณเต้ย หมู่บ้านรัตนา",1,333125,33600],["บ้านบางบอน5ซอย7",1,130841,14400]],"2026-9":[["HUAY KWANG RESIDENCE",1,479984,0],["Achalaboon Residence",1,319950,0],["คุณทวีชัย สมุทปราการ",1,184000,0],["หมู่บ้านมัณฑนา",1,163840,16734]],"2026-12":[["บ้านคุณปุกกี้",1,237646,0]],"2027-1":[["บ้านคุณยู้เขาใหญ่",1,252248,0]]},
+"REVMETA": {"rows":20,"rate":0.4,"noEnd":[],"noJoin":[]},
+"META": {"projects":20,"rows":39,"generated":"2026-08-06 15:32","missing":[["The Grand Pinklao","Second Fix"]]}
 };
 /* DATA:END */
 
@@ -348,9 +348,9 @@ document.addEventListener('mousemove', e => {
           `<div class="row net"><span>ส่วนต่าง</span><span>${fmtFull(rv - ex)}</span></div><hr>` +
           `<ul>${list.map(([n, p, r, e]) =>
             `<li><span>${esc(n)}<br><span style="color:var(--text-muted)">` +
-            `${p === 1 ? 'First Fix' : 'Second Fix'} · รับ ${fmtShort(r)} / จ่าย ${fmtShort(e)}</span></span></li>`
+            `รับ ${fmtShort(r)} / จ่าย ${fmtShort(e)}</span></span></li>`
           ).join('')}</ul>`
-        : `<div class="empty">ไม่มีงานจบในเดือนนี้</div>`);
+        : `<div class="empty">ไม่มีโครงการเริ่มในเดือนนี้</div>`);
 
     tip.style.opacity = 1;
   } else {
@@ -499,12 +499,12 @@ document.getElementById('foot').innerHTML =
   `<strong>จำนวนงาน</strong> — นับ 1 รายการ = 1 phase ของโครงการ ตาม Start Date; ` +
   `รวม ${META.rows} รายการจาก ${META.projects} โครงการ<br>` +
   (META.missing.length ? `ไม่มีวันที่เริ่ม จึงไม่ถูกนับ: ` + META.missing.map(note).join(', ') + `<br>` : '') +
-  `<br><strong>รับรู้รายได้</strong> — รายรับคือ Volume (THB) ของงวดนั้น ลงเดือนตาม End Date; ` +
-  `รายจ่ายคือ Spent (THB) ของโครงการจากชีต Summary Report ` +
-  `หารตามสัดส่วนงวดเดียวกับ Volume (เช่น First Fix 0.4 ใช้ 40% ของ Spent) ` +
-  `เพราะ Spent เป็นยอดระดับโครงการ ไม่ได้แยกงวด; รวม ${REVMETA.rows} รายการ<br>` +
-  (REVMETA.noEnd.length ? `ไม่มีวันที่จบ จึงไม่อยู่ในกราฟรายได้: ` + REVMETA.noEnd.map(note).join(', ') + `<br>` : '') +
-  (REVMETA.noJoin.length ? `Volume ไม่ได้ผูกสูตรกับ Summary Report จึงไม่ทราบรายจ่าย (นับเป็น 0): ` + REVMETA.noJoin.map(note).join(', ') + `<br>` : '') +
+  `<br><strong>รับรู้รายได้</strong> — 1 โครงการ = 1 รายการ (ไม่ได้แยกงวด) ลงเดือนตาม Start Date ของ First Fix; ` +
+  `รายรับ = Sale Price × ${Math.round(REVMETA.rate * 100)}% และรายจ่าย = Spent × ${Math.round(REVMETA.rate * 100)}% ` +
+  `ทั้งคู่ดึงจากชีต Summary Report เพื่อให้สองแท่งพูดถึงสัดส่วนเดียวกันของโครงการเดียวกัน; ` +
+  `รวม ${REVMETA.rows} โครงการ — อีก ${100 - Math.round(REVMETA.rate * 100)}% ของราคาขายยังไม่ถูกแสดงในกราฟนี้<br>` +
+  (REVMETA.noEnd.length ? `ไม่มีวันที่เริ่มของ First Fix จึงไม่อยู่ในกราฟรายได้: ` + REVMETA.noEnd.map(note).join(', ') + `<br>` : '') +
+  (REVMETA.noJoin.length ? `Volume ไม่ได้ผูกสูตรกับ Summary Report จึงหา Sale Price ไม่เจอ: ` + REVMETA.noJoin.map(note).join(', ') + `<br>` : '') +
   `<br>ซิงก์ล่าสุด ${esc(META.generated)} น.`;
 </script>
 </body>
