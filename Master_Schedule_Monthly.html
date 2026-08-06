@@ -156,7 +156,6 @@
   #tableview[hidden] { display: none; }
 
   footer { margin-top: 28px; color: var(--text-muted); font-size: 12px; }
-  footer code { font-size: 11px; }
 </style>
 </head>
 <body>
@@ -165,7 +164,7 @@
   <header>
     <h1>จำนวนงานรายเดือน — Master Schedule</h1>
     <p>นับตามเดือนที่<strong>เริ่มงาน</strong> (Start Date) แยกสีตาม Phase — ภาพรวมรายปี</p>
-    <p class="src">ที่มา: Construction_Portfolio_Template - Data base.xlsx › ชีต Master Schedule (แถว 5–44)</p>
+    <p class="src">ที่มา: Construction_Portfolio_Template - Data base.xlsx › ชีต Master Schedule</p>
   </header>
 
   <section class="tiles" id="tiles"></section>
@@ -189,38 +188,30 @@
 <div id="tip" role="status" aria-live="polite"></div>
 
 <script>
+/* =====================================================================
+   บล็อกข้อมูลด้านล่างถูกสร้างอัตโนมัติโดย sync_dashboard.ps1
+   อย่าแก้ด้วยมือ — จะถูกเขียนทับทุกครั้งที่กด Sync Dashboard.bat
+   ===================================================================== */
+/* DATA:START */
+const GEN = {
+"DATA": {"2025":[[0,0],[0,0],[2,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"2026":[[0,0],[0,0],[4,1],[0,1],[1,1],[4,4],[1,1],[2,2],[4,0],[0,3],[0,2],[1,0]],"2027":[[1,1],[0,2],[0,0],[0,0],[0,1],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]},
+"DETAIL": {"2025-3":[["25-17_Ekamai 28 (K'Phong)",1],["Khun Sarut's House",1]],"2026-3":[["Granpix",1],["บ้านคุณอู BUGAAN พัฒนาการ",1],["Sukhumvit 77 Prawet Residence",1],["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",1],["บ้านคุณอู BUGAAN พัฒนาการ",2]],"2026-4":[["Granpix",2]],"2026-5":[["บ้านคุณอิสระ",1],["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",2]],"2026-6":[["S’rin House",1],["PhanasonSamutprakhan Residence",1],["P'Gummy @Sildrom Residence FL.21",1],["Ventier courtyard ชั้น 3",1],["P'Gummy @Sildrom Residence FL.21",2],["Sukhumvit 77 Prawet Residence",2],["Ventier courtyard ชั้น 3",2],["บ้านคุณอิสระ",2]],"2026-7":[["The Grand Pinklao",1],["PhanasonSamutprakhan Residence",2]],"2026-8":[["คุณเต้ย หมู่บ้านรัตนา",1],["บ้านบางบอน5ซอย7",1],["25-17_Ekamai 28 (K'Phong)",2],["Khun Sarut's House",2]],"2026-9":[["คุณทวีชัย สมุทปราการ",1],["Achalaboon Residence",1],["หมู่บ้านมัณฑนา",1],["HUAY KWANG RESIDENCE",1]],"2026-10":[["คุณเต้ย หมู่บ้านรัตนา",2],["S’rin House",2],["หมู่บ้านมัณฑนา",2]],"2026-11":[["HUAY KWANG RESIDENCE",2],["บ้านบางบอน5ซอย7",2]],"2026-12":[["บ้านคุณปุกกี้",1]],"2027-1":[["บ้านคุณยู้เขาใหญ่",1],["บ้านคุณปุกกี้",2]],"2027-2":[["Achalaboon Residence",2],["บ้านคุณยู้เขาใหญ่",2]],"2027-5":[["คุณทวีชัย สมุทปราการ",2]]},
+"META": {"projects":20,"rows":39,"generated":"2026-08-06 13:24","missing":[["The Grand Pinklao","Second Fix"]]}
+};
+/* DATA:END */
+
 const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-
-// [First Fix, Second Fix] per month, index 0 = ม.ค.
-const DATA = {
-  2025: [[0,0],[0,0],[2,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],
-  2026: [[0,0],[0,0],[4,1],[0,1],[1,1],[4,4],[1,1],[2,2],[4,0],[0,3],[0,2],[1,0]],
-  2027: [[1,1],[0,2],[0,0],[0,0],[0,1],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]
-};
-
-// รายชื่อโครงการต่อเดือน — [ชื่อ, phase(1=First,2=Second)]
-const DETAIL = {
-  '2025-3': [["Khun Sarut's House",1],["25-17_Ekamai 28 (K'Phong)",1]],
-  '2026-3': [['Sukhumvit 77 Prawet Residence',1],['สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2',1],['Granpix',1],['บ้านคุณอู BUGAAN พัฒนาการ',1],['บ้านคุณอู BUGAAN พัฒนาการ',2]],
-  '2026-4': [['Granpix',2]],
-  '2026-5': [['บ้านคุณอิสระ',1],['สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2',2]],
-  '2026-6': [['Ventier courtyard ชั้น 3',1],["S’rin House",1],['PhanasonSamutprakhan Residence',1],["P'Gummy @Sildrom Residence FL.21",1],['Sukhumvit 77 Prawet Residence',2],['Ventier courtyard ชั้น 3',2],['บ้านคุณอิสระ',2],["P'Gummy @Sildrom Residence FL.21",2]],
-  '2026-7': [['The Grand Pinklao',1],['PhanasonSamutprakhan Residence',2]],
-  '2026-8': [['บ้านบางบอน5ซอย7',1],['คุณเต้ย หมู่บ้านรัตนา',1],["Khun Sarut's House",2],["25-17_Ekamai 28 (K'Phong)",2]],
-  '2026-9': [['หมู่บ้านมัณฑนา',1],['HUAY KWANG RESIDENCE',1],['คุณทวีชัย สมุทปราการ',1],['Achalaboon Residence',1]],
-  '2026-10':[['หมู่บ้านมัณฑนา',2],["S’rin House",2],['คุณเต้ย หมู่บ้านรัตนา',2]],
-  '2026-11':[['บ้านบางบอน5ซอย7',2],['HUAY KWANG RESIDENCE',2]],
-  '2026-12':[['บ้านคุณปุกกี้',1]],
-  '2027-1': [['บ้านคุณยู้เขาใหญ่',1],['บ้านคุณปุกกี้',2]],
-  '2027-2': [['บ้านคุณยู้เขาใหญ่',2],['Achalaboon Residence',2]],
-  '2027-5': [['คุณทวีชัย สมุทปราการ',2]]
-};
+const DATA = GEN.DATA, DETAIL = GEN.DETAIL, META = GEN.META;
 
 const YEARS = Object.keys(DATA).map(Number).sort();
-const MAX = 8;                       // สเกล y ร่วมกันทุกปี เพื่อเทียบข้ามปีได้
-const TICKS = [0, 2, 4, 6, 8];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const sum = a => a.reduce((x, y) => x + y, 0);
+
+/* สเกลแกน Y ร่วมกันทุกปี — คำนวณจากข้อมูลจริง เพื่อให้เทียบข้ามปีได้และไม่ล้นกรอบ */
+const RAW_MAX = Math.max(1, ...YEARS.flatMap(y => DATA[y].map(m => m[0] + m[1])));
+const STEP = RAW_MAX <= 5 ? 1 : RAW_MAX <= 12 ? 2 : Math.ceil(RAW_MAX / 6);
+const MAX = Math.ceil(RAW_MAX / STEP) * STEP;
+const TICKS = Array.from({ length: MAX / STEP + 1 }, (_, i) => i * STEP);
 
 const totF = sum(YEARS.map(y => sum(DATA[y].map(m => m[0]))));
 const totS = sum(YEARS.map(y => sum(DATA[y].map(m => m[1]))));
@@ -330,10 +321,12 @@ btn.onclick = () => {
 
 /* ---------- footer ---------- */
 document.getElementById('foot').innerHTML =
-  `หมายเหตุ: นับ 1 รายการ = 1 phase ของโครงการ (แต่ละโครงการมี First Fix และ Second Fix) — ` +
-  `รวม ${totF + totS} รายการจาก 20 โครงการ<br>` +
-  `The Grand Pinklao — Second Fix ยังไม่มีวันที่ในชีต จึงไม่ถูกนับ (First Fix ${totF} ≠ Second Fix ${totS})<br>` +
-  `สร้างเมื่อ ${new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })} — ข้อมูลเป็น snapshot ต้องรันใหม่เมื่อ Excel เปลี่ยน`;
+  `หมายเหตุ: นับ 1 รายการ = 1 phase ของโครงการ — รวม ${META.rows} รายการจาก ${META.projects} โครงการ<br>` +
+  (META.missing.length
+    ? `ยังไม่มีวันที่เริ่มในชีต จึงไม่ถูกนับ: ` +
+      META.missing.map(([n, p]) => `${esc(n)} (${esc(p)})`).join(', ') + `<br>`
+    : '') +
+  `ซิงก์ล่าสุด ${esc(META.generated)} น.`;
 </script>
 </body>
 </html>
