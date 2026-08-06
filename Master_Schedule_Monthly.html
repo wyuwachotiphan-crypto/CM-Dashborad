@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Master Schedule — จำนวนงานรายเดือน</title>
+<title>Master Schedule — จำนวนงานและรับรู้รายได้รายเดือน</title>
 <style>
   :root {
     color-scheme: light;
@@ -17,6 +17,10 @@
     --border:         rgba(11,11,11,0.10);
     --series-1:       #2a78d6;
     --series-2:       #eb6834;
+    /* revenue vs expense uses the blue<->red diverging poles: they read as
+       opposites, and staying off slot-2 orange keeps the two charts apart */
+    --series-rev:     #2a78d6;
+    --series-exp:     #e34948;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
@@ -31,6 +35,8 @@
       --border:         rgba(255,255,255,0.10);
       --series-1:       #3987e5;
       --series-2:       #d95926;
+      --series-rev:     #3987e5;
+      --series-exp:     #e66767;
     }
   }
   :root[data-theme="dark"] {
@@ -45,6 +51,8 @@
     --border:         rgba(255,255,255,0.10);
     --series-1:       #3987e5;
     --series-2:       #d95926;
+    --series-rev:     #3987e5;
+    --series-exp:     #e66767;
   }
 
   * { box-sizing: border-box; }
@@ -131,6 +139,27 @@
   .xaxis { display: flex; gap: 4px; margin-left: 28px; margin-top: 6px; }
   .xaxis b { flex: 1 1 0; text-align: center; font-size: 11px; font-weight: 400; color: var(--text-muted); }
 
+  /* ---- money chart: two bars per month, side by side ---- */
+  .yaxis.money { width: 40px; }
+  .cols.money { height: 170px; }
+  .cols.money + .xaxis, .xaxis.money { margin-left: 50px; }
+  .pair { display: flex; align-items: flex-end; gap: 2px; width: 100%; height: 100%; }
+  .bar { flex: 1 1 0; min-height: 0; border-radius: 3px 3px 0 0; }
+  .bar.rev { background: var(--series-rev); }
+  .bar.exp { background: var(--series-exp); }
+  .swatch.rev { background: var(--series-rev); }
+  .swatch.exp { background: var(--series-exp); }
+
+  .section-head { margin: 40px 0 6px; padding-top: 28px; border-top: 1px solid var(--border); }
+  .section-head.first { margin-top: 22px; padding-top: 0; border-top: none; }
+  .section-head h2 { font-size: 18px; font-weight: 650; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .section-head p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+
+  #tip .row { display: flex; justify-content: space-between; gap: 14px; }
+  #tip .row span:last-child { font-variant-numeric: tabular-nums; }
+  #tip hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+  #tip .net { font-weight: 650; }
+
   /* ---- tooltip ---- */
   #tip {
     position: fixed; z-index: 10; pointer-events: none; opacity: 0;
@@ -162,10 +191,14 @@
 <div class="wrap">
 
   <header>
-    <h1>จำนวนงานรายเดือน — Master Schedule</h1>
-    <p>นับตามเดือนที่<strong>เริ่มงาน</strong> (Start Date) แยกสีตาม Phase — ภาพรวมรายปี</p>
-    <p class="src">ที่มา: Construction_Portfolio_Template - Data base.xlsx › ชีต Master Schedule</p>
+    <h1>Master Schedule Dashboard</h1>
+    <p class="src">ที่มา: Construction_Portfolio_Template - Data base.xlsx › ชีต Master Schedule + Summary Report</p>
   </header>
+
+  <div class="section-head first">
+    <h2>จำนวนงานรายเดือน</h2>
+    <p>นับตามเดือนที่<strong>เริ่มงาน</strong> (Start Date) แยกสีตาม Phase — ภาพรวมรายปี</p>
+  </div>
 
   <section class="tiles" id="tiles"></section>
 
@@ -182,6 +215,26 @@
 
   <section id="tableview" hidden></section>
 
+  <div class="section-head">
+    <h2>รับรู้รายได้รายเดือน</h2>
+    <p>นับตามเดือนที่<strong>จบงาน</strong> (End Date) ของแต่ละงวด — เทียบรายรับกับรายจ่าย</p>
+  </div>
+
+  <section class="tiles" id="revtiles"></section>
+
+  <div class="toolbar">
+    <div class="legend">
+      <span><i class="swatch rev"></i>รายรับ (Volume)</span>
+      <span><i class="swatch exp"></i>รายจ่าย (Spent)</span>
+    </div>
+    <div class="spacer"></div>
+    <button id="revtoggle" aria-expanded="false" aria-controls="revtableview">แสดงตาราง</button>
+  </div>
+
+  <section class="facets" id="revfacets"></section>
+
+  <section id="revtableview" hidden></section>
+
   <footer id="foot"></footer>
 </div>
 
@@ -196,7 +249,10 @@
 const GEN = {
 "DATA": {"2025":[[0,0],[0,0],[2,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"2026":[[0,0],[0,0],[4,1],[0,1],[1,1],[4,4],[1,1],[2,2],[4,0],[0,3],[0,2],[1,0]],"2027":[[1,1],[0,2],[0,0],[0,0],[0,1],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]},
 "DETAIL": {"2025-3":[["25-17_Ekamai 28 (K'Phong)",1],["Khun Sarut's House",1]],"2026-3":[["Granpix",1],["บ้านคุณอู BUGAAN พัฒนาการ",1],["Sukhumvit 77 Prawet Residence",1],["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",1],["บ้านคุณอู BUGAAN พัฒนาการ",2]],"2026-4":[["Granpix",2]],"2026-5":[["บ้านคุณอิสระ",1],["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",2]],"2026-6":[["S’rin House",1],["PhanasonSamutprakhan Residence",1],["P'Gummy @Sildrom Residence FL.21",1],["Ventier courtyard ชั้น 3",1],["P'Gummy @Sildrom Residence FL.21",2],["Sukhumvit 77 Prawet Residence",2],["Ventier courtyard ชั้น 3",2],["บ้านคุณอิสระ",2]],"2026-7":[["The Grand Pinklao",1],["PhanasonSamutprakhan Residence",2]],"2026-8":[["คุณเต้ย หมู่บ้านรัตนา",1],["บ้านบางบอน5ซอย7",1],["25-17_Ekamai 28 (K'Phong)",2],["Khun Sarut's House",2]],"2026-9":[["คุณทวีชัย สมุทปราการ",1],["Achalaboon Residence",1],["หมู่บ้านมัณฑนา",1],["HUAY KWANG RESIDENCE",1]],"2026-10":[["คุณเต้ย หมู่บ้านรัตนา",2],["S’rin House",2],["หมู่บ้านมัณฑนา",2]],"2026-11":[["HUAY KWANG RESIDENCE",2],["บ้านบางบอน5ซอย7",2]],"2026-12":[["บ้านคุณปุกกี้",1]],"2027-1":[["บ้านคุณยู้เขาใหญ่",1],["บ้านคุณปุกกี้",2]],"2027-2":[["Achalaboon Residence",2],["บ้านคุณยู้เขาใหญ่",2]],"2027-5":[["คุณทวีชัย สมุทปราการ",2]]},
-"META": {"projects":20,"rows":39,"generated":"2026-08-06 13:27","missing":[["The Grand Pinklao","Second Fix"]]}
+"REV": {"2025":[[0,0],[0,0],[403175,86997],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],"2026":[[0,0],[0,0],[601116,254446],[310715,122458],[0,0],[953630,228640],[1100472,450007],[656342,62349],[961164,45883],[915266,50367],[338123,10800],[237646,0]],"2027":[[434132,0],[286099,0],[0,0],[0,0],[92000,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]},
+"REVDETAIL": {"2025-3":[["25-17_Ekamai 28 (K'Phong)",1,266680,58299],["Khun Sarut's House",1,136495,28698]],"2026-3":[["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",1,230527,112000],["Granpix",1,180000,70458],["บ้านคุณอู BUGAAN พัฒนาการ",1,127059,47992],["บ้านคุณอู BUGAAN พัฒนาการ",2,63530,23996]],"2026-4":[["Granpix",2,180000,70458],["Sukhumvit 77 Prawet Residence",1,130715,52000]],"2026-6":[["S’rin House",1,346833,25200],["บ้านคุณอิสระ",1,135380,44160],["Ventier courtyard ชั้น 3",1,129184,35600],["Ventier courtyard ชั้น 3",2,129184,35600],["P'Gummy @Sildrom Residence FL.21",1,80000,40000],["บ้านคุณอิสระ",2,67690,22080],["Sukhumvit 77 Prawet Residence",2,65357,26000]],"2026-7":[["PhanasonSamutprakhan Residence",1,682836,262672],["PhanasonSamutprakhan Residence",2,341418,131336],["สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2",2,76219,56000]],"2026-8":[["คุณเต้ย หมู่บ้านรัตนา",1,333125,33600],["บ้านบางบอน5ซอย7",1,130841,14400],["The Grand Pinklao",1,124128,0],["Khun Sarut's House",2,68247,14349]],"2026-9":[["HUAY KWANG RESIDENCE",1,479984,0],["คุณทวีชัย สมุทปราการ",1,184000,0],["หมู่บ้านมัณฑนา",1,163840,16734],["25-17_Ekamai 28 (K'Phong)",2,133340,29150]],"2026-10":[["S’rin House",2,346833,25200],["Achalaboon Residence",1,319950,0],["คุณเต้ย หมู่บ้านรัตนา",2,166563,16800],["หมู่บ้านมัณฑนา",2,81920,8367]],"2026-11":[["HUAY KWANG RESIDENCE",2,239992,0],["บ้านบางบอน5ซอย7",2,98131,10800]],"2026-12":[["บ้านคุณปุกกี้",1,237646,0]],"2027-1":[["บ้านคุณยู้เขาใหญ่",1,315310,0],["บ้านคุณปุกกี้",2,118823,0]],"2027-2":[["Achalaboon Residence",2,159975,0],["บ้านคุณยู้เขาใหญ่",2,126124,0]],"2027-5":[["คุณทวีชัย สมุทปราการ",2,92000,0]]},
+"REVMETA": {"rows":38,"noEnd":[["The Grand Pinklao","Second Fix"]],"noJoin":[]},
+"META": {"projects":20,"rows":39,"generated":"2026-08-06 14:55","missing":[["The Grand Pinklao","Second Fix"]]}
 };
 /* DATA:END */
 
@@ -275,6 +331,27 @@ document.addEventListener('mousemove', e => {
   const col = e.target.closest('.col');
   if (!col) { tip.style.opacity = 0; return; }
 
+  // Both charts render .col; the dataset tells them apart.
+  if (col.dataset.ry !== undefined) {
+    const y = col.dataset.ry, i = +col.dataset.rm;
+    const [rv, ex] = REV[y][i];
+    const list = REVDETAIL[`${y}-${i + 1}`] || [];
+
+    tip.innerHTML =
+      `<div class="th">${MONTHS[i]} ${y}</div>` +
+      (list.length
+        ? `<div class="row"><span><i class="swatch rev"></i>รายรับ</span><span>${fmtFull(rv)}</span></div>` +
+          `<div class="row"><span><i class="swatch exp"></i>รายจ่าย</span><span>${fmtFull(ex)}</span></div>` +
+          `<div class="row net"><span>ส่วนต่าง</span><span>${fmtFull(rv - ex)}</span></div><hr>` +
+          `<ul>${list.map(([n, p, r, e]) =>
+            `<li><span>${esc(n)}<br><span style="color:var(--text-muted)">` +
+            `${p === 1 ? 'First Fix' : 'Second Fix'} · รับ ${fmtShort(r)} / จ่าย ${fmtShort(e)}</span></span></li>`
+          ).join('')}</ul>`
+        : `<div class="empty">ไม่มีงานจบในเดือนนี้</div>`);
+
+    tip.style.opacity = 1;
+  } else {
+
   const y = col.dataset.y, i = +col.dataset.m;
   const [f, s] = DATA[y][i];
   const list = DETAIL[`${y}-${i + 1}`] || [];
@@ -288,6 +365,7 @@ document.addEventListener('mousemove', e => {
       : `<div class="empty">ไม่มีงานเริ่มในเดือนนี้</div>`);
 
   tip.style.opacity = 1;
+  }
   const r = tip.getBoundingClientRect();
   let x = e.clientX + 14, ty = e.clientY + 14;
   if (x + r.width > innerWidth - 8)  x = e.clientX - r.width - 14;
@@ -319,14 +397,112 @@ btn.onclick = () => {
   btn.textContent = open ? 'ซ่อนตาราง' : 'แสดงตาราง';
 };
 
+/* =====================================================================
+   Money chart - revenue vs expense, keyed on End Date
+   ===================================================================== */
+const REV = GEN.REV, REVDETAIL = GEN.REVDETAIL, REVMETA = GEN.REVMETA;
+const RYEARS = Object.keys(REV).map(Number).sort();
+
+const fmtFull  = v => Math.round(v).toLocaleString('en-US');
+const fmtShort = v =>
+  Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(v % 1e6 === 0 ? 0 : 1) + 'M' :
+  Math.abs(v) >= 1e3 ? Math.round(v / 1e3) + 'K' : String(Math.round(v));
+
+/* Round the axis up to a 1/2/2.5/5 x 10^n step so ticks land on readable
+   numbers instead of the raw maximum. */
+function niceScale(max, targetTicks) {
+  const rough = max / targetTicks;
+  const p = Math.pow(10, Math.floor(Math.log10(rough)));
+  const step = ([1, 2, 2.5, 5, 10].find(x => x * p >= rough) || 10) * p;
+  return { step, max: Math.ceil(max / step) * step };
+}
+
+const RMAX_RAW = Math.max(1, ...RYEARS.flatMap(y => REV[y].flatMap(m => m)));
+const RS = niceScale(RMAX_RAW, 4);
+const RTICKS = Array.from({ length: Math.round(RS.max / RS.step) + 1 }, (_, i) => i * RS.step);
+
+const totRev = RYEARS.reduce((a, y) => a + sum(REV[y].map(m => m[0])), 0);
+const totExp = RYEARS.reduce((a, y) => a + sum(REV[y].map(m => m[1])), 0);
+
+let rpeak = { v: -1 };
+RYEARS.forEach(y => REV[y].forEach((m, i) => { if (m[0] > rpeak.v) rpeak = { v: m[0], y, i }; }));
+
+document.getElementById('revtiles').innerHTML = [
+  ['รายรับรวม', fmtShort(totRev), 'บาท'],
+  ['รายจ่ายรวม', fmtShort(totExp), 'บาท'],
+  ['ส่วนต่าง', fmtShort(totRev - totExp), (totRev ? Math.round((totRev - totExp) / totRev * 100) : 0) + '% ของรายรับ'],
+  ['เดือนรายรับสูงสุด', fmtShort(rpeak.v), MONTHS[rpeak.i] + ' ' + rpeak.y]
+].map(([k, v, u]) =>
+  `<div class="tile"><div class="k">${esc(k)}</div><div class="v sm">${esc(v)}</div><div class="u">${esc(u)}</div></div>`
+).join('');
+
+document.getElementById('revfacets').innerHTML = RYEARS.map(y => {
+  const rows = REV[y];
+  const yRev = sum(rows.map(m => m[0])), yExp = sum(rows.map(m => m[1]));
+
+  const grid = RTICKS.map(t =>
+    `<u class="${t === 0 ? 'base' : ''}" style="bottom:${(t / RS.max) * 100}%"></u>`
+  ).join('');
+
+  const yaxis = RTICKS.map(t =>
+    `<i style="bottom:${(t / RS.max) * 100}%">${fmtShort(t)}</i>`
+  ).join('');
+
+  const cols = rows.map(([rv, ex], i) =>
+    `<div class="col" data-ry="${y}" data-rm="${i}">
+       <div class="pair">
+         <div class="bar rev" style="height:${(rv / RS.max) * 100}%"></div>
+         <div class="bar exp" style="height:${(ex / RS.max) * 100}%"></div>
+       </div>
+     </div>`
+  ).join('');
+
+  return `<div class="facet">
+      <h2>ปี ${y} <span class="be">พ.ศ. ${y + 543}</span>
+          <span class="tot">รับ ${fmtShort(yRev)} / จ่าย ${fmtShort(yExp)}</span></h2>
+      <div class="plot">
+        <div class="yaxis money">${yaxis}</div>
+        <div class="cols money"><div class="gridlines">${grid}</div>${cols}</div>
+      </div>
+      <div class="xaxis money">${MONTHS.map(n => `<b>${n}</b>`).join('')}</div>
+    </div>`;
+}).join('');
+
+document.getElementById('revtableview').innerHTML = RYEARS.map(y => {
+  const rows = REV[y];
+  const active = rows.map((m, i) => [m, i]).filter(([m]) => m[0] !== 0 || m[1] !== 0);
+  const f = sum(rows.map(m => m[0])), s = sum(rows.map(m => m[1]));
+  return `<table>
+      <caption>ปี ${y} (พ.ศ. ${y + 543}) — บาท, แสดงเฉพาะเดือนที่มีรายการ</caption>
+      <thead><tr><th>เดือน</th><th>รายรับ</th><th>รายจ่าย</th><th>ส่วนต่าง</th></tr></thead>
+      <tbody>${active.map(([m, i]) =>
+        `<tr><td>${MONTHS[i]}</td><td>${fmtFull(m[0])}</td><td>${fmtFull(m[1])}</td><td>${fmtFull(m[0] - m[1])}</td></tr>`
+      ).join('')}</tbody>
+      <tfoot><tr><td>รวมทั้งปี</td><td>${fmtFull(f)}</td><td>${fmtFull(s)}</td><td>${fmtFull(f - s)}</td></tr></tfoot>
+    </table>`;
+}).join('');
+
+const rbtn = document.getElementById('revtoggle'), rtv = document.getElementById('revtableview');
+rbtn.onclick = () => {
+  const open = rtv.hidden;
+  rtv.hidden = !open;
+  rbtn.setAttribute('aria-expanded', String(open));
+  rbtn.textContent = open ? 'ซ่อนตาราง' : 'แสดงตาราง';
+};
+
 /* ---------- footer ---------- */
+const note = ([n, p]) => `${esc(n)} (${esc(p)})`;
 document.getElementById('foot').innerHTML =
-  `หมายเหตุ: นับ 1 รายการ = 1 phase ของโครงการ — รวม ${META.rows} รายการจาก ${META.projects} โครงการ<br>` +
-  (META.missing.length
-    ? `ยังไม่มีวันที่เริ่มในชีต จึงไม่ถูกนับ: ` +
-      META.missing.map(([n, p]) => `${esc(n)} (${esc(p)})`).join(', ') + `<br>`
-    : '') +
-  `ซิงก์ล่าสุด ${esc(META.generated)} น.`;
+  `<strong>จำนวนงาน</strong> — นับ 1 รายการ = 1 phase ของโครงการ ตาม Start Date; ` +
+  `รวม ${META.rows} รายการจาก ${META.projects} โครงการ<br>` +
+  (META.missing.length ? `ไม่มีวันที่เริ่ม จึงไม่ถูกนับ: ` + META.missing.map(note).join(', ') + `<br>` : '') +
+  `<br><strong>รับรู้รายได้</strong> — รายรับคือ Volume (THB) ของงวดนั้น ลงเดือนตาม End Date; ` +
+  `รายจ่ายคือ Spent (THB) ของโครงการจากชีต Summary Report ` +
+  `หารตามสัดส่วนงวดเดียวกับ Volume (เช่น First Fix 0.4 ใช้ 40% ของ Spent) ` +
+  `เพราะ Spent เป็นยอดระดับโครงการ ไม่ได้แยกงวด; รวม ${REVMETA.rows} รายการ<br>` +
+  (REVMETA.noEnd.length ? `ไม่มีวันที่จบ จึงไม่อยู่ในกราฟรายได้: ` + REVMETA.noEnd.map(note).join(', ') + `<br>` : '') +
+  (REVMETA.noJoin.length ? `Volume ไม่ได้ผูกสูตรกับ Summary Report จึงไม่ทราบรายจ่าย (นับเป็น 0): ` + REVMETA.noJoin.map(note).join(', ') + `<br>` : '') +
+  `<br>ซิงก์ล่าสุด ${esc(META.generated)} น.`;
 </script>
 </body>
 </html>
