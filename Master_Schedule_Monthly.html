@@ -262,8 +262,8 @@
 
     <section class="sec">
       <div class="sec-head">
-        <h2>จำนวนงานรายเดือน</h2>
-        <p>นับตามเดือนที่<strong>เริ่มงาน</strong> (Start Date) — ดูว่าเดือนไหนงานกระจุก</p>
+        <h2>Project Pipeline</h2>
+        <p>จำนวนงานรายเดือน นับตามเดือนที่<strong>เริ่มงาน</strong> (Start Date) — ดูว่าเดือนไหนงานกระจุก</p>
       </div>
       <div class="legend">
         <span><i class="swatch s1"></i>First Fix</span>
@@ -274,8 +274,8 @@
 
     <section class="sec">
       <div class="sec-head">
-        <h2>รับรู้รายได้รายเดือน</h2>
-        <p>เงินเข้า–เงินออกจริง ลงเดือนตามวันที่ในชีต — รับ 3 งวด, จ่ายผู้รับเหมา 3 งวด</p>
+        <h2>Financial Forecast</h2>
+        <p>รับรู้รายได้รายเดือน — เงินเข้า–เงินออกจริง ลงเดือนตามวันที่ในชีต · รับ 3 งวด, จ่ายผู้รับเหมา 3 งวด</p>
       </div>
       <div class="legend">
         <span><i class="swatch rev"></i>รายรับ</span>
@@ -291,8 +291,8 @@
 
     <section class="sec">
       <div class="sec-head">
-        <h2>รายรับ–รายจ่าย รายเดือน</h2>
-        <p>ตัวเลขเต็ม หน่วยบาท — แสดงเฉพาะเดือนที่มีรายการ</p>
+        <h2>Financial Forecast</h2>
+        <p>รายรับ–รายจ่ายรายเดือน ตัวเลขเต็ม หน่วยบาท — แสดงเฉพาะเดือนที่มีรายการ</p>
       </div>
       <div id="revtables"></div>
     </section>
@@ -307,7 +307,7 @@
 
     <section class="sec">
       <div class="sec-head">
-        <h2>จำนวนงานรายเดือน</h2>
+        <h2>Project Pipeline</h2>
         <p>จำนวนงวดงานที่เริ่มในแต่ละเดือน</p>
       </div>
       <div id="worktables"></div>
@@ -506,11 +506,11 @@ document.getElementById('projtable').innerHTML = PROJ.length === 0
 /* ===================== notes ===================== */
 const note = ([n, p]) => `${esc(n)} (${esc(p)})`;
 document.getElementById('foot').innerHTML =
-  `<h3>จำนวนงาน</h3>` +
+  `<h3>Project Pipeline</h3>` +
   `นับ 1 รายการ = 1 งวดงานของโครงการ ลงเดือนตาม Start Date — รวม ${META.rows} งวดจาก ${META.projects} โครงการ` +
   (META.missing.length ? `<br><span class="warn">ไม่มีวันที่เริ่ม จึงไม่ถูกนับ:</span> ` + META.missing.map(note).join(', ') : '') +
 
-  `<h3>รับรู้รายได้</h3>` +
+  `<h3>Financial Forecast</h3>` +
   `ลงเดือนตามวันที่จ่าย/รับจริงที่ระบุในชีต Master Schedule รวม ${REVMETA.rows} รายการ<br>` +
   `<strong>รายรับ</strong> · งวด 1 = Sale Price × ${PCT}% ลงเดือนที่เริ่มงาน (งวดนี้ไม่มีในชีต จึงคำนวณให้) · งวด 2 = คอลัมน์ S วันที่ T · งวด 3 = คอลัมน์ U วันที่ V<br>` +
   `<strong>รายจ่าย</strong> · คอลัมน์ K/N/P (30% / 50% / 20%) วันที่ L/O/Q ตามลำดับ — ใช้ตัวเลขที่กรอกไว้ตรง ๆ ไม่ได้คำนวณเปอร์เซ็นต์ใหม่` +
