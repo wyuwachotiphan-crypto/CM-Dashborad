@@ -451,6 +451,15 @@
   .search-box svg{width:15px; height:15px; color:var(--steel); flex-shrink:0;}
   .search-box input{border:none; outline:none; background:transparent; font-family:'IBM Plex Sans'; font-size:12.5px; color:var(--text); width:100%;}
 
+  .period-nav{display:flex; align-items:center; gap:10px; margin:-4px 0 14px;}
+  .period-nav-btn{
+    font-family:'IBM Plex Sans'; font-weight:600; font-size:12px; color:var(--ink); background:var(--paper);
+    border:1.5px solid var(--line); border-radius:7px; padding:5px 11px; cursor:pointer; transition:border-color .12s;
+  }
+  .period-nav-btn:hover{border-color:var(--ink);}
+  .period-nav-today{color:var(--steel); font-size:11px;}
+  .period-range{font-family:'IBM Plex Mono'; font-size:12.5px; font-weight:600; color:var(--ink);}
+
   .proj-link{cursor:pointer;}
   span.proj-link, td .proj-link{font-weight:600; color:var(--text); border-bottom:1.5px dashed var(--grid); transition:color .12s;}
   span.proj-link:hover, td .proj-link:hover{color:var(--accent); border-bottom-color:var(--accent);}
@@ -851,11 +860,25 @@
             <option value="30">Last 30 Days</option>
           </select>
         </div>
+        <div class="filter-select-group">
+          <label class="filter-select-label" for="defectPeriodFilter">Period</label>
+          <select id="defectPeriodFilter" class="filter-select">
+            <option value="all">All</option>
+            <option value="week">Weekly</option>
+            <option value="month">Monthly</option>
+          </select>
+        </div>
       </div>
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input type="text" id="defectSearch" placeholder="Search project, location, description...">
       </div>
+    </div>
+    <div class="period-nav" id="defectPeriodNav" style="display:none;">
+      <button class="period-nav-btn" id="defectPeriodPrev" aria-label="Previous period">&larr;</button>
+      <span class="period-range" id="defectPeriodRange">-</span>
+      <button class="period-nav-btn" id="defectPeriodNext" aria-label="Next period">&rarr;</button>
+      <button class="period-nav-btn period-nav-today" id="defectPeriodToday">This week</button>
     </div>
     <div class="panel project-list-wrap">
       <div class="defect-list-head">
@@ -2527,6 +2550,49 @@ function populateDefectFilterOptions(){
   fillDefectSelect('defectContractorFilter', distinct('contractor'));
 }
 
+/* Week/Month period filter for the Project Problems List — offset is in whole
+   periods from the current one (0 = this week/month, -1 = previous, +1 = next).
+   Weeks run Monday-Sunday. Always resolved against today's real date, not a
+   cached value, so "This week" stays correct across midnight/month rollovers. */
+let defectPeriod = { mode:'all', offset:0 };
+
+function getPeriodRange(mode, offset){
+  const today = new Date(); today.setHours(0,0,0,0);
+  if(mode==='month'){
+    const start = new Date(today.getFullYear(), today.getMonth()+offset, 1);
+    const end = new Date(today.getFullYear(), today.getMonth()+offset+1, 0);
+    return {start, end};
+  }
+  // week: Monday-start
+  const dow = (today.getDay()+6)%7; // 0=Mon..6=Sun
+  const monday = new Date(today); monday.setDate(today.getDate()-dow+offset*7);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  return {start:monday, end:sunday};
+}
+
+function updateDefectPeriodUI(){
+  const nav = document.getElementById('defectPeriodNav');
+  if(defectPeriod.mode==='all'){ nav.style.display = 'none'; return; }
+  nav.style.display = 'flex';
+  const {start, end} = getPeriodRange(defectPeriod.mode, defectPeriod.offset);
+  document.getElementById('defectPeriodRange').textContent =
+    defectPeriod.mode==='month'
+      ? start.toLocaleDateString('en-GB', {month:'long', year:'numeric'})
+      : `${fmtShortDate(toISO(start))} → ${fmtShortDate(toISO(end))}`;
+  document.getElementById('defectPeriodToday').textContent = defectPeriod.mode==='month' ? 'This month' : 'This week';
+}
+function toISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+document.getElementById('defectPeriodFilter').addEventListener('change', e=>{
+  defectPeriod.mode = e.target.value;
+  defectPeriod.offset = 0;
+  updateDefectPeriodUI();
+  renderDefects();
+});
+document.getElementById('defectPeriodPrev').addEventListener('click', ()=>{ defectPeriod.offset--; updateDefectPeriodUI(); renderDefects(); });
+document.getElementById('defectPeriodNext').addEventListener('click', ()=>{ defectPeriod.offset++; updateDefectPeriodUI(); renderDefects(); });
+document.getElementById('defectPeriodToday').addEventListener('click', ()=>{ defectPeriod.offset = 0; updateDefectPeriodUI(); renderDefects(); });
+
 function getFilteredDefects(){
   const project = document.getElementById('defectProjectFilter').value;
   const status = document.getElementById('defectStatusFilter').value;
@@ -2535,12 +2601,18 @@ function getFilteredDefects(){
   const changedWindow = document.getElementById('defectChangedFilter').value;
   const q = document.getElementById('defectSearch').value.trim().toLowerCase();
   const changedKeys = changedWindow !== 'all' ? getDefectChangesByKey(Number(changedWindow)) : null;
+  const periodRange = defectPeriod.mode !== 'all' ? getPeriodRange(defectPeriod.mode, defectPeriod.offset) : null;
   return defectState.defects.filter(d=>{
     if(project!=='all' && d.project!==project) return false;
     if(status!=='all' && d.status!==status) return false;
     if(severity!=='all' && d.severity!==severity) return false;
     if(contractor!=='all' && d.contractor!==contractor) return false;
     if(changedKeys && !changedKeys[defectMatchKey(d)]) return false;
+    if(periodRange){
+      if(!d.date) return false;
+      const dd = new Date(d.date);
+      if(dd < periodRange.start || dd > periodRange.end) return false;
+    }
     if(q && !(d.description.toLowerCase().includes(q) || d.location.toLowerCase().includes(q) || d.project.toLowerCase().includes(q))) return false;
     return true;
   });
