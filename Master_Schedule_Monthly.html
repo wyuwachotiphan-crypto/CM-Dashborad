@@ -237,6 +237,65 @@
   .note h3:not(:first-child) { margin-top: 16px; }
   .note .warn { color: var(--series-exp); font-weight: 550; }
 
+  /* ---------- project cards ---------- */
+  .projgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(252px, 1fr)); gap: 10px; }
+  .projcard {
+    font: inherit; color: inherit; text-align: left; cursor: pointer;
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .projcard:hover, .projcard:focus-visible { border-color: var(--series-1); outline: none; }
+  .projcard .nm { font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+  .projcard .net { font-size: 20px; font-weight: 650; letter-spacing: -0.02em; margin-top: 5px; }
+  .projcard .net.pos { color: var(--good); }
+  .projcard .net.neg { color: var(--series-exp); }
+  .projcard .meta { font-size: 11.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+  /* ---------- modal ---------- */
+  dialog {
+    width: min(680px, calc(100vw - 32px)); max-height: min(84vh, 760px);
+    padding: 0; border: 1px solid var(--border); border-radius: 16px;
+    background: var(--surface-1); color: var(--text-primary);
+    box-shadow: 0 24px 60px rgba(0,0,0,.28);
+  }
+  dialog::backdrop { background: rgba(0,0,0,.45); backdrop-filter: blur(2px); }
+  .pm-head {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 20px 22px 14px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--surface-1); border-radius: 16px 16px 0 0;
+  }
+  .pm-head h3 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+  .pm-head p { margin: 3px 0 0; font-size: 12px; color: var(--text-muted); }
+  #pm-close {
+    margin-left: auto; font-size: 22px; line-height: 1; padding: 2px 10px 5px;
+    background: none; border: 1px solid transparent; border-radius: 8px;
+    color: var(--text-secondary); cursor: pointer;
+  }
+  #pm-close:hover { background: var(--surface-2); color: var(--text-primary); }
+  .pm-body { padding: 18px 22px 22px; overflow-y: auto; max-height: calc(84vh - 92px); }
+
+  .pm-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1px;
+            background: var(--border); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .pm-sum div { background: var(--surface-1); padding: 11px 13px; }
+  .pm-sum .k { font-size: 11.5px; color: var(--text-secondary); }
+  .pm-sum .v { font-size: 17px; font-weight: 650; letter-spacing: -0.015em; }
+  .pm-sum .v.pos { color: var(--good); }
+  .pm-sum .v.neg { color: var(--series-exp); }
+
+  .pm-note {
+    margin-top: 14px; font-size: 12px; color: var(--text-secondary);
+    background: var(--surface-2); border-radius: 9px; padding: 10px 13px; line-height: 1.6;
+  }
+  .pm-note.alert { color: var(--series-exp); }
+  /* the 5-column timeline is wider than the dialog on phones, so it scrolls
+     inside its own box rather than pushing the dialog sideways */
+  .pm-scroll { overflow-x: auto; margin-top: 16px; }
+  .pm-body table { margin-top: 0; }
+  .pm-body td.bal { font-weight: 600; }
+  .pm-body td.bal.pos { color: var(--good); }
+  .pm-body td.bal.neg { color: var(--series-exp); }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -300,7 +359,7 @@
     <section class="sec">
       <div class="sec-head">
         <h2>แยกตามโครงการ</h2>
-        <p>ทุกงวดรับ–จ่ายพร้อมวันที่จริง เรียงตามวันที่</p>
+        <p>คลิกที่โครงการเพื่อดูไทม์ไลน์รับ–จ่ายและยอดคงเหลือสะสม</p>
       </div>
       <div id="projtable"></div>
     </section>
@@ -322,6 +381,17 @@
 </div>
 
 <div id="tip" role="status" aria-live="polite"></div>
+
+<dialog id="projmodal" aria-labelledby="pm-title">
+  <div class="pm-head">
+    <div>
+      <h3 id="pm-title"></h3>
+      <p id="pm-sub"></p>
+    </div>
+    <button id="pm-close" aria-label="ปิด">&times;</button>
+  </div>
+  <div class="pm-body" id="pm-body"></div>
+</dialog>
 
 <script>
 /* =====================================================================
@@ -484,24 +554,93 @@ document.getElementById('worktables').innerHTML = YEARS.map(y => {
     </table></div>`;
 }).join('');
 
+/* Each project gets a card; the timeline lives in a modal so the list stays
+   scannable. Totals are derived here once and reused by the modal. */
+const projStats = PROJ.map(p => {
+  const inSum  = sum(p.flows.filter(f => KIND_IN[f[0]]).map(f => f[1]));
+  const outSum = sum(p.flows.filter(f => !KIND_IN[f[0]]).map(f => f[1]));
+  let bal = 0, low = 0;
+  p.flows.forEach(([k, amt]) => { bal += KIND_IN[k] ? amt : -amt; if (bal < low) low = bal; });
+  return { inSum, outSum, net: inSum - outSum, low };
+});
+
 document.getElementById('projtable').innerHTML = PROJ.length === 0
   ? `<div class="note">ยังไม่มีข้อมูลรายโครงการ — กด Sync Dashboard.bat หนึ่งครั้งเพื่อสร้าง</div>`
-  : `<div class="card"><table>
-      <thead><tr><th>โครงการ / รายการ</th><th>วันที่</th><th>รายรับ</th><th>รายจ่าย</th></tr></thead>
-      <tbody>${PROJ.map(p => {
-        const inSum  = sum(p.flows.filter(f => KIND_IN[f[0]]).map(f => f[1]));
-        const outSum = sum(p.flows.filter(f => !KIND_IN[f[0]]).map(f => f[1]));
-        return `<tr><td class="grp">${esc(p.name)}</td>` +
-               `<td class="grp" style="color:var(--text-muted);font-weight:400">Sale ${fmtFull(p.sale)}</td>` +
-               `<td class="grp">${fmtFull(inSum)}</td><td class="grp">${fmtFull(outSum)}</td></tr>` +
-               p.flows.map(([k, amt, d]) =>
-                 `<tr><td style="padding-left:22px"><span class="pill ${KIND_IN[k] ? 'in' : 'out'}">${esc(KIND_SHORT[k] || k)}</span></td>` +
-                 `<td>${esc(d)}</td>` +
-                 `<td>${KIND_IN[k] ? fmtFull(amt) : ''}</td>` +
-                 `<td>${KIND_IN[k] ? '' : fmtFull(amt)}</td></tr>`).join('');
-      }).join('')}</tbody>
-      <tfoot><tr><td>รวมทุกโครงการ</td><td></td><td>${fmtFull(totRev)}</td><td>${fmtFull(totExp)}</td></tr></tfoot>
+  : `<div class="projgrid">${PROJ.map((p, i) => {
+      const st = projStats[i];
+      return `<button class="projcard" data-i="${i}">
+          <span class="nm">${esc(p.name)}</span>
+          <span class="net ${st.net >= 0 ? 'pos' : 'neg'}">${st.net >= 0 ? '+' : '−'}${fmtFull(Math.abs(st.net))}</span>
+          <span class="meta">รับ ${fmtShort(st.inSum)} · จ่าย ${fmtShort(st.outSum)} · ${p.flows.length} รายการ</span>
+        </button>`;
+    }).join('')}</div>`;
+
+/* ---------- project modal ---------- */
+const modal = document.getElementById('projmodal');
+
+function openProject(i) {
+  const p = PROJ[i], st = projStats[i];
+  document.getElementById('pm-title').textContent = p.name;
+  document.getElementById('pm-sub').textContent =
+    `Sale Price ${fmtFull(p.sale)} บาท · ${p.flows.length} รายการ`;
+
+  let bal = 0;
+  const rows = p.flows.map(([k, amt, d]) => {
+    bal += KIND_IN[k] ? amt : -amt;
+    return `<tr>
+        <td>${esc(d)}</td>
+        <td><span class="pill ${KIND_IN[k] ? 'in' : 'out'}">${esc(KIND_SHORT[k] || k)}</span></td>
+        <td>${KIND_IN[k] ? fmtFull(amt) : ''}</td>
+        <td>${KIND_IN[k] ? '' : fmtFull(amt)}</td>
+        <td class="bal ${bal >= 0 ? 'pos' : 'neg'}">${fmtFull(bal)}</td>
+      </tr>`;
+  }).join('');
+
+  // Money on this project that has no date yet, so it is absent from the timeline.
+  const pending = (REVMETA.unsched || []).filter(u => u[0] === p.name);
+
+  document.getElementById('pm-body').innerHTML = `
+    <div class="pm-sum">
+      <div><div class="k">รับรวม</div><div class="v">${fmtFull(st.inSum)}</div></div>
+      <div><div class="k">จ่ายรวม</div><div class="v">${fmtFull(st.outSum)}</div></div>
+      <div><div class="k">สถานะการเงิน</div>
+           <div class="v ${st.net >= 0 ? 'pos' : 'neg'}">${st.net >= 0 ? '+' : '−'}${fmtFull(Math.abs(st.net))}</div></div>
+    </div>
+
+    <div class="pm-note">
+      <strong>รับงวด 1 = ${PCT}% ของ Sale Price</strong> ลงวันที่เริ่มงานวันแรก (Start Date ของ First Fix) —
+      งวดนี้คำนวณให้ ไม่มีในชีต · งวด 2, งวด 3 และรายจ่ายทุกงวด ยึดยอดและวันที่ตาม Excel ตรง ๆ
+    </div>
+
+    ${st.low < 0 ? `<div class="pm-note alert">
+      ⚠ ยอดคงเหลือติดลบต่ำสุด ${fmtFull(st.low)} บาท ระหว่างทาง — จ่ายผู้รับเหมาก่อนได้รับเงินงวดแรก
+      ต้องสำรองเงินช่วงนั้น (ปลายทางยังเป็น + ${fmtFull(st.net)})
+    </div>` : ''}
+
+    ${pending.length ? `<div class="pm-note alert">
+      ⚠ ยังไม่มีวันที่ จึงไม่อยู่ในไทม์ไลน์: ${pending.map(u => `${esc(KIND_LABEL[u[1]] || u[1])} ${fmtFull(u[2])}`).join(', ')}
+    </div>` : ''}
+
+    <div class="pm-scroll"><table>
+      <thead><tr><th>วันที่</th><th>รายการ</th><th>รับ</th><th>จ่าย</th><th>คงเหลือสะสม</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td>รวม</td><td></td><td>${fmtFull(st.inSum)}</td><td>${fmtFull(st.outSum)}</td>
+        <td class="bal ${st.net >= 0 ? 'pos' : 'neg'}">${fmtFull(st.net)}</td></tr></tfoot>
     </table></div>`;
+
+  modal.showModal();
+}
+
+document.getElementById('projtable').addEventListener('click', e => {
+  const card = e.target.closest('.projcard');
+  if (card) openProject(+card.dataset.i);
+});
+document.getElementById('pm-close').onclick = () => modal.close();
+// Click on the backdrop (outside the dialog box) closes it too.
+modal.addEventListener('click', e => {
+  const r = modal.getBoundingClientRect();
+  if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) modal.close();
+});
 
 /* ===================== notes ===================== */
 const note = ([n, p]) => `${esc(n)} (${esc(p)})`;
