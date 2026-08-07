@@ -186,6 +186,8 @@
   thead th { color: var(--text-secondary); font-weight: 550; }
   tfoot td { font-weight: 650; border-bottom: none; }
   #tableview[hidden] { display: none; }
+  /* always-on table under the money chart - needs its own breathing room */
+  #revtableview table { margin-top: 24px; }
 
   footer { margin-top: 28px; color: var(--text-muted); font-size: 12px; }
 </style>
@@ -223,20 +225,16 @@
     <p>เงินเข้า–เงินออกจริง ลงเดือนตามวันที่ที่ระบุไว้ในชีต — รับ 3 งวด, จ่ายผู้รับเหมา 3 งวด</p>
   </div>
 
-  <section class="tiles" id="revtiles"></section>
-
   <div class="toolbar">
     <div class="legend">
       <span><i class="swatch rev"></i>รายรับ (งวด 1–3)</span>
       <span><i class="swatch exp"></i>รายจ่าย (จ่ายผู้รับเหมา 30/50/20%)</span>
     </div>
-    <div class="spacer"></div>
-    <button id="revtoggle" aria-expanded="false" aria-controls="revtableview">แสดงตาราง</button>
   </div>
 
   <section class="facets" id="revfacets"></section>
 
-  <section id="revtableview" hidden></section>
+  <section id="revtableview"></section>
 
   <footer id="foot"></footer>
 </div>
@@ -437,21 +435,6 @@ const RMAX_RAW = Math.max(1, ...RYEARS.flatMap(y => REV[y].flatMap(m => m)));
 const RS = niceScale(RMAX_RAW, 4);
 const RTICKS = Array.from({ length: Math.round(RS.max / RS.step) + 1 }, (_, i) => i * RS.step);
 
-const totRev = RYEARS.reduce((a, y) => a + sum(REV[y].map(m => m[0])), 0);
-const totExp = RYEARS.reduce((a, y) => a + sum(REV[y].map(m => m[1])), 0);
-
-let rpeak = { v: -1 };
-RYEARS.forEach(y => REV[y].forEach((m, i) => { if (m[0] > rpeak.v) rpeak = { v: m[0], y, i }; }));
-
-document.getElementById('revtiles').innerHTML = [
-  ['รายรับรวม', fmtShort(totRev), 'บาท'],
-  ['รายจ่ายรวม', fmtShort(totExp), 'บาท'],
-  ['ส่วนต่าง', fmtShort(totRev - totExp), (totRev ? Math.round((totRev - totExp) / totRev * 100) : 0) + '% ของรายรับ'],
-  ['เดือนรายรับสูงสุด', fmtShort(rpeak.v), MONTHS[rpeak.i] + ' ' + rpeak.y]
-].map(([k, v, u]) =>
-  `<div class="tile"><div class="k">${esc(k)}</div><div class="v sm">${esc(v)}</div><div class="u">${esc(u)}</div></div>`
-).join('');
-
 document.getElementById('revfacets').innerHTML = RYEARS.map(y => {
   const rows = REV[y];
   const yRev = sum(rows.map(m => m[0])), yExp = sum(rows.map(m => m[1]));
@@ -498,13 +481,8 @@ document.getElementById('revtableview').innerHTML = RYEARS.map(y => {
     </table>`;
 }).join('');
 
-const rbtn = document.getElementById('revtoggle'), rtv = document.getElementById('revtableview');
-rbtn.onclick = () => {
-  const open = rtv.hidden;
-  rtv.hidden = !open;
-  rbtn.setAttribute('aria-expanded', String(open));
-  rbtn.textContent = open ? 'ซ่อนตาราง' : 'แสดงตาราง';
-};
+/* This table is always visible - it replaced the stat tiles, so there is no
+   toggle for it (the works chart above still has one). */
 
 /* ---------- footer ---------- */
 const note = ([n, p]) => `${esc(n)} (${esc(p)})`;
