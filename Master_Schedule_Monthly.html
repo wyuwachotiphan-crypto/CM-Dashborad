@@ -129,6 +129,13 @@
   .swatch.rev { background: var(--series-rev); }
   .swatch.exp { background: var(--series-exp); }
 
+  .dl {
+    margin-left: auto; font-size: 12.5px; text-decoration: none;
+    color: var(--text-secondary); background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 8px; padding: 5px 12px;
+  }
+  .dl:hover { color: var(--text-primary); border-color: var(--series-1); }
+
   /* ---------- chart cards ---------- */
   .facets { display: flex; flex-direction: column; gap: 12px; }
   .facet {
@@ -341,6 +348,7 @@
       <div class="legend">
         <span><i class="swatch rev"></i>รายรับ</span>
         <span><i class="swatch exp"></i>รายจ่าย</span>
+        <a class="dl" href="Financial_Forecast.xlsx" download>⤓ ดาวน์โหลด Excel</a>
       </div>
       <div class="facets" id="revfacets"></div>
     </section>
