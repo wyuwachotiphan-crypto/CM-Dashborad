@@ -358,7 +358,7 @@
   .donutmid b { display: block; font-size: 30px; font-weight: 650; letter-spacing: -0.02em; }
   .donutmid span { font-size: 11.5px; color: var(--text-muted); }
   .dlegend { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-  .dlegend div { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
+  .dlegend div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-secondary); }
   .dlegend b { margin-left: auto; color: var(--text-primary); font-variant-numeric: tabular-nums; }
   .dlegend em { font-style: normal; color: var(--text-muted); font-size: 11.5px;
     width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
@@ -480,6 +480,13 @@
       </div>
       <div class="card" id="contractorCard"></div>
     </section>
+    <section class="sec">
+      <div class="sec-head">
+        <h2>ตรวจสอบความถูกต้องของข้อมูล</h2>
+        <p>เทียบยอดใน Master Schedule กับ Summary Report อัตโนมัติทุกครั้งที่ Sync — ถ้าตรงกันทั้งหมดจะไม่มีรายการขึ้น</p>
+      </div>
+      <div class="card" id="auditCard"></div>
+    </section>
 
   </div>
   <!-- ======================= Project Pipeline ======================= -->
@@ -596,7 +603,7 @@ const GEN = {
 "VISITS": [{"date":"2026-06-12","project":"Phanasorn","inspector":"ฤทธิพร บุตรนิตย์","hours":4,"purpose":"ตรวจสอบหน้างานก่อนติดตั้ง"},{"date":"2026-06-16","project":"Prawet Resident","inspector":"ฤทธิพร บุตรนิตย์","hours":4,"purpose":"ตรวจสอบงานติดตั้ง 2nd Fix"},{"date":"2026-06-10","project":"P'Gummy","inspector":"ธนทร วัฒนชโนบล","hours":3,"purpose":"เปิดฝ้า,ติดตั้งหน้างาน"},{"date":"2026-06-12","project":"P'Gummy","inspector":"วริษฐ์ ยุวโชติพันธุ์","hours":2.5,"purpose":"ส่งมอบงาน"},{"date":"2026-06-17","project":"Phanasorn","inspector":"ฤทธิพร บุตรนิตย์","hours":3,"purpose":"ตรวจสอบเปิดฝ้าหน้างานก่อนติดตั้ง"},{"date":"2026-06-17","project":"K'Issara House","inspector":"วริษฐ์ ยุวโชติพันธุ์","hours":3,"purpose":"ส่งมอบงาน"},{"date":"2026-06-19","project":"S'rin House","inspector":"ฤทธิพร บุตรนิตย์","hours":3,"purpose":"ติดตามหน้างาน Firt fix"},{"date":"2026-06-24","project":"28-คุณเต้ย หมู่บ้านรัตนาวดี","inspector":"วริษฐ์ ยุวโชติพันธุ์","hours":3,"purpose":"สำรวจหน้างาน"},{"date":"2026-06-25","project":"D'Land","inspector":"ฤทธิพร บุตรนิตย์","hours":6,"purpose":"ส่งเอกสารวางบิล"},{"date":"2026-06-29","project":"S'rin House","inspector":"ฤทธิพร บุตรนิตย์","hours":6,"purpose":"ติดตามหน้างาน Firt fix ก่อนปิดฝ้า"},{"date":"2026-07-02","project":"Phanasorn","inspector":"ฤทธิพร บุตรนิตย์","hours":4,"purpose":"ติดตามหน้างาน Firt fix"},{"date":"2026-07-06","project":"K'Pong House","inspector":"ฤทธิพร บุตรนิตย์","hours":4,"purpose":"ประชุม,เก็บงานติดตั้งกริล"},{"date":"2026-07-08","project":"HouseX","inspector":"ธนทร วัฒนชโนบล","hours":3,"purpose":"สำรวจหน้างาน"},{"date":"2026-07-13","project":"K'Pong House","inspector":"วริษฐ์ ยุวโชติพันธุ์","hours":2.7,"purpose":"Site Meenting"},{"date":"2026-07-13","project":"Phanasorn","inspector":"ฤทธิพร บุตรนิตย์","hours":6,"purpose":"ส่งมอบงาน Firt fix"},{"date":"2026-07-15","project":"K'Bamrung House","inspector":"ฤทธิพร บุตรนิตย์","hours":3,"purpose":"ส่งมอบงาน"},{"date":"2026-07-15","project":"S'rin House","inspector":"ฤทธิพร บุตรนิตย์","hours":3,"purpose":"ส่งมอบงาน Firt fix"},{"date":"2026-07-15","project":"The Grand Pinkao","inspector":"กันตพัฒน์ มากมูล","hours":3,"purpose":"สำรวจหน้างาน"},{"date":"2026-07-15","project":"The Grand Pinkao","inspector":"วริษฐ์ ยุวโชติพันธุ์","hours":3,"purpose":"สำรวจหน้างาน"},{"date":"2026-07-16","project":"28-คุณเต้ย หมู่บ้านรัตนาวดี","inspector":"ฤทธิพร บุตรนิตย์","hours":3,"purpose":"ประชุมไซต์ก่อนเริ่มงาน"},{"date":"2026-07-21","project":"K'Pong House","inspector":"ฤทธิพร บุตรนิตย์","hours":2,"purpose":"ประชุม,คุยงานแก้ไขหลัง Corring"},{"date":"2026-07-23","project":"The Grand Pinkao","inspector":"ฤทธิพร บุตรนิตย์","hours":4,"purpose":"เข้าเคลียร์ติดตั้งหน้างานวันแรก"},{"date":"2026-07-24","project":"Huaykwang residence","inspector":"ฤทธิพร บุตรนิตย์","hours":3,"purpose":"Site Meenting"},{"date":"2026-07-27","project":"K'Pong House","inspector":"ฤทธิพร บุตรนิตย์","hours":2,"purpose":"ประชุม,คุยงานนัด Owner เข้า Pretest"},{"date":"2026-07-31","project":"K'Pong House","inspector":"ฤทธิพร บุตรนิตย์","hours":3,"purpose":"เทสและวัดลม"}],
 "PORTFOLIO": {"sale":11894264,"budgetActual":7093832,"projects":20},
 "REVMETA": {"rows":111,"rate":0.4,"today":"2026-08-19","noEnd":[],"noJoin":[],"unsched":[]},
-"META": {"projects":20,"rows":39,"generated":"2026-08-19 11:57","missing":[["The Grand Pinklao","Second Fix"]]}
+"META": {"projects":20,"rows":39,"generated":"2026-08-19 15:01","missing":[["The Grand Pinklao","Second Fix"]]}
 };
 /* DATA:END */
 
@@ -1280,6 +1287,55 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
       `<div class="hrow"><div class="nm">${esc(name)}
          <small>${d.n} โครงการ · ${fmtFull(d.value)} บาท</small></div>
        <div class="hbar"><i class="c1" style="width:${d.value / max * 100}%"></i></div></div>`).join('');
+})();
+
+/* ---- Data-quality check --------------------------------------------------
+   Two invariants hold across the workbook: the three receipt instalments must
+   add up to Sale Price, and the 30/50/20 instalments must add up to Contract
+   Value. Anything that breaks one is a typo in the sheet, not a chart bug, so
+   list it here rather than letting it quietly skew the forecast. */
+(function drawAudit() {
+  const byCode = {};
+  PROJ.forEach(p => { if (p.code) byCode[p.code] = p; });
+  const issues = [];
+
+  STAT.forEach(s => {
+    const src = byCode[s.code] || PROJ.find(p => p.name === s.name);
+    if (!src) return;
+    let rec = 0, pay = 0;
+    src.flows.forEach(([k, amt]) => { if (KIND_IN[k]) rec += amt; else pay += amt; });
+
+    const dR = Math.round(rec - s.sale);
+    if (s.sale && Math.abs(dR) > 2) issues.push({
+      name: s.name, what: 'รับเงิน (งวด 1-3) ไม่เท่า Sale Price',
+      should: s.sale, is: rec, diff: dR,
+      hint: 'แก้แถว S หรือ U ใน Master Schedule'
+    });
+
+    const dP = Math.round(pay - s.contract);
+    if ((s.contract || pay) && Math.abs(dP) > 2) issues.push({
+      name: s.name, what: 'จ่ายผู้รับเหมา (30/50/20) ไม่เท่า Contract Value',
+      should: s.contract, is: pay, diff: dP,
+      hint: 'แก้แถว K, N หรือ P ใน Master Schedule'
+    });
+  });
+
+  document.getElementById('auditCard').innerHTML = issues.length ? `
+    <div class="pm-sum" style="margin-bottom:14px">
+      <div><div class="k">รายการที่ต้องแก้</div><div class="v">${issues.length}</div>
+           <div class="ku">จาก ${STAT.length} โครงการ</div></div>
+      <div><div class="k">ยอดที่คลาดเคลื่อนรวม</div>
+           <div class="v">${fmtFull(sum(issues.map(i => Math.abs(i.diff))))}</div><div class="ku">บาท</div></div>
+    </div>
+    <div class="pm-scroll"><table>
+      <thead><tr><th>โครงการ</th><th>สิ่งที่ไม่ตรง</th><th>ควรเป็น</th><th>ในไฟล์</th><th>ต่าง</th><th>แก้ที่</th></tr></thead>
+      <tbody>${issues.map(i => `<tr>
+        <td>${esc(i.name)}</td><td>${esc(i.what)}</td>
+        <td>${fmtFull(i.should)}</td><td>${fmtFull(i.is)}</td>
+        <td><span class="pill ${i.diff > 0 ? 'out' : 'in'}">${i.diff > 0 ? 'เกิน ' : 'ขาด '}${fmtFull(Math.abs(i.diff))}</span></td>
+        <td>${esc(i.hint)}</td></tr>`).join('')}</tbody>
+    </table></div>`
+    : `<div class="pm-note">ข้อมูลตรงกันทั้งหมด — รับเงินรวมเท่ากับ Sale Price และงวดจ่ายรวมเท่ากับ Contract Value ทุกโครงการ</div>`;
 })();
 
 /* Hide any in-bar value that would be clipped by its own segment, and redo the
