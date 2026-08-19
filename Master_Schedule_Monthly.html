@@ -1750,8 +1750,14 @@ const iwColor = s => `var(${IW_VAR[s] || '--text-muted'})`;
    trust. The net here is cash movement, NOT profit - the chart never sees the
    costs that are not paid as contractor instalments. */
 (function drawBridge() {
-  const recFlow = sum(PROJ.flatMap(p => p.flows.filter(f => KIND_IN[f[0]]).map(f => f[1])));
-  const payFlow = sum(PROJ.flatMap(p => p.flows.filter(f => !KIND_IN[f[0]]).map(f => f[1])));
+  // Total the same monthly buckets the chart plots, not the raw flows: each is
+  // rounded at a different stage, so quoting the flows left this card a couple
+  // of baht away from the bars sitting right above it.
+  let recFlow = 0, payFlow = 0;
+  Object.keys(REV).forEach(y => REV[y].forEach(m => {
+    recFlow += m[0] + m[1];
+    payFlow += m[2] + m[3];
+  }));
   const contract = sum(STAT.map(s => s.contract));
   // unscheduled is summed from the per-project gaps below so the headline
   const otherCost = PF.budgetActual - payFlow; // cost not paid via subcontractors
