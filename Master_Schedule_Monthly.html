@@ -385,6 +385,9 @@
   .swatch.c4 { background: var(--stat-con); }
   .swatch.c4.due { background: color-mix(in srgb, var(--stat-con) 40%, var(--surface-1)); }
   .swatch.c5 { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border); }
+  .warnchip { display: inline-block; font-size: 10.5px; padding: 1px 6px; border-radius: 20px;
+              border: 1px solid var(--series-exp); color: var(--series-exp); white-space: nowrap; }
+  .warnchip.soft { border-color: var(--stat-hold); color: var(--stat-hold); }
 
   [hidden] { display: none !important; }
 </style>
@@ -1131,7 +1134,9 @@ document.getElementById('ovkpis').innerHTML = [
     });
     // Anything the instalments do not account for is shown as its own segment
     // rather than quietly making the bar disagree with the contract value.
-    const gap = Math.round(s.contract - paid - due);
+    // Sub-baht slivers are rounding, not a real gap - ignore them.
+    let gap = Math.round(s.contract - paid - due);
+    if (Math.abs(gap) < 2) gap = 0;
     return { name: s.name, contract: s.contract, paid, due, gap };
   }).filter(r => r.contract || r.paid || r.due);
 
@@ -1152,7 +1157,12 @@ document.getElementById('ovkpis').innerHTML = [
     rows.map(r => {
       const title = `Contract ${fmtFull(r.contract)} · จ่ายแล้ว ${fmtFull(r.paid)} · ยังไม่ถึงกำหนด ${fmtFull(r.due)}` +
                     (r.gap ? ` · ต่างจากสัญญา ${fmtFull(r.gap)}` : '');
-      return `<div class="hrow" title="${esc(title)}"><div class="nm">${esc(r.name)}</div>
+      // A negative gap means the instalments add up to more than the contract -
+      // that is a data problem, so say so instead of silently overshooting.
+      const warn = r.gap < 0
+        ? ` <span class="warnchip">เกินสัญญา ${fmtFull(-r.gap)}</span>`
+        : (r.gap > 0 ? ` <span class="warnchip soft">ขาด ${fmtFull(r.gap)}</span>` : '');
+      return `<div class="hrow" title="${esc(title)}"><div class="nm">${esc(r.name)}${warn}</div>
         <div class="hbar">${seg(r.paid,'c4')}${seg(r.due,'c4 due')}${seg(r.gap,'c5')}</div></div>`;
     }).join('');
 })();
@@ -1233,11 +1243,14 @@ document.getElementById('ovkpis').innerHTML = [
    pass whenever the bars are re-laid out. */
 function fitBarLabels() {
   document.querySelectorAll('.hbar i[data-val]').forEach(el => {
+    // A hidden tab measures 0 wide; leave those alone so the labels are not
+    // wiped before the panel is ever shown.
+    if (!el.clientWidth) return;
     el.textContent = el.dataset.val;
     if (el.scrollWidth > el.clientWidth + 1) el.textContent = '';
   });
 }
-fitBarLabels();
+requestAnimationFrame(fitBarLabels);
 addEventListener('resize', fitBarLabels);
 
 /* ===================== tabs ===================== */
@@ -1250,6 +1263,7 @@ function showTab(name) {
   });
   // The KPI strip is a summary of everything, so it stays on both tabs.
   history.replaceState(null, '', '#' + name);
+  if (typeof fitBarLabels === 'function') requestAnimationFrame(fitBarLabels);
 }
 Object.keys(PAGES).forEach(k => document.getElementById('tab-' + k).onclick = () => showTab(k));
 showTab(location.hash.replace('#', '') || 'project');
