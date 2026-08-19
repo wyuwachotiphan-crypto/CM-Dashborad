@@ -504,7 +504,7 @@
     <section class="sec">
       <div class="sec-head">
         <h2>Monthly Site Visit Overview</h2>
-        <p>ชั่วโมงลงหน้างานรายเดือน แยกตามผู้ตรวจ — จากชีต Site Visit Log</p>
+        <p>ชั่วโมงลงหน้างานรายเดือน — จากชีต Site Visit Log</p>
       </div>
       <div class="legend" id="visitLegend"></div>
       <div class="facets" id="visitChart"></div>
@@ -692,7 +692,7 @@ const GEN = {
 "IWORK": [{"topic":"ERV - Project Management","details":"Dashboard สำหรับ Management","start":"2026-07-01","end":"2026-07-21","status":"Completed"},{"topic":"สัญญาผู้รับเหมา & Note ของ QT ลูกค้า","details":"รอนัดวัน ผู้รับเหมาเข้ามาประชุม","start":"2026-07-01","end":"2026-07-21","status":"In Progress"},{"topic":"Find contractor","details":"หาผู้รับเหมาเพิ่มเติม เจ้าเล็กๆ อีก 2 เจ้า","start":"2026-07-01","end":"2026-07-21","status":"On Hold"},{"topic":"Revise ราคาของผู้รับเหมา","details":"ทำราคาขั้นต่ำ ในกรณีงานเล็กเป็นงานเหมา","start":"2026-07-23","end":"2026-08-15","status":"In Progress"},{"topic":"Data Actual  Plan","details":"","start":"2026-07-14","end":"2026-07-21","status":"In Progress"},{"topic":"ฝึกออกแบบ","details":"ริทจะมีความเข้าใจ การแก้ไขปัญหาหน้างานมากขึ้น","start":"2026-08-10","end":"2026-08-21","status":"In Progress"},{"topic":"Construction Standara","details":"มาตราฐานการก่อสร้าง IAQ และเอกสาร","start":"2026-08-18","end":"2026-09-01","status":"In Progress"}],
 "PORTFOLIO": {"sale":11894264,"budgetActual":7093832,"projects":20},
 "REVMETA": {"rows":110,"rate":0.4,"today":"2026-08-19","noEnd":[],"noJoin":[],"unsched":[]},
-"META": {"projects":20,"rows":39,"generated":"2026-08-19 16:55","missing":[["The Grand Pinklao","Second Fix"]]}
+"META": {"projects":20,"rows":39,"generated":"2026-08-19 17:16","missing":[["The Grand Pinklao","Second Fix"]]}
 };
 /* DATA:END */
 
@@ -1309,26 +1309,20 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
    One card per calendar year with all 12 months, matching the other charts, so
    a quiet month reads as a gap rather than being dropped from the axis. */
 (function drawVisits() {
-  const people = [...new Set(VISITS.map(v => v.inspector))].sort();
-  const SER = ['--series-1', '--series-2', '--stat-done', '--stat-hold', '--series-exp'];
-  const colour = i => `var(${SER[i % SER.length]})`;
-
   const years = [...new Set(VISITS.map(v => +v.date.slice(0, 4)))].sort();
-  const cell = {};                       // "year|month|inspector" -> hours
-  VISITS.forEach(v => {
-    const k = +v.date.slice(0, 4) + '|' + (+v.date.slice(5, 7)) + '|' + v.inspector;
-    cell[k] = (cell[k] || 0) + v.hours;
-  });
-  const hours = (y, m, p) => cell[y + '|' + m + '|' + p] || 0;
-  const monthTotal = (y, m) => sum(people.map(p => hours(y, m, p)));
+  const key = v => +v.date.slice(0, 4) + '|' + (+v.date.slice(5, 7));
+  const cell = {};                                  // "year|month" -> hours
+  VISITS.forEach(v => { cell[key(v)] = (cell[key(v)] || 0) + v.hours; });
+  const monthTotal = (y, m) => cell[y + '|' + m] || 0;
+  const round1 = n => Math.round(n * 10) / 10;
 
   // One scale across every year so the cards stay comparable.
   const peak = Math.max(1, ...years.flatMap(y => Array.from({ length: 12 }, (_, i) => monthTotal(y, i + 1))));
   const scale = niceScale(peak, 4), ticks = ticksOf(scale);
-  const round1 = n => Math.round(n * 10) / 10;
 
-  document.getElementById('visitLegend').innerHTML = people.map((p, i) =>
-    `<span><i class="swatch" style="background:${colour(i)}"></i>${esc(p)}</span>`).join('');
+  // A single series needs no legend - use the space for the click affordance.
+  document.getElementById('visitLegend').innerHTML =
+    `<span style="color:var(--text-muted)">คลิกที่แท่งของเดือนไหน เพื่อดูว่าไปไซต์ไหน โครงการอะไรบ้าง</span>`;
 
   document.getElementById('visitChart').innerHTML = VISITS.length ? years.map(y => {
     const grid = ticks.map(v => `<u class="${v === 0 ? 'base' : ''}" style="bottom:${v / scale.max * 100}%"></u>`).join('');
@@ -1336,14 +1330,16 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
     const cols = Array.from({ length: 12 }, (_, i) => {
       const m = i + 1, t = round1(monthTotal(y, m));
       if (!t) return `<div class="col" title="${MONTHS[i]} ${y} — ไม่มีการลงหน้างาน"></div>`;
-      const segs = people.map((p, pi) => {
-        const hv = hours(y, m, p);
-        return hv ? `<div class="seg" style="flex:${hv};background:${colour(pi)}"></div>` : '';
-      }).join('');
-      const who = people.filter(p => hours(y, m, p)).map(p => `${p} ${round1(hours(y, m, p))} ชม.`).join(' · ');
-      return `<div class="col" title="${MONTHS[i]} ${y} — ${t} ชม. (${esc(who)})">
+      const rows = VISITS.filter(v => key(v) === y + '|' + m);
+      const byProj = {};
+      rows.forEach(v => { byProj[v.project] = (byProj[v.project] || 0) + v.hours; });
+      const tip = Object.entries(byProj).sort((a, b) => b[1] - a[1])
+        .map(([p, h]) => `${p} ${round1(h)} ชม.`).join(' · ');
+      return `<div class="col" data-vy="${y}" data-vm="${m}"
+          title="${MONTHS[i]} ${y} — ${t} ชม. ${rows.length} ครั้ง (${esc(tip)})">
           <div class="cap" style="bottom:calc(${t / scale.max * 100}% + 5px)">${t}</div>
-          <div class="stack" style="height:${t / scale.max * 100}%">${segs}</div></div>`;
+          <div class="stack" style="height:${t / scale.max * 100}%">
+            <div class="seg" style="flex:1;background:var(--series-1)"></div></div></div>`;
     }).join('');
     const yTot = round1(sum(Array.from({ length: 12 }, (_, i) => monthTotal(y, i + 1))));
     const yVisits = VISITS.filter(v => +v.date.slice(0, 4) === y).length;
@@ -1355,6 +1351,47 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
         <div class="xaxis money">${MONTHS.map(n => `<b>${n}</b>`).join('')}</div>
       </div>`;
   }).join('') : `<div class="note">ยังไม่มีข้อมูลใน Site Visit Log</div>`;
+
+  /* ---- click a month -> where the team actually went ---- */
+  document.getElementById('visitChart').addEventListener('click', e => {
+    const col = e.target.closest('.col[data-vy]');
+    if (!col) return;
+    if (typeof tip !== 'undefined' && tip) tip.style.opacity = 0;
+    const y = +col.dataset.vy, m = +col.dataset.vm;
+    const rows = VISITS.filter(v => key(v) === y + '|' + m)
+      .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+
+    const byProj = {}; rows.forEach(v => { byProj[v.project] = (byProj[v.project] || 0) + v.hours; });
+    const byWho = {};  rows.forEach(v => { byWho[v.inspector] = (byWho[v.inspector] || 0) + v.hours; });
+    const total = round1(sum(rows.map(v => v.hours)));
+
+    document.getElementById('cm-title').textContent = MONTHS[m - 1] + ' ' + y;
+    document.getElementById('cm-sub').textContent =
+      'Site Visit · ' + rows.length + ' ครั้ง · ' + total + ' ชม. · ' + Object.keys(byProj).length + ' โครงการ';
+    document.getElementById('cm-body').innerHTML = `
+      <div class="pm-sum">
+        <div><div class="k">ชั่วโมงรวม</div><div class="v">${total}</div><div class="ku">ชม.</div></div>
+        <div><div class="k">จำนวนครั้ง</div><div class="v">${rows.length}</div><div class="ku">ครั้ง</div></div>
+        <div><div class="k">โครงการที่ไป</div><div class="v">${Object.keys(byProj).length}</div><div class="ku">โครงการ</div></div>
+        <div><div class="k">คนที่ลงหน้างาน</div><div class="v">${Object.keys(byWho).length}</div><div class="ku">คน</div></div>
+      </div>
+      <div class="repgrid" style="margin-bottom:14px">
+        <div class="card repcard"><h4>ชั่วโมงตามโครงการ</h4><table><tbody>
+          ${Object.entries(byProj).sort((a, b) => b[1] - a[1]).map(([k2, h]) =>
+            `<tr><td>${esc(k2)}</td><td style="text-align:right;white-space:nowrap">${round1(h)} ชม.</td></tr>`).join('')}
+        </tbody></table></div>
+        <div class="card repcard"><h4>ชั่วโมงตามผู้ตรวจ</h4><table><tbody>
+          ${Object.entries(byWho).sort((a, b) => b[1] - a[1]).map(([k2, h]) =>
+            `<tr><td>${esc(k2)}</td><td style="text-align:right;white-space:nowrap">${round1(h)} ชม.</td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+      <div class="pm-scroll"><table>
+        <thead><tr><th>วันที่</th><th>โครงการ</th><th>ผู้ตรวจ</th><th>ชม.</th><th>ไปทำอะไร</th></tr></thead>
+        <tbody>${rows.map(v => `<tr><td>${esc(v.date)}</td><td>${esc(v.project)}</td>
+          <td>${esc(v.inspector)}</td><td>${v.hours}</td><td>${esc(v.purpose || '-')}</td></tr>`).join('')}</tbody>
+      </table></div>`;
+    cellModal.showModal();
+  });
 })();
 
 /* ---- Contractor Assignments ---- */
