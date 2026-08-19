@@ -24,6 +24,9 @@
     --series-rev:     #2a78d6;
     --series-exp:     #e34948;
     --good:           #006300;
+    --stat-con:       #2a78d6;
+    --stat-done:      #0ca30c;
+    --stat-hold:      #b8860b;
     --plot-works:     168px;
     --plot-money:     190px;
   }
@@ -45,6 +48,9 @@
       --series-rev:     #3987e5;
       --series-exp:     #e66767;
       --good:           #0ca30c;
+      --stat-con:       #3987e5;
+      --stat-done:      #0ca30c;
+      --stat-hold:      #fab219;
     }
   }
   :root[data-theme="dark"] {
@@ -64,6 +70,9 @@
     --series-rev:     #3987e5;
     --series-exp:     #e66767;
     --good:           #0ca30c;
+    --stat-con:       #3987e5;
+    --stat-done:      #0ca30c;
+    --stat-hold:      #fab219;
   }
 
   * { box-sizing: border-box; }
@@ -330,6 +339,43 @@
   .pm-body td.bal.pos { color: var(--good); }
   .pm-body td.bal.neg { color: var(--series-exp); }
 
+  /* ---------- Project Overview ---------- */
+  .ovgrid { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(280px,1fr); gap: 12px; align-items: start; }
+  @media (max-width: 860px) { .ovgrid { grid-template-columns: 1fr; } }
+  .ovkpis { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin: 0; }
+  .kpi .ico { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+              margin-bottom: 8px; background: var(--surface-2); }
+  .kpi .ico svg { width: 15px; height: 15px; stroke-width: 1.9; fill: none; }
+  .kpi.k-all  .ico { color: var(--series-1); }
+  .kpi.k-con  .ico { color: var(--stat-con); }
+  .kpi.k-done .ico { color: var(--stat-done); }
+  .kpi.k-hold .ico { color: var(--stat-hold); }
+
+  .donutcard { padding: 16px 20px 18px; }
+  .donutwrap { position: relative; width: 178px; margin: 10px auto 4px; }
+  .donutwrap svg { width: 178px; height: 178px; transform: rotate(-90deg); display: block; }
+  .donutmid { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .donutmid b { display: block; font-size: 30px; font-weight: 650; letter-spacing: -0.02em; }
+  .donutmid span { font-size: 11.5px; color: var(--text-muted); }
+  .dlegend { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .dlegend div { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
+  .dlegend b { margin-left: auto; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+  /* horizontal bar rows shared by the variations and contractor panels */
+  .hrow { display: grid; grid-template-columns: minmax(0,1fr) 190px; gap: 14px; align-items: center;
+          padding: 7px 0; border-bottom: 1px solid var(--grid); }
+  .hrow:last-child { border-bottom: none; }
+  .hrow .nm { font-size: 12.5px; line-height: 1.35; }
+  .hrow .nm small { display: block; color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .hbar { display: flex; align-items: center; gap: 2px; height: 16px; }
+  .hbar i { display: block; height: 100%; border-radius: 2px; min-width: 1px; }
+  .hbar .c1 { background: var(--series-1); }
+  .hbar .c2 { background: var(--series-2); }
+  .hbar .c3 { background: var(--series-exp); }
+  .swatch.c1 { background: var(--series-1); }
+  .swatch.c2 { background: var(--series-2); }
+  .swatch.c3 { background: var(--series-exp); }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -340,7 +386,8 @@
     <h1>Project Pipeline &amp; Financial Forecast</h1>
     <p class="sub" id="sub"></p>
     <nav class="tabs" role="tablist">
-      <button role="tab" id="tab-overview" aria-controls="page-overview" aria-selected="true">ภาพรวม</button>
+      <button role="tab" id="tab-project" aria-controls="page-project" aria-selected="true">Project Overview</button>
+      <button role="tab" id="tab-overview" aria-controls="page-overview" aria-selected="false">ภาพรวม</button>
       <button role="tab" id="tab-details"  aria-controls="page-details"  aria-selected="false">รายละเอียด</button>
     </nav>
   </div>
@@ -351,6 +398,58 @@
   <p class="stripcap">มูลค่าตามสัญญาทั้งพอร์ต — คนละมุมกับกราฟ Financial Forecast ด้านล่าง ซึ่งเป็นกระแสเงินสดตามวันที่จริง ตัวเลขจึงไม่เท่ากันโดยตั้งใจ</p>
   <section class="kpis" id="kpis"></section>
 
+  <!-- ======================= Project Overview ======================= -->
+  <div id="page-project" role="tabpanel" aria-labelledby="tab-project">
+
+    <section class="sec">
+      <div class="sec-head">
+        <h2>Project Overview</h2>
+        <p>จำนวนโครงการและสถานะ จากชีต Summary Report</p>
+      </div>
+      <div class="ovgrid">
+        <div class="kpis ovkpis" id="ovkpis"></div>
+        <div class="facet donutcard">
+          <h3>สถานะโครงการ</h3>
+          <div class="donutwrap">
+            <svg id="statusDonut" viewBox="0 0 200 200" role="img" aria-label="สัดส่วนสถานะโครงการ"></svg>
+            <div class="donutmid"><b id="donutTotal">0</b><span>โครงการ</span></div>
+          </div>
+          <div class="dlegend" id="donutLegend"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
+        <h2>Contract Variations &amp; Preliminary</h2>
+        <p>Preliminary · VO (งานเพิ่ม) · VE (งานลด) รายโครงการ — แสดงเฉพาะโครงการที่มีตัวเลข</p>
+      </div>
+      <div class="legend">
+        <span><i class="swatch c1"></i>Preliminary</span>
+        <span><i class="swatch c2"></i>VO</span>
+        <span><i class="swatch c3"></i>VE</span>
+      </div>
+      <div class="card" id="varCard"></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
+        <h2>Monthly Site Visit Overview</h2>
+        <p>ชั่วโมงลงหน้างานรายเดือน แยกตามผู้ตรวจ — จากชีต Site Visit Log</p>
+      </div>
+      <div class="legend" id="visitLegend"></div>
+      <div class="facets" id="visitChart"></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
+        <h2>Contractor Assignments</h2>
+        <p>มูลค่าสัญญารวมและจำนวนงานของผู้รับเหมาแต่ละราย</p>
+      </div>
+      <div class="card" id="contractorCard"></div>
+    </section>
+
+  </div>
   <!-- ======================= ภาพรวม ======================= -->
   <div id="page-overview" role="tabpanel" aria-labelledby="tab-overview">
 
@@ -922,10 +1021,138 @@ cellModal.addEventListener('click', e => {
   if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) cellModal.close();
 });
 
+/* ===================== Project Overview tab =====================
+   Everything here comes from Summary Report (STAT) and Site Visit Log
+   (VISITS) in the same workbook the rest of the page reads. */
+const STAT = GEN.STAT || [], VISITS = GEN.VISITS || [];
+
+const STATUS_ORDER = ['Construction', 'Completed', 'On Hold'];
+const STATUS_VAR = { 'Construction': '--stat-con', 'Completed': '--stat-done', 'On Hold': '--stat-hold' };
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const ICONS = {
+  all:  '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  con:  '<path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/>',
+  done: '<path d="M21 7L9 19l-5.5-5.5"/>',
+  hold: '<path d="M12 9v4m0 4h.01M10.3 3.9 2.7 17a1.6 1.6 0 0 0 1.4 2.4h15.8a1.6 1.6 0 0 0 1.4-2.4L13.7 3.9a1.6 1.6 0 0 0-2.8 0Z"/>'
+};
+const svgIcon = k => `<span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor">${ICONS[k]}</svg></span>`;
+
+const statusCount = s => STAT.filter(p => p.status === s).length;
+
+document.getElementById('ovkpis').innerHTML = [
+  ['k-all',  'all',  'โครงการทั้งหมด', STAT.length,                  'ทุกสถานะ'],
+  ['k-con',  'con',  'Construction',   statusCount('Construction'),  'กำลังก่อสร้าง'],
+  ['k-done', 'done', 'Completed',      statusCount('Completed'),     'เสร็จแล้ว'],
+  ['k-hold', 'hold', 'Requires Attention', statusCount('On Hold'),   'On Hold']
+].map(([cls, ic, label, val, sub]) =>
+  `<div class="kpi ${cls}">${svgIcon(ic)}<div class="k">${esc(label)}</div>
+     <div class="v">${val}</div><div class="u">${esc(sub)}</div></div>`).join('');
+
+/* Donut drawn as SVG arcs - no charting library, and it inherits the theme. */
+(function drawDonut() {
+  const total = STAT.length || 1;
+  const R = 70, C = 2 * Math.PI * R;
+  let off = 0;
+  const segs = STATUS_ORDER.map(s => {
+    const n = statusCount(s);
+    const len = C * n / total;
+    const el = `<circle cx="100" cy="100" r="${R}" fill="none" stroke="var(${STATUS_VAR[s]})"
+        stroke-width="26" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}"></circle>`;
+    off += len;
+    return n ? el : '';
+  }).join('');
+  document.getElementById('statusDonut').innerHTML =
+    `<circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--surface-2)" stroke-width="26"></circle>` + segs;
+  document.getElementById('donutTotal').textContent = STAT.length;
+  document.getElementById('donutLegend').innerHTML = STATUS_ORDER.map(s =>
+    `<div><i class="swatch" style="background:var(${STATUS_VAR[s]})"></i>${esc(s)}
+       <b>${statusCount(s)}</b></div>`).join('');
+})();
+
+/* ---- Contract Variations & Preliminary ---- */
+(function drawVariations() {
+  const rows = STAT.filter(p => p.prelim || p.vo || p.ve);
+  const max = Math.max(1, ...rows.map(p => p.prelim + p.vo + p.ve));
+  const tot = k => sum(STAT.map(p => p[k]));
+  document.getElementById('varCard').innerHTML =
+    `<div class="pm-sum" style="margin-bottom:14px">
+       <div><div class="k">Preliminary</div><div class="v">${fmtFull(tot('prelim'))}</div></div>
+       <div><div class="k">VO — งานเพิ่ม</div><div class="v">${fmtFull(tot('vo'))}</div></div>
+       <div><div class="k">VE — งานลด</div><div class="v">${fmtFull(tot('ve'))}</div></div>
+     </div>` +
+    rows.map(p => {
+      const seg = (v, c) => v ? `<i class="${c}" style="width:${v / max * 100}%"></i>` : '';
+      return `<div class="hrow"><div class="nm">${esc(p.name)}
+          <small>Prelim ${fmtFull(p.prelim)} · VO ${fmtFull(p.vo)} · VE ${fmtFull(p.ve)}</small></div>
+        <div class="hbar">${seg(p.prelim,'c1')}${seg(p.vo,'c2')}${seg(p.ve,'c3')}</div></div>`;
+    }).join('');
+})();
+
+/* ---- Monthly Site Visit Overview ---- */
+(function drawVisits() {
+  const people = [...new Set(VISITS.map(v => v.inspector))].sort();
+  const SER = ['--series-1', '--series-2', '--stat-done', '--stat-hold', '--series-exp'];
+  const colour = i => `var(${SER[i % SER.length]})`;
+  const months = [...new Set(VISITS.map(v => v.date.slice(0, 7)))].sort();
+  const cell = {};
+  VISITS.forEach(v => {
+    const k = v.date.slice(0, 7) + '|' + v.inspector;
+    cell[k] = (cell[k] || 0) + v.hours;
+  });
+  const totals = months.map(m => sum(people.map(p => cell[m + '|' + p] || 0)));
+  const scale = niceScale(Math.max(1, ...totals), 4), ticks = ticksOf(scale);
+
+  document.getElementById('visitLegend').innerHTML = people.map((p, i) =>
+    `<span><i class="swatch" style="background:${colour(i)}"></i>${esc(p)}</span>`).join('');
+
+  const grid = ticks.map(v => `<u class="${v === 0 ? 'base' : ''}" style="bottom:${v / scale.max * 100}%"></u>`).join('');
+  const yaxis = ticks.map(v => `<i style="bottom:${v / scale.max * 100}%">${v}</i>`).join('');
+  const cols = months.map((m, mi) => {
+    const t = totals[mi];
+    const segs = people.map((p, i) => {
+      const h = cell[m + '|' + p] || 0;
+      return h ? `<div class="seg" style="flex:${h};background:${colour(i)}"></div>` : '';
+    }).join('');
+    const [y, mm] = m.split('-');
+    return `<div class="col" title="${MONTHS[+mm - 1]} ${y} — ${t} ชม.">
+        <div class="cap" style="bottom:calc(${t / scale.max * 100}% + 5px)">${t}</div>
+        <div class="stack" style="height:${t / scale.max * 100}%">${segs}</div></div>`;
+  }).join('');
+
+  document.getElementById('visitChart').innerHTML = VISITS.length ? `<div class="facet">
+      <h3>ชั่วโมงลงหน้างาน <span class="tot">รวม ${sum(totals)} ชม. · ${VISITS.length} ครั้ง · ${people.length} คน</span></h3>
+      <div class="plot"><div class="yaxis money">${yaxis}</div>
+        <div class="cols money"><div class="gridlines">${grid}</div>${cols}</div></div>
+      <div class="xaxis money">${months.map(m => { const [y, mm] = m.split('-');
+        return `<b>${MONTHS[+mm - 1]} ${y.slice(2)}</b>`; }).join('')}</div>
+    </div>` : `<div class="note">ยังไม่มีข้อมูลใน Site Visit Log</div>`;
+})();
+
+/* ---- Contractor Assignments ---- */
+(function drawContractors() {
+  const by = {};
+  STAT.forEach(p => {
+    const c = p.contractor || '(ยังไม่ระบุผู้รับเหมา)';
+    if (!by[c]) by[c] = { n: 0, value: 0 };
+    by[c].n++; by[c].value += p.contract;
+  });
+  const rows = Object.entries(by).sort((a, b) => b[1].value - a[1].value);
+  const max = Math.max(1, ...rows.map(r => r[1].value));
+  document.getElementById('contractorCard').innerHTML =
+    `<div class="pm-sum" style="margin-bottom:14px">
+       <div><div class="k">ผู้รับเหมา</div><div class="v">${rows.length}</div><div class="ku">ราย</div></div>
+       <div><div class="k">มูลค่าสัญญารวม</div><div class="v">${fmtFull(sum(rows.map(r => r[1].value)))}</div></div>
+     </div>` +
+    rows.map(([name, d]) =>
+      `<div class="hrow"><div class="nm">${esc(name)}
+         <small>${d.n} โครงการ · ${fmtFull(d.value)} บาท</small></div>
+       <div class="hbar"><i class="c1" style="width:${d.value / max * 100}%"></i></div></div>`).join('');
+})();
 /* ===================== tabs ===================== */
-const PAGES = { overview: 'page-overview', details: 'page-details' };
+const PAGES = { project: 'page-project', overview: 'page-overview', details: 'page-details' };
 function showTab(name) {
-  if (!PAGES[name]) name = 'overview';
+  if (!PAGES[name]) name = 'project';
   Object.entries(PAGES).forEach(([k, id]) => {
     document.getElementById(id).hidden = k !== name;
     document.getElementById('tab-' + k).setAttribute('aria-selected', String(k === name));
@@ -934,7 +1161,7 @@ function showTab(name) {
   history.replaceState(null, '', '#' + name);
 }
 Object.keys(PAGES).forEach(k => document.getElementById('tab-' + k).onclick = () => showTab(k));
-showTab(location.hash.replace('#', '') || 'overview');
+showTab(location.hash.replace('#', '') || 'project');
 </script>
 </body>
 </html>
