@@ -362,13 +362,17 @@
   .dlegend b { margin-left: auto; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 
   /* horizontal bar rows shared by the variations and contractor panels */
-  .hrow { display: grid; grid-template-columns: minmax(0,1fr) 190px; gap: 14px; align-items: center;
+  .hrow { display: grid; grid-template-columns: minmax(0,0.85fr) minmax(0,1.7fr); gap: 14px; align-items: center;
           padding: 7px 0; border-bottom: 1px solid var(--grid); }
   .hrow:last-child { border-bottom: none; }
   .hrow .nm { font-size: 12.5px; line-height: 1.35; }
   .hrow .nm small { display: block; color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-  .hbar { display: flex; align-items: center; gap: 2px; height: 16px; }
-  .hbar i { display: block; height: 100%; border-radius: 2px; min-width: 1px; }
+  .hbar { display: flex; align-items: center; gap: 2px; height: 22px; }
+  /* value sits inside its own segment; overflow is clipped rather than spilling into the next colour */
+  .hbar i { display: block; height: 100%; border-radius: 2px; min-width: 1px;
+            font-style: normal; font-size: 10.5px; line-height: 22px; color: #fff;
+            text-align: center; overflow: hidden; white-space: nowrap;
+            font-variant-numeric: tabular-nums; }
   .hbar .c1 { background: var(--series-1); }
   .hbar .c2 { background: var(--series-2); }
   .hbar .c3 { background: var(--series-exp); }
@@ -1082,9 +1086,13 @@ document.getElementById('ovkpis').innerHTML = [
        <div><div class="k">VE — งานลด</div><div class="v">${fmtFull(tot('ve'))}</div></div>
      </div>` +
     rows.map(p => {
-      const seg = (v, c) => v ? `<i class="${c}" style="width:${v / max * 100}%"></i>` : '';
-      return `<div class="hrow"><div class="nm">${esc(p.name)}
-          <small>Prelim ${fmtFull(p.prelim)} · VO ${fmtFull(p.vo)} · VE ${fmtFull(p.ve)}</small></div>
+      // Print every value, then let fitBarLabels() drop the ones that do not
+      // physically fit - measuring beats guessing a percentage threshold,
+      // because the bar width changes with the viewport.
+      const seg = (v, c) => v
+        ? `<i class="${c}" style="width:${v / max * 100}%" data-val="${fmtFull(v)}">${fmtFull(v)}</i>` : '';
+      const title = `Preliminary ${fmtFull(p.prelim)} · VO ${fmtFull(p.vo)} · VE ${fmtFull(p.ve)}`;
+      return `<div class="hrow" title="${esc(title)}"><div class="nm">${esc(p.name)}</div>
         <div class="hbar">${seg(p.prelim,'c1')}${seg(p.vo,'c2')}${seg(p.ve,'c3')}</div></div>`;
     }).join('');
 })();
@@ -1149,6 +1157,18 @@ document.getElementById('ovkpis').innerHTML = [
          <small>${d.n} โครงการ · ${fmtFull(d.value)} บาท</small></div>
        <div class="hbar"><i class="c1" style="width:${d.value / max * 100}%"></i></div></div>`).join('');
 })();
+
+/* Hide any in-bar value that would be clipped by its own segment, and redo the
+   pass whenever the bars are re-laid out. */
+function fitBarLabels() {
+  document.querySelectorAll('.hbar i[data-val]').forEach(el => {
+    el.textContent = el.dataset.val;
+    if (el.scrollWidth > el.clientWidth + 1) el.textContent = '';
+  });
+}
+fitBarLabels();
+addEventListener('resize', fitBarLabels);
+
 /* ===================== tabs ===================== */
 const PAGES = { project: 'page-project', overview: 'page-overview', details: 'page-details' };
 function showTab(name) {
