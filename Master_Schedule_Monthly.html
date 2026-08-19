@@ -1097,44 +1097,56 @@ document.getElementById('ovkpis').innerHTML = [
     }).join('');
 })();
 
-/* ---- Monthly Site Visit Overview ---- */
+/* ---- Monthly Site Visit Overview ----
+   One card per calendar year with all 12 months, matching the other charts, so
+   a quiet month reads as a gap rather than being dropped from the axis. */
 (function drawVisits() {
   const people = [...new Set(VISITS.map(v => v.inspector))].sort();
   const SER = ['--series-1', '--series-2', '--stat-done', '--stat-hold', '--series-exp'];
   const colour = i => `var(${SER[i % SER.length]})`;
-  const months = [...new Set(VISITS.map(v => v.date.slice(0, 7)))].sort();
-  const cell = {};
+
+  const years = [...new Set(VISITS.map(v => +v.date.slice(0, 4)))].sort();
+  const cell = {};                       // "year|month|inspector" -> hours
   VISITS.forEach(v => {
-    const k = v.date.slice(0, 7) + '|' + v.inspector;
+    const k = +v.date.slice(0, 4) + '|' + (+v.date.slice(5, 7)) + '|' + v.inspector;
     cell[k] = (cell[k] || 0) + v.hours;
   });
-  const totals = months.map(m => sum(people.map(p => cell[m + '|' + p] || 0)));
-  const scale = niceScale(Math.max(1, ...totals), 4), ticks = ticksOf(scale);
+  const hours = (y, m, p) => cell[y + '|' + m + '|' + p] || 0;
+  const monthTotal = (y, m) => sum(people.map(p => hours(y, m, p)));
+
+  // One scale across every year so the cards stay comparable.
+  const peak = Math.max(1, ...years.flatMap(y => Array.from({ length: 12 }, (_, i) => monthTotal(y, i + 1))));
+  const scale = niceScale(peak, 4), ticks = ticksOf(scale);
+  const round1 = n => Math.round(n * 10) / 10;
 
   document.getElementById('visitLegend').innerHTML = people.map((p, i) =>
     `<span><i class="swatch" style="background:${colour(i)}"></i>${esc(p)}</span>`).join('');
 
-  const grid = ticks.map(v => `<u class="${v === 0 ? 'base' : ''}" style="bottom:${v / scale.max * 100}%"></u>`).join('');
-  const yaxis = ticks.map(v => `<i style="bottom:${v / scale.max * 100}%">${v}</i>`).join('');
-  const cols = months.map((m, mi) => {
-    const t = totals[mi];
-    const segs = people.map((p, i) => {
-      const h = cell[m + '|' + p] || 0;
-      return h ? `<div class="seg" style="flex:${h};background:${colour(i)}"></div>` : '';
+  document.getElementById('visitChart').innerHTML = VISITS.length ? years.map(y => {
+    const grid = ticks.map(v => `<u class="${v === 0 ? 'base' : ''}" style="bottom:${v / scale.max * 100}%"></u>`).join('');
+    const yaxis = ticks.map(v => `<i style="bottom:${v / scale.max * 100}%">${v}</i>`).join('');
+    const cols = Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1, t = round1(monthTotal(y, m));
+      if (!t) return `<div class="col" title="${MONTHS[i]} ${y} — ไม่มีการลงหน้างาน"></div>`;
+      const segs = people.map((p, pi) => {
+        const hv = hours(y, m, p);
+        return hv ? `<div class="seg" style="flex:${hv};background:${colour(pi)}"></div>` : '';
+      }).join('');
+      const who = people.filter(p => hours(y, m, p)).map(p => `${p} ${round1(hours(y, m, p))} ชม.`).join(' · ');
+      return `<div class="col" title="${MONTHS[i]} ${y} — ${t} ชม. (${esc(who)})">
+          <div class="cap" style="bottom:calc(${t / scale.max * 100}% + 5px)">${t}</div>
+          <div class="stack" style="height:${t / scale.max * 100}%">${segs}</div></div>`;
     }).join('');
-    const [y, mm] = m.split('-');
-    return `<div class="col" title="${MONTHS[+mm - 1]} ${y} — ${t} ชม.">
-        <div class="cap" style="bottom:calc(${t / scale.max * 100}% + 5px)">${t}</div>
-        <div class="stack" style="height:${t / scale.max * 100}%">${segs}</div></div>`;
-  }).join('');
-
-  document.getElementById('visitChart').innerHTML = VISITS.length ? `<div class="facet">
-      <h3>ชั่วโมงลงหน้างาน <span class="tot">รวม ${sum(totals)} ชม. · ${VISITS.length} ครั้ง · ${people.length} คน</span></h3>
-      <div class="plot"><div class="yaxis money">${yaxis}</div>
-        <div class="cols money"><div class="gridlines">${grid}</div>${cols}</div></div>
-      <div class="xaxis money">${months.map(m => { const [y, mm] = m.split('-');
-        return `<b>${MONTHS[+mm - 1]} ${y.slice(2)}</b>`; }).join('')}</div>
-    </div>` : `<div class="note">ยังไม่มีข้อมูลใน Site Visit Log</div>`;
+    const yTot = round1(sum(Array.from({ length: 12 }, (_, i) => monthTotal(y, i + 1))));
+    const yVisits = VISITS.filter(v => +v.date.slice(0, 4) === y).length;
+    return `<div class="facet">
+        <h3>ปี ${y} <span class="be">พ.ศ. ${y + 543}</span>
+            <span class="tot">รวม ${yTot} ชม. · ${yVisits} ครั้ง</span></h3>
+        <div class="plot"><div class="yaxis money">${yaxis}</div>
+          <div class="cols money"><div class="gridlines">${grid}</div>${cols}</div></div>
+        <div class="xaxis money">${MONTHS.map(n => `<b>${n}</b>`).join('')}</div>
+      </div>`;
+  }).join('') : `<div class="note">ยังไม่มีข้อมูลใน Site Visit Log</div>`;
 })();
 
 /* ---- Contractor Assignments ---- */
