@@ -98,7 +98,8 @@
   h1 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.015em; }
   .sub { color: var(--text-muted); font-size: 12px; margin: 2px 0 0; }
 
-  .tabs { display: flex; gap: 4px; margin-top: 14px; }
+  /* five tabs no longer fit a phone in one row, so let them wrap */
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 14px; }
   .tabs button {
     font: inherit; font-size: 14px; font-weight: 550;
     color: var(--text-secondary); background: none; border: none;
@@ -415,6 +416,21 @@
     border-left: 2px dashed var(--series-exp); z-index: 2; }
   .iwrow { cursor: pointer; }
   .iwrow:hover { background: var(--surface-2); }
+
+  /* ---------- Report ---------- */
+  .filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .repwindow { font-size: 12.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .repgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items: start; }
+  .repcard h4 { font-size: 13px; font-weight: 600; margin: 0 0 10px; }
+  .repcard .pm-note { margin: 0; }
+  /* Printing is the export path here, so drop the chrome and let cards break cleanly. */
+  @media print {
+    .tabs, #tip, .filterbar, .stripcap, .kpis#kpis { display: none !important; }
+    body { background: #fff; }
+    .sec { break-inside: avoid; }
+    .card, .facet, .repcard { break-inside: avoid; box-shadow: none; }
+    .pm-scroll { overflow: visible !important; max-height: none !important; }
+  }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -429,6 +445,7 @@
       <button role="tab" id="tab-overview" aria-controls="page-overview" aria-selected="false">Project Pipeline</button>
       <button role="tab" id="tab-details"  aria-controls="page-details"  aria-selected="false">รายละเอียด</button>
       <button role="tab" id="tab-internal" aria-controls="page-internal" aria-selected="false">Internal Work</button>
+      <button role="tab" id="tab-report" aria-controls="page-report" aria-selected="false">Report</button>
     </nav>
   </div>
 </div>
@@ -611,6 +628,27 @@
     </section>
 
   </div>
+
+  <!-- ======================= Report ======================= -->
+  <div id="page-report" role="tabpanel" aria-labelledby="tab-report" hidden>
+
+    <section class="sec">
+      <div class="sec-head">
+        <h2>รายงานสรุปงาน</h2>
+        <p>สรุปสิ่งที่เกิดขึ้นจริงในช่วงที่เลือก นับย้อนจากวันที่ Sync ล่าสุด — กด Ctrl+P เพื่อบันทึกเป็น PDF</p>
+      </div>
+      <div class="filterbar">
+        <div class="seg" id="repfilter" role="group" aria-label="ช่วงรายงาน">
+          <button data-days="14" aria-pressed="true">2 สัปดาห์</button>
+          <button data-days="30" aria-pressed="false">1 เดือน</button>
+        </div>
+        <span class="repwindow" id="repwindow"></span>
+      </div>
+    </section>
+
+    <div id="repbody"></div>
+
+  </div>
 </div>
 
 <div id="tip" role="status" aria-live="polite"></div>
@@ -654,7 +692,7 @@ const GEN = {
 "IWORK": [{"topic":"ERV - Project Management","details":"Dashboard สำหรับ Management","start":"2026-07-01","end":"2026-07-21","status":"Completed"},{"topic":"สัญญาผู้รับเหมา & Note ของ QT ลูกค้า","details":"รอนัดวัน ผู้รับเหมาเข้ามาประชุม","start":"2026-07-01","end":"2026-07-21","status":"In Progress"},{"topic":"Find contractor","details":"หาผู้รับเหมาเพิ่มเติม เจ้าเล็กๆ อีก 2 เจ้า","start":"2026-07-01","end":"2026-07-21","status":"On Hold"},{"topic":"Revise ราคาของผู้รับเหมา","details":"ทำราคาขั้นต่ำ ในกรณีงานเล็กเป็นงานเหมา","start":"2026-07-23","end":"2026-08-15","status":"In Progress"},{"topic":"Data Actual  Plan","details":"","start":"2026-07-14","end":"2026-07-21","status":"In Progress"},{"topic":"ฝึกออกแบบ","details":"ริทจะมีความเข้าใจ การแก้ไขปัญหาหน้างานมากขึ้น","start":"2026-08-10","end":"2026-08-21","status":"In Progress"},{"topic":"Construction Standara","details":"มาตราฐานการก่อสร้าง IAQ และเอกสาร","start":"2026-08-18","end":"2026-09-01","status":"In Progress"}],
 "PORTFOLIO": {"sale":11894264,"budgetActual":7093832,"projects":20},
 "REVMETA": {"rows":111,"rate":0.4,"today":"2026-08-19","noEnd":[],"noJoin":[],"unsched":[]},
-"META": {"projects":20,"rows":39,"generated":"2026-08-19 15:45","missing":[["The Grand Pinklao","Second Fix"]]}
+"META": {"projects":20,"rows":39,"generated":"2026-08-19 16:05","missing":[["The Grand Pinklao","Second Fix"]]}
 };
 /* DATA:END */
 
@@ -1521,8 +1559,148 @@ const iwColor = s => `var(${IW_VAR[s] || '--text-muted'})`;
     cellModal.showModal();
   });
 })();
+
+/* ===================== Report =====================
+   A rolling window ending on the sync date. Everything here is already in the
+   page; the report just slices it by date, so the same numbers are reused
+   rather than recomputed a second way. */
+(function buildReport() {
+  const today = REVMETA.today;
+  // Date.parse on a bare date string is read as local time, which lands on the
+  // previous UTC day east of Greenwich - build the index from the parts instead
+  // so it round-trips through isoOf().
+  const day = s => { const [y, m, d] = s.split('-').map(Number); return Math.floor(Date.UTC(y, m - 1, d) / 86400000); };
+  const isoOf = n => {
+    const d = new Date(n * 86400000);
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0')
+                              + '-' + String(d.getUTCDate()).padStart(2, '0');
+  };
+  const FLOWS_ALL = PROJ.flatMap(p => p.flows.map(([kind, amt, d]) => ({ name: p.name, kind, amt, d })));
+  const byDate = (a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0;
+
+  const tile = (k, v, u) =>
+    `<div><div class="k">${esc(k)}</div><div class="v">${v}</div>${u ? `<div class="ku">${esc(u)}</div>` : ''}</div>`;
+  const section = (title, sub, inner) =>
+    `<section class="sec"><div class="sec-head"><h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ''}</div>${inner}</section>`;
+  const note = t => `<div class="card"><div class="pm-note">${esc(t)}</div></div>`;
+
+  function render(days) {
+    const to = day(today), from = to - days + 1;
+    const inWin = d => day(d) >= from && day(d) <= to;
+    const nextFrom = to + 1, nextTo = to + days;
+    const inNext = d => day(d) >= nextFrom && day(d) <= nextTo;
+
+    document.getElementById('repwindow').textContent =
+      `${isoOf(from)} ถึง ${isoOf(to)} · ${days} วัน · ช่วงถัดไป ${isoOf(nextFrom)} ถึง ${isoOf(nextTo)}`;
+
+    /* ---- money that actually moved ---- */
+    const fl = FLOWS_ALL.filter(f => inWin(f.d)).sort(byDate);
+    const inAmt = sum(fl.filter(f => KIND_IN[f.kind]).map(f => f.amt));
+    const outAmt = sum(fl.filter(f => !KIND_IN[f.kind]).map(f => f.amt));
+
+    /* ---- site visits ---- */
+    const vs = VISITS.filter(v => inWin(v.date)).sort((a, b) => a.date < b.date ? -1 : 1);
+    const hours = sum(vs.map(v => v.hours));
+    const byWho = {}; vs.forEach(v => { byWho[v.inspector] = (byWho[v.inspector] || 0) + v.hours; });
+    const byProj = {}; vs.forEach(v => { byProj[v.project] = (byProj[v.project] || 0) + v.hours; });
+
+    /* ---- internal work ---- */
+    const iwDone = IWORK.filter(w => w.status === 'Completed' && w.end && inWin(w.end));
+    const iwOpen = IWORK.filter(w => w.status !== 'Completed');
+    const iwLate = iwOpen.filter(w => w.end && w.end < today);
+    const iwSoon = iwOpen.filter(w => w.end && inNext(w.end));
+
+    /* ---- what is coming ---- */
+    const flNext = FLOWS_ALL.filter(f => inNext(f.d)).sort(byDate);
+    const inNextAmt = sum(flNext.filter(f => KIND_IN[f.kind]).map(f => f.amt));
+    const outNextAmt = sum(flNext.filter(f => !KIND_IN[f.kind]).map(f => f.amt));
+
+    const kpi = `<section class="sec"><div class="kpis ovkpis">
+      ${tile('เงินเข้า', fmtFull(inAmt), fl.filter(f => KIND_IN[f.kind]).length + ' รายการ')}
+      ${tile('เงินออก', fmtFull(outAmt), fl.filter(f => !KIND_IN[f.kind]).length + ' รายการ')}
+      ${tile('สุทธิ', fmtFull(inAmt - outAmt), inAmt - outAmt >= 0 ? 'เป็นบวก' : 'ติดลบ')}
+      ${tile('ชั่วโมงหน้างาน', hours.toFixed(1), vs.length + ' ครั้ง')}
+      ${tile('Internal ค้าง', iwOpen.length, iwLate.length + ' เลยกำหนด')}
+    </div></section>`;
+
+    const moneyTbl = fl.length ? `<div class="card"><div class="pm-scroll"><table>
+      <thead><tr><th>วันที่</th><th>โครงการ</th><th>รายการ</th><th>รับ</th><th>จ่าย</th></tr></thead>
+      <tbody>${fl.map(f => `<tr><td>${esc(f.d)}</td><td>${esc(f.name)}</td>
+        <td><span class="pill ${KIND_IN[f.kind] ? 'in' : 'out'}">${esc(KIND_SHORT[f.kind] || f.kind)}</span></td>
+        <td>${KIND_IN[f.kind] ? fmtFull(f.amt) : ''}</td>
+        <td>${KIND_IN[f.kind] ? '' : fmtFull(f.amt)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><th colspan="3">รวม</th><th>${fmtFull(inAmt)}</th><th>${fmtFull(outAmt)}</th></tr></tfoot>
+    </table></div></div>` : note('ไม่มีรายการเงินเข้า–ออกในช่วงนี้');
+
+    const visitBlock = vs.length ? `<div class="repgrid">
+      <div class="card repcard"><h4>ชั่วโมงตามผู้ตรวจ</h4><table><tbody>
+        ${Object.entries(byWho).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+          `<tr><td>${esc(k)}</td><td style="text-align:right">${v.toFixed(1)} ชม.</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="card repcard"><h4>ชั่วโมงตามโครงการ</h4><table><tbody>
+        ${Object.entries(byProj).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+          `<tr><td>${esc(k)}</td><td style="text-align:right">${v.toFixed(1)} ชม.</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="card repcard" style="grid-column:1/-1"><h4>รายการออกหน้างาน</h4><div class="pm-scroll"><table>
+        <thead><tr><th>วันที่</th><th>โครงการ</th><th>ผู้ตรวจ</th><th>ชม.</th><th>เรื่อง</th></tr></thead>
+        <tbody>${vs.map(v => `<tr><td>${esc(v.date)}</td><td>${esc(v.project)}</td>
+          <td>${esc(v.inspector)}</td><td>${v.hours}</td><td>${esc(v.purpose || '-')}</td></tr>`).join('')}</tbody>
+      </table></div></div>
+    </div>` : note('ไม่มีการออกหน้างานในช่วงนี้');
+
+    const iwList = (arr, empty, showLate) => arr.length ? `<div class="pm-scroll"><table><tbody>
+      ${arr.map(w => `<tr><td>${esc(w.topic)}</td>
+        <td style="text-align:right;white-space:nowrap">${esc(w.end || '-')}${
+          showLate && w.end && w.end < today ? ` <span class="warnchip">เลย ${day(today) - day(w.end)} วัน</span>` : ''
+        }</td></tr>`).join('')}
+    </tbody></table></div>` : `<div class="pm-note">${esc(empty)}</div>`;
+
+    const iwBlock = `<div class="repgrid">
+      <div class="card repcard"><h4>ปิดงานได้ในช่วงนี้ (${iwDone.length})</h4>${iwList(iwDone, 'ยังไม่มีงานที่ปิดในช่วงนี้')}</div>
+      <div class="card repcard"><h4>เลยกำหนดแล้ว (${iwLate.length})</h4>${iwList(iwLate, 'ไม่มีงานเลยกำหนด', true)}</div>
+      <div class="card repcard"><h4>ครบกำหนดช่วงถัดไป (${iwSoon.length})</h4>${iwList(iwSoon, 'ไม่มีงานครบกำหนดในช่วงถัดไป')}</div>
+    </div>`;
+
+    const nextTbl = flNext.length ? `<div class="card">
+      <div class="pm-sum" style="margin-bottom:14px">
+        ${tile('จะได้รับ', fmtFull(inNextAmt), '')}
+        ${tile('ต้องจ่าย', fmtFull(outNextAmt), '')}
+        ${tile('สุทธิ', fmtFull(inNextAmt - outNextAmt), '')}
+      </div>
+      <div class="pm-scroll"><table>
+        <thead><tr><th>วันที่</th><th>โครงการ</th><th>รายการ</th><th>รับ</th><th>จ่าย</th></tr></thead>
+        <tbody>${flNext.map(f => `<tr><td>${esc(f.d)}</td><td>${esc(f.name)}</td>
+          <td><span class="pill ${KIND_IN[f.kind] ? 'in' : 'out'} due">${esc(KIND_SHORT[f.kind] || f.kind)}</span></td>
+          <td>${KIND_IN[f.kind] ? fmtFull(f.amt) : ''}</td>
+          <td>${KIND_IN[f.kind] ? '' : fmtFull(f.amt)}</td></tr>`).join('')}</tbody>
+      </table></div>
+    </div>` : note('ไม่มีรายการเงินที่ครบกำหนดในช่วงถัดไป');
+
+    const statusNow = `<div class="card"><div class="pm-sum">
+      ${STATUS_ORDER.map(s => tile(s, statusCount(s), statusPct(statusCount(s)) + '% ของทั้งหมด')).join('')}
+      ${tile('รวม', STAT.length, 'โครงการ')}
+    </div></div>`;
+
+    document.getElementById('repbody').innerHTML =
+      kpi +
+      section('การเงินที่เกิดขึ้นจริง', 'ทุกรายการรับ–จ่ายที่ลงวันที่ในช่วงนี้', moneyTbl) +
+      section('งานหน้างาน', 'จากชีต Site Visit Log', visitBlock) +
+      section('งานภายใน (Internal Work)', 'จากชีต INTERNAL WORK', iwBlock) +
+      section('สิ่งที่กำลังจะถึง', 'เงินที่ครบกำหนดในอีก ' + days + ' วันข้างหน้า', nextTbl) +
+      section('สถานะโครงการ ณ วันที่รายงาน', '', statusNow);
+  }
+
+  document.getElementById('repfilter').addEventListener('click', e => {
+    const b = e.target.closest('button[data-days]');
+    if (!b) return;
+    [...e.currentTarget.querySelectorAll('button')].forEach(x =>
+      x.setAttribute('aria-pressed', String(x === b)));
+    render(+b.dataset.days);
+  });
+  render(14);
+})();
 /* ===================== tabs ===================== */
-const PAGES = { project: 'page-project', overview: 'page-overview', details: 'page-details', internal: 'page-internal' };
+const PAGES = { project: 'page-project', overview: 'page-overview', details: 'page-details', internal: 'page-internal', report: 'page-report' };
 function showTab(name) {
   if (!PAGES[name]) name = 'project';
   Object.entries(PAGES).forEach(([k, id]) => {
