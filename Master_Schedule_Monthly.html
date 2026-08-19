@@ -360,6 +360,13 @@
   .dlegend { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
   .dlegend div { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
   .dlegend b { margin-left: auto; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .dlegend em { font-style: normal; color: var(--text-muted); font-size: 11.5px;
+    width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+  /* status tiles / legend rows open the project list */
+  .clickable { cursor: pointer; }
+  .dlegend .clickable { margin: -3px -6px; padding: 3px 6px; border-radius: 5px; }
+  .clickable:hover, .clickable:focus-visible { background: var(--surface-2); outline: none; }
+  .kpi.clickable:focus-visible { box-shadow: inset 0 0 0 2px var(--stat-con); }
 
   /* horizontal bar rows shared by the variations and contractor panels */
   .hrow { display: grid; grid-template-columns: minmax(0,0.85fr) minmax(0,1.7fr); gap: 14px; align-items: center;
@@ -1065,14 +1072,16 @@ const svgIcon = k => `<span class="ico"><svg viewBox="0 0 24 24" stroke="current
 
 const statusCount = s => STAT.filter(p => p.status === s).length;
 
+const statusPct = n => STAT.length ? Math.round(n / STAT.length * 100) : 0;
+
 document.getElementById('ovkpis').innerHTML = [
-  ['k-all',  'all',  'โครงการทั้งหมด', STAT.length,                  'ทุกสถานะ'],
-  ['k-con',  'con',  'Construction',   statusCount('Construction'),  'กำลังก่อสร้าง'],
-  ['k-done', 'done', 'Completed',      statusCount('Completed'),     'เสร็จแล้ว'],
-  ['k-hold', 'hold', 'Requires Attention', statusCount('On Hold'),   'On Hold']
-].map(([cls, ic, label, val, sub]) =>
-  `<div class="kpi ${cls}">${svgIcon(ic)}<div class="k">${esc(label)}</div>
-     <div class="v">${val}</div><div class="u">${esc(sub)}</div></div>`).join('');
+  ['k-all',  'all',  'โครงการทั้งหมด', STAT.length,                  'ทุกสถานะ',      ''],
+  ['k-con',  'con',  'Construction',   statusCount('Construction'),  'กำลังก่อสร้าง', 'Construction'],
+  ['k-done', 'done', 'Completed',      statusCount('Completed'),     'เสร็จแล้ว',     'Completed'],
+  ['k-hold', 'hold', 'Requires Attention', statusCount('On Hold'),   'On Hold',       'On Hold']
+].map(([cls, ic, label, val, sub, st]) =>
+  `<div class="kpi ${cls} clickable" data-st="${esc(st)}" tabindex="0" role="button">${svgIcon(ic)}<div class="k">${esc(label)}</div>
+     <div class="v">${val}</div><div class="u">${esc(sub)}${st ? ` · ${statusPct(val)}% ของทั้งหมด` : ''}</div></div>`).join('');
 
 /* Donut drawn as SVG arcs - no charting library, and it inherits the theme. */
 (function drawDonut() {
@@ -1083,17 +1092,51 @@ document.getElementById('ovkpis').innerHTML = [
     const n = statusCount(s);
     const len = C * n / total;
     const el = `<circle cx="100" cy="100" r="${R}" fill="none" stroke="var(${STATUS_VAR[s]})"
-        stroke-width="26" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}"></circle>`;
+        stroke-width="26" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}"
+        data-st="${esc(s)}" style="cursor:pointer"><title>${esc(s)} ${n} โครงการ (${statusPct(n)}%)</title></circle>`;
     off += len;
     return n ? el : '';
   }).join('');
   document.getElementById('statusDonut').innerHTML =
     `<circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--surface-2)" stroke-width="26"></circle>` + segs;
   document.getElementById('donutTotal').textContent = STAT.length;
-  document.getElementById('donutLegend').innerHTML = STATUS_ORDER.map(s =>
-    `<div><i class="swatch" style="background:var(${STATUS_VAR[s]})"></i>${esc(s)}
-       <b>${statusCount(s)}</b></div>`).join('');
+  document.getElementById('donutLegend').innerHTML = STATUS_ORDER.map(s => {
+    const n = statusCount(s);
+    return `<div class="clickable" data-st="${esc(s)}" tabindex="0" role="button">
+      <i class="swatch" style="background:var(${STATUS_VAR[s]})"></i>${esc(s)}
+      <b>${n}</b><em>${statusPct(n)}%</em></div>`;
+  }).join('');
 })();
+
+/* Click a status (KPI tile, donut slice or legend row) -> which projects are in it. */
+function openStatus(st) {
+  const rows = (st ? STAT.filter(p => p.status === st) : STAT.slice()).sort((a, b) =>
+    STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || a.name.localeCompare(b.name, 'th'));
+  document.getElementById('cm-title').textContent = st || 'โครงการทั้งหมด';
+  document.getElementById('cm-sub').textContent = 'สถานะโครงการ · ' + rows.length + ' โครงการ'
+    + (st ? ` · ${statusPct(rows.length)}% ของทั้งหมด ${STAT.length} โครงการ` : '');
+  document.getElementById('cm-body').innerHTML = `
+    <div class="pm-sum">${STATUS_ORDER.map(s => `<div><div class="k">${esc(s)}</div>
+      <div class="v">${statusCount(s)}</div>
+      <div class="ku">${statusPct(statusCount(s))}% ของทั้งหมด</div></div>`).join('')}</div>
+    ${rows.length ? `<div class="pm-scroll"><table>
+      <thead><tr><th>รหัส</th><th>โครงการ</th><th>สถานะ</th><th>ความคืบหน้า</th><th>Contract Value</th></tr></thead>
+      <tbody>${rows.map(p => `<tr><td>${esc(p.code || '-')}</td><td>${esc(p.name)}</td>
+        <td><span class="pill" style="background:var(${STATUS_VAR[p.status]});color:#fff">${esc(p.status)}</span></td>
+        <td>${Math.round((p.progress || 0) * 100)}%</td>
+        <td>${p.contract ? fmtFull(p.contract) : '-'}</td></tr>`).join('')}</tbody>
+    </table></div>` : `<div class="pm-note">ไม่มีโครงการในสถานะนี้</div>`}`;
+  cellModal.showModal();
+}
+document.querySelector('.ovgrid').addEventListener('click', e => {
+  const el = e.target.closest('[data-st]');
+  if (el) openStatus(el.dataset.st);
+});
+document.querySelector('.ovgrid').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest('[data-st]');
+  if (el) { e.preventDefault(); openStatus(el.dataset.st); }
+});
 
 /* ---- Contract Variations & Preliminary ---- */
 (function drawVariations() {
