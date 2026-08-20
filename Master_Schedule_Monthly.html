@@ -751,7 +751,7 @@ const GEN = {
 "PROGRESS": [],
 "PORTFOLIO": {"sale":11894264,"budgetActual":7093832,"projects":20},
 "REVMETA": {"rows":110,"rate":0.4,"today":"2026-08-20","noEnd":[],"noJoin":[],"unsched":[]},
-"META": {"projects":20,"rows":39,"generated":"2026-08-20 16:09","missing":[["The Grand Pinklao","Second Fix"]]}
+"META": {"projects":20,"rows":39,"generated":"2026-08-20 16:27","missing":[["The Grand Pinklao","Second Fix"]]}
 };
 /* DATA:END */
 
@@ -1787,7 +1787,14 @@ const iwColor = s => `var(${IW_VAR[s] || '--text-muted'})`;
     /* ---- progress: what actually moved, and where everything stands ----
        PROGRESS is a change log the sync keeps between runs, because the
        workbook itself only ever holds the current value. */
-    const moved = PROGRESS.filter(c => inWin(c.date))
+    /* Scoped to Construction like the table below. A project is in scope if it
+       is in Construction now, or if the change itself was a move into or out of
+       Construction - otherwise finishing a job would erase the very entry that
+       records it finishing. */
+    const conNow = new Set(STAT.filter(s => s.status === 'Construction').map(s => s.code || s.name));
+    const moved = PROGRESS
+      .filter(c => inWin(c.date))
+      .filter(c => conNow.has(c.code || c.name) || c.fromS === 'Construction' || c.toS === 'Construction')
       .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
     const pctOf = v => Math.round((v || 0) * 100);
 
@@ -1807,26 +1814,28 @@ const iwColor = s => `var(${IW_VAR[s] || '--text-muted'})`;
       }).join('')}</tbody>
     </table></div></div>`
       : note(PROGRESS.length
-          ? 'ไม่มีโครงการไหนเปลี่ยนความคืบหน้าหรือสถานะในช่วงนี้'
+          ? 'ไม่มีโครงการหมวด Construction ที่เปลี่ยนความคืบหน้าหรือสถานะในช่วงนี้'
           : 'ยังไม่มีประวัติเทียบ — ระบบเพิ่งบันทึกค่าตั้งต้นไว้ การเปลี่ยนแปลงจะเริ่มแสดงตั้งแต่ Sync ครั้งถัดไป');
 
-    // Current standing for every project, busiest first.
-    const standing = STAT.slice().sort((a, b) => (b.progress || 0) - (a.progress || 0));
-    const avg = STAT.length ? sum(STAT.map(s => s.progress || 0)) / STAT.length : 0;
-    const standingTbl = `<div class="card">
+    // Both progress blocks are scoped to Construction - those are the projects
+    // that actually keep moving. Completed and On Hold sit still, so listing
+    // them here just buries the ones worth watching.
+    const standing = STAT.filter(s => s.status === 'Construction')
+      .sort((a, b) => (b.progress || 0) - (a.progress || 0));
+    const avg = standing.length ? sum(standing.map(s => s.progress || 0)) / standing.length : 0;
+    const standingTbl = standing.length ? `<div class="card">
       <div class="pm-sum" style="margin-bottom:14px">
-        ${tile('ความคืบหน้าเฉลี่ย', pctOf(avg) + '%', 'ทั้ง ' + STAT.length + ' โครงการ')}
-        ${tile('เสร็จแล้ว', STAT.filter(s => (s.progress || 0) >= 1).length, '100%')}
-        ${tile('ยังไม่เริ่ม', STAT.filter(s => !(s.progress || 0)).length, '0%')}
+        ${tile('ความคืบหน้าเฉลี่ย', pctOf(avg) + '%', 'เฉพาะที่กำลังก่อสร้าง')}
+        ${tile('กำลังก่อสร้าง', standing.length, 'จาก ' + STAT.length + ' โครงการ')}
+        ${tile('ยังไม่เริ่ม', standing.filter(s => !(s.progress || 0)).length, '0%')}
         ${tile('เปลี่ยนในช่วงนี้', moved.length, 'โครงการ')}
       </div>
       <div class="pm-scroll"><table>
-        <thead><tr><th>โครงการ</th><th>สถานะ</th><th>ความคืบหน้า</th><th></th></tr></thead>
+        <thead><tr><th>โครงการ</th><th>ความคืบหน้า</th><th></th></tr></thead>
         <tbody>${standing.map(s => `<tr><td>${esc(s.name)}</td>
-          <td><span class="pill" style="background:var(${STATUS_VAR[s.status] || '--text-muted'});color:#fff">${esc(s.status)}</span></td>
-          <td style="width:120px">${pctOf(s.progress)}%</td>
+          <td style="width:90px">${pctOf(s.progress)}%</td>
           <td><div class="hbar" style="min-width:120px"><i class="c1" style="width:${pctOf(s.progress)}%"></i></div></td></tr>`).join('')}</tbody>
-      </table></div></div>`;
+      </table></div></div>` : note('ตอนนี้ไม่มีโครงการที่อยู่ในสถานะ Construction');
 
     const kpi = `<section class="sec"><div class="card"><div class="pm-sum">
       ${tile('เงินเข้า', fmtFull(inAmt), fl.filter(f => KIND_IN[f.kind]).length + ' รายการ')}
@@ -1896,8 +1905,8 @@ const iwColor = s => `var(${IW_VAR[s] || '--text-muted'})`;
 
     document.getElementById('repbody').innerHTML =
       kpi +
-      section('1 · ความคืบหน้าที่เปลี่ยนไป', 'โครงการที่ % หรือสถานะขยับในช่วงนี้ เทียบกับที่บันทึกไว้ครั้งก่อน', movedTbl) +
-      section('2 · ความคืบหน้าปัจจุบัน', 'ทุกโครงการ เรียงจากคืบหน้ามากไปน้อย', standingTbl) +
+      section('1 · ความคืบหน้าที่เปลี่ยนไป', 'เฉพาะหมวด Construction — % หรือสถานะขยับในช่วงนี้ เทียบกับที่บันทึกไว้ครั้งก่อน', movedTbl) +
+      section('2 · ความคืบหน้าปัจจุบัน', 'เฉพาะหมวด Construction เรียงจากคืบหน้ามากไปน้อย', standingTbl) +
       section('3 · การเงินที่เกิดขึ้นจริง', 'ทุกรายการรับ–จ่ายที่ลงวันที่ในช่วงนี้', moneyTbl) +
       section('4 · งานหน้างาน', 'จากชีต Site Visit Log', visitBlock) +
       section('5 · งานภายใน (Internal Work)', 'จากชีต INTERNAL WORK', iwBlock) +
