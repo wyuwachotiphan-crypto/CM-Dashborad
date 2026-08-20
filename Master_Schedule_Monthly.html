@@ -447,6 +447,22 @@
   .moredetail > summary:hover { color: var(--text-secondary); background: var(--surface-2); }
   .moredetail > summary:focus-visible { outline: 2px solid var(--stat-con); outline-offset: 2px; }
   .moredetail[open] > summary { margin-bottom: 4px; }
+
+  /* ---------- collapsible chart block: heading stays, detail folds away ---- */
+  .collapsible > summary {
+    list-style: none; cursor: pointer; display: flex; align-items: flex-start; gap: 8px;
+    border-radius: 8px; margin: -4px -8px 0; padding: 4px 8px;
+  }
+  .collapsible > summary::-webkit-details-marker { display: none; }
+  .collapsible > summary::before {
+    content: '▾'; flex: none; font-size: 12px; line-height: 1.9;
+    color: var(--text-muted); transition: transform .12s;
+  }
+  .collapsible:not([open]) > summary::before { transform: rotate(-90deg); }
+  .collapsible > summary:hover { background: var(--surface-2); }
+  .collapsible > summary:focus-visible { outline: 2px solid var(--stat-con); outline-offset: 1px; }
+  .collapsible > summary .sec-head { margin-bottom: 0; }
+  .collapsible:not([open]) > summary { margin-bottom: 0; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -516,36 +532,36 @@
     </section>
 
     <section class="sec">
-      <div class="sec-head">
-        <h2>Contract Variations &amp; Preliminary</h2>
-        <p>Preliminary · VO (งานเพิ่ม) · VE (งานลด) รายโครงการ — แสดงเฉพาะโครงการที่มีตัวเลข</p>
-      </div>
-      <div class="legend">
-        <span><i class="swatch c1"></i>Preliminary</span>
-        <span><i class="swatch c2"></i>VO</span>
-        <span><i class="swatch c3"></i>VE</span>
-      </div>
-      <div class="card" id="varCard"></div>
+      <details class="collapsible" open>
+        <summary>
+          <div class="sec-head">
+            <h2>Contract Variations &amp; Preliminary</h2>
+            <p>Preliminary · VO (งานเพิ่ม) · VE (งานลด) รายโครงการ — แสดงเฉพาะโครงการที่มีตัวเลข</p>
+          </div>
+        </summary>
+        <div class="legend">
+          <span><i class="swatch c1"></i>Preliminary</span>
+          <span><i class="swatch c2"></i>VO</span>
+          <span><i class="swatch c3"></i>VE</span>
+        </div>
+        <div class="card" id="varCard"></div>
+      </details>
 
-      <div class="sec-head" style="margin:22px 0 10px">
-        <h3 style="font-size:14.5px;font-weight:650;margin:0">Cost การก่อสร้าง — งวดจ่ายผู้รับเหมา</h3>
-        <p style="margin:3px 0 0;color:var(--text-secondary);font-size:12.5px">
-          Contract Value จาก Summary Report แบ่งตามงวด 30/50/20 และวันที่จ่ายใน Master Schedule</p>
-      </div>
-      <div class="legend">
-        <span><i class="swatch c4"></i>จ่ายแล้ว</span>
-        <span><i class="swatch c4 due"></i>ยังไม่ถึงกำหนด</span>
-        <span><i class="swatch c5"></i>ไม่มีงวด / ไม่ตรงกับสัญญา</span>
-      </div>
-      <div class="card" id="costCard"></div>
-    </section>
-
-    <section class="sec">
-      <div class="sec-head">
-        <h2>Petty Cash</h2>
-        <p>ยอดรวมจากชีต Summary Report แถว I — <strong>คลิกที่การ์ด</strong>เพื่อดูว่าแต่ละรายการไปโครงการไหน</p>
-      </div>
-      <div class="card" id="pettyCard"></div>
+      <details class="collapsible" open style="margin-top:22px">
+        <summary>
+          <div class="sec-head">
+            <h3 style="font-size:14.5px;font-weight:650;margin:0">Cost การก่อสร้าง — งวดจ่ายผู้รับเหมา</h3>
+            <p style="margin:3px 0 0;color:var(--text-secondary);font-size:12.5px">
+              Contract Value จาก Summary Report แบ่งตามงวด 30/50/20 และวันที่จ่ายใน Master Schedule</p>
+          </div>
+        </summary>
+        <div class="legend">
+          <span><i class="swatch c4"></i>จ่ายแล้ว</span>
+          <span><i class="swatch c4 due"></i>ยังไม่ถึงกำหนด</span>
+          <span><i class="swatch c5"></i>ไม่มีงวด / ไม่ตรงกับสัญญา</span>
+        </div>
+        <div class="card" id="costCard"></div>
+      </details>
     </section>
 
     <section class="sec">
@@ -734,7 +750,7 @@ const GEN = {
 "PETTY": {"rows":[{"code":"CRLEV-26-003","name":"สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2","amount":603},{"code":"CRLEV-26-006","name":"Ventier courtyard ชั้น 3","amount":715},{"code":"CRLEV-26-009","name":"บ้านคุณอิสระ","amount":470},{"code":"CRLEV-26-012","name":"S’rin House","amount":840},{"code":"CRLEV-26-015","name":"PhanasonSamutprakhan Residence","amount":522},{"code":"CRLEV-26-014","name":"P'Gummy @Sildrom Residence FL.21","amount":489},{"code":"CRLEV-26-004","name":"Granpix","amount":735},{"code":"CRLEV-26-018","name":"คุณเต้ย หมู่บ้านรัตนา","amount":630},{"code":"CRLST-25-003","name":"Khun Sarut's House","amount":255},{"code":"CRLEV-26-020","name":"คุณทวีชัย สมุทรปราการ","amount":460},{"code":"CRLEV-26-021","name":"The Grand Pinklao","amount":540}],"carried":2591},
 "PORTFOLIO": {"sale":11894264,"budgetActual":7093832,"projects":20},
 "REVMETA": {"rows":110,"rate":0.4,"today":"2026-08-20","noEnd":[],"noJoin":[],"unsched":[]},
-"META": {"projects":20,"rows":39,"generated":"2026-08-20 15:38","missing":[["The Grand Pinklao","Second Fix"]]}
+"META": {"projects":20,"rows":39,"generated":"2026-08-20 15:47","missing":[["The Grand Pinklao","Second Fix"]]}
 };
 /* DATA:END */
 
@@ -1418,60 +1434,6 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
     }).join('');
 })();
 
-/* ---- Petty Cash ----------------------------------------------------------
-   The sheet also carries a petty-cash amount on a row with no project name - a
-   brought-forward balance. It belongs in the total but there is nothing to list
-   it against, so it is shown as its own line here and left out of the popup. */
-(function drawPetty() {
-  const rows = (PETTY.rows || []).slice().sort((a, b) => b.amount - a.amount);
-  const listed = sum(rows.map(r => r.amount));
-  const carried = PETTY.carried || 0;
-  const total = listed + carried;
-
-  document.getElementById('pettyCard').innerHTML = `
-    <div class="pm-sum">
-      <div><div class="k">Petty Cash รวม</div><div class="v">${fmtFull(total)}</div>
-           <div class="ku">บาท · ทั้งพอร์ต</div></div>
-      <div><div class="k">แยกตามโครงการ</div><div class="v">${fmtFull(listed)}</div>
-           <div class="ku">${rows.length} โครงการ</div></div>
-      <div><div class="k">ยอดยกมา</div><div class="v">${fmtFull(carried)}</div>
-           <div class="ku">ไม่ได้ระบุโครงการ</div></div>
-    </div>
-    ${rows.length ? `<div class="pm-note" style="margin-top:12px">คลิกเพื่อดูรายการแยกตามโครงการ</div>` : ''}`;
-
-  const card = document.getElementById('pettyCard');
-  if (!rows.length) return;
-  card.classList.add('clickable');
-  card.setAttribute('tabindex', '0');
-  card.setAttribute('role', 'button');
-
-  function open() {
-    document.getElementById('cm-title').textContent = 'Petty Cash';
-    document.getElementById('cm-sub').textContent =
-      'แยกตามโครงการ · ' + rows.length + ' โครงการ · รวม ' + fmtFull(listed) + ' บาท';
-    document.getElementById('cm-body').innerHTML = `
-      <div class="pm-sum">
-        <div><div class="k">รวมในรายการนี้</div><div class="v">${fmtFull(listed)}</div><div class="ku">บาท</div></div>
-        <div><div class="k">เฉลี่ยต่อโครงการ</div><div class="v">${fmtFull(listed / rows.length)}</div><div class="ku">บาท</div></div>
-        <div><div class="k">สูงสุด</div><div class="v">${fmtFull(rows[0].amount)}</div>
-             <div class="ku">${esc(rows[0].name)}</div></div>
-      </div>
-      <div class="pm-scroll"><table>
-        <thead><tr><th>รหัส</th><th>โครงการ</th><th>Petty Cash</th><th>% ของรายการ</th></tr></thead>
-        <tbody>${rows.map(r => `<tr><td>${esc(r.code || '-')}</td><td>${esc(r.name)}</td>
-          <td>${fmtFull(r.amount)}</td>
-          <td>${listed ? Math.round(r.amount / listed * 100) : 0}%</td></tr>`).join('')}</tbody>
-        <tfoot><tr><th colspan="2">รวม</th><th>${fmtFull(listed)}</th><th>100%</th></tr></tfoot>
-      </table></div>
-      ${carried ? `<div class="pm-note" style="margin-top:10px">ไม่รวมยอดยกมา ${fmtFull(carried)} บาท
-        ที่ไม่ได้ระบุโครงการ — ยอดนั้นถูกนับอยู่ใน Petty Cash รวม ${fmtFull(total)} บาทแล้ว</div>` : ''}`;
-    cellModal.showModal();
-  }
-  card.addEventListener('click', open);
-  card.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
-  });
-})();
 /* ---- Monthly Site Visit Overview ----
    One card per calendar year with all 12 months, matching the other charts, so
    a quiet month reads as a gap rather than being dropped from the axis. */
@@ -1993,6 +1955,13 @@ function showTab(name) {
   if (openDetail) document.getElementById('moredetail').open = true;
   if (typeof fitBarLabels === 'function') requestAnimationFrame(fitBarLabels);
 }
+// Same for the collapsible chart blocks: bars measure zero wide while folded,
+// so the in-bar labels have to be re-fitted once one is opened again.
+document.querySelectorAll('details.collapsible').forEach(d =>
+  d.addEventListener('toggle', () => {
+    if (typeof fitBarLabels === 'function') requestAnimationFrame(fitBarLabels);
+  }));
+
 document.getElementById('moredetail').addEventListener('toggle', () => {
   // Content inside a closed <details> measures zero wide, so any in-bar label
   // there was skipped on first paint - redo the fit once it is actually shown.
