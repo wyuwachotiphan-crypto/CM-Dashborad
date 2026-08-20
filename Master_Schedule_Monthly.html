@@ -492,6 +492,14 @@
 
     <section class="sec">
       <div class="sec-head">
+        <h2>Preliminary · VE · VO · Petty Cash</h2>
+        <p>ยอดรวมทั้งพอร์ต 4 รายการ — Preliminary, VE, VO จากชีต Summary Report แถว O, Q, P และ Petty Cash จากแถว I</p>
+      </div>
+      <div class="card" id="extrasCard"></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
         <h2>Contract Variations &amp; Preliminary</h2>
         <p>Preliminary · VO (งานเพิ่ม) · VE (งานลด) รายโครงการ — แสดงเฉพาะโครงการที่มีตัวเลข</p>
       </div>
@@ -1297,6 +1305,35 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
   if (el) { e.preventDefault(); openStatus(el.dataset.st); }
 });
 
+
+/* ---- Preliminary / VE / VO / Petty Cash ----------------------------------
+   Four portfolio totals in the order the user asked for, not sorted by size -
+   the sequence is the point. One series, so one colour and no legend; the
+   values sit in (or beside) their own bar. */
+(function drawExtras() {
+  const items = [
+    { name: 'Preliminary', value: sum(STAT.map(s => s.prelim)), note: 'Summary Report แถว O' },
+    { name: 'VE', value: sum(STAT.map(s => s.ve)), note: 'งานลด · แถว Q' },
+    { name: 'VO', value: sum(STAT.map(s => s.vo)), note: 'งานเพิ่ม · แถว P' },
+    { name: 'Petty Cash', value: sum((PETTY.rows || []).map(r => r.amount)) + (PETTY.carried || 0),
+      note: 'แถว I · รวมยอดยกมา' }
+  ];
+  const total = sum(items.map(i => i.value));
+  const max = Math.max(1, ...items.map(i => i.value));
+
+  document.getElementById('extrasCard').innerHTML =
+    `<div class="pm-sum" style="margin-bottom:14px">
+       ${items.map(i => `<div><div class="k">${esc(i.name)}</div>
+         <div class="v">${fmtFull(i.value)}</div>
+         <div class="ku">${total ? Math.round(i.value / total * 100) : 0}% ของทั้งสี่รายการ</div></div>`).join('')}
+       <div><div class="k">รวม 4 รายการ</div><div class="v">${fmtFull(total)}</div><div class="ku">บาท</div></div>
+     </div>` +
+    items.map(i => `<div class="hrow" title="${esc(i.name)} ${fmtFull(i.value)} บาท">
+        <div class="nm">${esc(i.name)}<small>${esc(i.note)}</small></div>
+        <div class="hbar"><i class="c1" style="width:${i.value / max * 100}%"
+           data-val="${fmtFull(i.value)}">${fmtFull(i.value)}</i></div>
+      </div>`).join('');
+})();
 /* ---- Contract Variations & Preliminary ---- */
 (function drawVariations() {
   const rows = STAT.filter(p => p.prelim || p.vo || p.ve);
