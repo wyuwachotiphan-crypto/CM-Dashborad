@@ -1326,7 +1326,6 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
        ${items.map(i => `<div><div class="k">${esc(i.name)}</div>
          <div class="v">${fmtFull(i.value)}</div>
          <div class="ku">${total ? Math.round(i.value / total * 100) : 0}% ของทั้งสี่รายการ</div></div>`).join('')}
-       <div><div class="k">รวม 4 รายการ</div><div class="v">${fmtFull(total)}</div><div class="ku">บาท</div></div>
      </div>` +
     items.map(i => `<div class="hrow" title="${esc(i.name)} ${fmtFull(i.value)} บาท">
         <div class="nm">${esc(i.name)}<small>${esc(i.note)}</small></div>
