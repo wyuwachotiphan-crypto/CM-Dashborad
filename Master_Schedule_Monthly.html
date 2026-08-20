@@ -552,6 +552,9 @@
         <span><i class="swatch s1"></i>First Fix</span>
         <span><i class="swatch s2"></i>Second Fix</span>
       </div>
+      <div class="legend">
+        <div class="seg" id="pipeyear" role="group" aria-label="เลือกปี"></div>
+      </div>
       <div class="facets" id="facets"></div>
     </section>
 
@@ -573,6 +576,7 @@
           <button data-period="month" aria-pressed="true">รายเดือน</button>
           <button data-period="quarter" aria-pressed="false">รายไตรมาส</button>
         </div>
+        <div class="seg" id="revyear" role="group" aria-label="เลือกปี"></div>
       </div>
       <div class="facets" id="revfacets"></div>
     </section>
@@ -756,7 +760,19 @@ const WTICKS = Array.from({ length: WMAX / WSTEP + 1 }, (_, i) => i * WSTEP);
 const totF = sum(YEARS.map(y => sum(DATA[y].map(m => m[0]))));
 const totS = sum(YEARS.map(y => sum(DATA[y].map(m => m[1]))));
 
-document.getElementById('facets').innerHTML = YEARS.map(y => {
+/* One chart, one year. The scales (WMAX / niceScale) still span every year, so
+   switching years compares like with like instead of silently rescaling. */
+const thisYear = +(REVMETA.today || '').slice(0, 4);
+const pickYear = list => list.includes(thisYear) ? thisYear : list[list.length - 1];
+
+function yearButtons(host, list, current) {
+  document.getElementById(host).innerHTML = list.map(y =>
+    `<button data-year="${y}" aria-pressed="${y === current}">${y}</button>`).join('');
+}
+
+let PYEAR = pickYear(YEARS);
+function renderPipeline() {
+document.getElementById('facets').innerHTML = YEARS.filter(y => y === PYEAR).map(y => {
   const rows = DATA[y], yearTotal = sum(rows.map(m => m[0] + m[1]));
   const grid = WTICKS.map(t => `<u class="${t === 0 ? 'base' : ''}" style="bottom:${t / WMAX * 100}%"></u>`).join('');
   const yaxis = WTICKS.map(t => `<i style="bottom:${t / WMAX * 100}%">${t}</i>`).join('');
@@ -779,6 +795,16 @@ document.getElementById('facets').innerHTML = YEARS.map(y => {
       <div class="xaxis works">${MONTHS.map(n => `<b>${n}</b>`).join('')}</div>
     </div>`;
 }).join('');
+}
+yearButtons('pipeyear', YEARS, PYEAR);
+renderPipeline();
+document.getElementById('pipeyear').addEventListener('click', e => {
+  const b = e.target.closest('button[data-year]');
+  if (!b) return;
+  PYEAR = +b.dataset.year;
+  yearButtons('pipeyear', YEARS, PYEAR);
+  renderPipeline();
+});
 
 /* ===================== money chart =====================
    Each month is [in-settled, in-pending, out-settled, out-pending]. The chart
@@ -808,7 +834,7 @@ function renderMoney(period) {
   const scale = niceScale(Math.max(1, ...RYEARS.flatMap(y => byYear[y].flatMap(m => [revIn(m), revOut(m)]))), 4);
   const ticks = ticksOf(scale);
 
-  document.getElementById('revfacets').innerHTML = RYEARS.map(y => {
+  document.getElementById('revfacets').innerHTML = RYEARS.filter(y => y === RYEAR).map(y => {
     const rows = byYear[y];
     const yRev = sum(rows.map(revIn)), yExp = sum(rows.map(revOut));
     const grid = ticks.map(t => `<u class="${t === 0 ? 'base' : ''}" style="bottom:${t / scale.max * 100}%"></u>`).join('');
@@ -837,7 +863,17 @@ function renderMoney(period) {
 }
 
 let PERIOD = 'month';
+let RYEAR = pickYear(RYEARS);
+yearButtons('revyear', RYEARS, RYEAR);
 renderMoney(PERIOD);
+
+document.getElementById('revyear').addEventListener('click', e => {
+  const b = e.target.closest('button[data-year]');
+  if (!b) return;
+  RYEAR = +b.dataset.year;
+  yearButtons('revyear', RYEARS, RYEAR);
+  renderMoney(PERIOD);
+});
 
 document.getElementById('periodfilter').addEventListener('click', e => {
   const b = e.target.closest('button[data-period]');
