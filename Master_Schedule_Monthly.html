@@ -575,7 +575,7 @@
     <section class="sec">
       <div class="sec-head">
         <h2>ตรวจสอบความถูกต้องของข้อมูล</h2>
-        <p>เทียบยอดใน Master Schedule กับ Summary Report อัตโนมัติทุกครั้งที่ Sync — ถ้าตรงกันทั้งหมดจะไม่มีรายการขึ้น</p>
+        <p>เทียบยอดใน Master Schedule กับ Summary Report อัตโนมัติทุกครั้งที่ Sync — รวมถึงเช็คว่าวันที่รับเงินตรงกับช่อง Collected ไหม ถ้าตรงกันทั้งหมดจะไม่มีรายการขึ้น</p>
       </div>
       <div class="card" id="auditCard"></div>
     </section>
@@ -759,7 +759,7 @@ const GEN = {
 "PROGRESS": [],
 "PORTFOLIO": {"sale":11894264,"budgetActual":7093832,"projects":20},
 "REVMETA": {"rows":110,"rate":0.4,"today":"2026-08-27","noEnd":[],"noJoin":[],"unsched":[]},
-"META": {"projects":20,"rows":39,"generated":"2026-08-27 09:40","missing":[["The Grand Pinklao","Second Fix"]]}
+"META": {"projects":20,"rows":39,"generated":"2026-08-27 09:47","missing":[["The Grand Pinklao","Second Fix"]]}
 };
 /* DATA:END */
 
@@ -1654,6 +1654,19 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
       name: s.name, what: 'จ่ายผู้รับเหมา (30/50/20) ไม่เท่า Contract Value',
       should: s.contract, is: pay, diff: dP,
       hint: 'แก้แถว K, N หรือ P ใน Master Schedule'
+    });
+
+    /* Third check: the chart decides "received" from the DATE, while column J
+       states it outright. When those disagree the bars look wrong even though
+       the arithmetic is right, so name the rows that still need a real date. */
+    let dueByToday = 0;
+    src.flows.forEach(([k, amt, d]) => { if (KIND_IN[k] && d <= REVMETA.today) dueByToday += amt; });
+    const dC = Math.round(dueByToday - s.collected);
+    if ((s.collected || dueByToday) && Math.abs(dC) > 2) issues.push({
+      name: s.name,
+      what: dC < 0 ? 'เก็บเงินแล้ว แต่วันที่ยังไม่ถึง' : 'วันที่ถึงแล้ว แต่ Collected ยังไม่ขึ้น',
+      should: s.collected, is: dueByToday, diff: dC,
+      hint: dC < 0 ? 'กรอกวันรับจริง แถว X (งวด 1) / T / V' : 'อัปเดต Collected แถว J หรือแก้วันที่'
     });
   });
 
