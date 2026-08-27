@@ -2311,7 +2311,12 @@ function showTab(name) {
     document.getElementById(id).hidden = k !== name;
     document.getElementById('tab-' + k).setAttribute('aria-selected', String(k === name));
   });
-  // The KPI strip is a summary of everything, so it stays on both tabs.
+  // The contract-value strip belongs to the pipeline page - it is the figure the
+  // Financial Forecast below it is contrasted against. On the other tabs it is
+  // unrelated context, so hide it there.
+  const showStrip = (name === 'overview');
+  document.querySelector('.stripcap').hidden = !showStrip;
+  document.getElementById('kpis').hidden = !showStrip;
   history.replaceState(null, '', '#' + name);
   if (openDetail) document.getElementById('moredetail').open = true;
   if (typeof fitBarLabels === 'function') requestAnimationFrame(fitBarLabels);
