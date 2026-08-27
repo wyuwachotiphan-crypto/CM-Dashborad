@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Master Schedule Builder — เครื่องมือจัดทำแผนงานก่อสร้าง</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --ink:#003049; --ink-soft:#0F4C6B; --grid:#669BBC; --paper:#fff; --canvas:#F7F7F5;
+  --accent:#C1121F; --accent-soft:#FDF0D5; --text:#003049; --steel:#787774;
+  --line:#E3E2DE; --green:#3E8F63; --red:#780000; --gray:#98A5AD; --amber:#B47B12;
+  font-family:'IBM Plex Sans Thai',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--canvas);color:var(--text);padding-bottom:60px;font-size:14px}
+.wrap{max-width:1500px;margin:0 auto;padding:0 20px}
+header{background:var(--ink);color:#fff;padding:16px 0 0}
+.head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:14px}
+/* แท็บโครงการ */
+.tabbar{display:flex;gap:3px;align-items:flex-end;overflow-x:auto;padding-top:2px}
+.tabbar .tab{background:rgba(255,255,255,.07);border:0;border-radius:8px 8px 0 0;color:#CFE2EC;
+  font-size:13px;padding:8px 13px;white-space:nowrap;display:flex;align-items:center;gap:7px;cursor:pointer}
+.tabbar .tab:hover{background:rgba(255,255,255,.16)}
+.tabbar .tab.on{background:var(--canvas);color:var(--text);font-weight:600}
+.tabbar .tab .cnt{font-size:10.5px;background:rgba(0,0,0,.18);border-radius:9px;padding:1px 6px;font-weight:500}
+.tabbar .tab.on .cnt{background:var(--accent-soft);color:var(--ink)}
+.tabbar .tab .x{opacity:.45;font-size:11px}
+.tabbar .tab .x:hover{opacity:1;color:var(--accent)}
+.tabbar .tab.add{background:transparent;color:#9EC4D8;font-size:12px}
+h1{font-size:19px;font-weight:700;letter-spacing:.2px}
+.sub{font-size:12px;color:#9EC4D8;margin-top:2px}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+button{font-family:inherit;font-size:13px;border:1px solid var(--line);background:var(--paper);
+  color:var(--text);padding:7px 12px;border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--grid)}
+button.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
+button.ghost:hover{background:rgba(255,255,255,.12)}
+button.mini{padding:3px 7px;font-size:12px;line-height:1.2}
+section{background:var(--paper);border:1px solid var(--line);border-radius:10px;margin-top:16px;overflow:hidden}
+.sec-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:11px 16px;border-bottom:1px solid var(--line);background:#FBFBFA}
+.sec-h h2{font-size:14px;font-weight:700}
+.sec-h .hint{font-size:12px;color:var(--steel);font-weight:400}
+.pad{padding:16px}
+label{display:block;font-size:11px;color:var(--steel);margin-bottom:3px;font-weight:500}
+input,select,textarea{font-family:inherit;font-size:13px;color:var(--text);border:1px solid var(--line);
+  border-radius:5px;padding:6px 8px;background:#fff;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--grid)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line)}
+.kpi{background:var(--paper);padding:12px 16px}
+.kpi .k{font-size:11px;color:var(--steel)}
+.kpi .v{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.kpi .n{font-size:11px;color:var(--steel);margin-top:1px}
+.ok{color:var(--green)} .bad{color:var(--accent)} .warn{color:var(--amber)}
+/* table */
+.tbl{width:100%;min-width:1600px;border-collapse:collapse;table-layout:fixed}
+.tbl th{background:var(--ink-soft);color:#fff;font-size:11px;font-weight:600;padding:7px 6px;text-align:left;white-space:nowrap}
+.tbl td{border-bottom:1px solid var(--line);padding:3px 5px;vertical-align:middle;overflow:hidden}
+.tbl tr:hover td{background:#FBFAF7}
+.tbl td input,.tbl td select{width:100%;padding:4px 6px;font-size:12.5px;border-color:transparent;
+  background:transparent;text-overflow:ellipsis}
+.tbl td input[type=checkbox]{width:auto}
+.tbl td input:hover,.tbl td select:hover{border-color:var(--line);background:#fff}
+/* ช่องที่กำลังพิมพ์ให้ขยายทับคอลัมน์ข้าง ๆ จะได้เห็นข้อความเต็ม */
+.tbl td{position:relative}
+.tbl td input:focus{position:absolute;left:5px;top:3px;z-index:5;width:max(100%,320px);
+  background:#fff;box-shadow:0 2px 10px rgba(0,48,73,.18)}
+.tbl td input[type=number]:focus,.tbl td input[type=checkbox]:focus{position:static;width:100%;box-shadow:none}
+.derived{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--steel);white-space:nowrap}
+.ph{background:var(--accent-soft);font-weight:700;font-size:12px}
+.scroll{overflow-x:auto}
+.rowact{display:flex;gap:3px}
+/* gantt */
+.gantt{display:flex;overflow-x:auto;border-top:1px solid var(--line)}
+.gl{flex:0 0 auto;background:var(--paper);border-right:2px solid var(--ink-soft);position:sticky;left:0;z-index:3}
+.gr{flex:1 0 auto}
+.grow{height:26px;display:flex;align-items:center;border-bottom:1px solid #F0EFEC;font-size:12px;white-space:nowrap}
+.gl .grow{padding:0 8px;gap:8px}
+.gl .gname{width:320px;overflow:hidden;text-overflow:ellipsis}
+.gl .gdate{width:150px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--steel);text-align:right}
+.ghead{height:22px;font-size:10px;color:var(--steel);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;font-weight:600;background:#FBFBFA}
+.tick{border-left:1px solid var(--line);height:100%;display:flex;align-items:center;padding-left:3px;overflow:hidden;flex:0 0 auto}
+.lane{position:relative;height:26px;border-bottom:1px solid #F0EFEC}
+.lane .wknd{position:absolute;top:0;bottom:0;background:#F4F3F0}
+.bar{position:absolute;top:5px;height:16px;border-radius:3px;background:var(--grid);
+  color:#fff;font-size:10px;line-height:16px;padding:0 4px;overflow:hidden;white-space:nowrap}
+.bar.p1{background:var(--ink-soft)} .bar.p2{background:#5A7D8C}
+.bar.late{background:var(--accent)}
+.bar.ext{background:repeating-linear-gradient(45deg,#D8D6D1,#D8D6D1 4px,#EDEBE7 4px,#EDEBE7 8px);color:var(--steel)}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;background:rgba(0,0,0,.30);border-radius:3px 0 0 3px}
+.ms{position:absolute;top:6px;width:14px;height:14px;background:var(--accent);transform:rotate(45deg)}
+.today{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);z-index:2}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--steel);padding:8px 16px;border-top:1px solid var(--line)}
+.legend i{display:inline-block;width:14px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}
+/* misc */
+.msg{font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:10px}
+.msg.e{background:#FDECEC;color:var(--red)} .msg.o{background:#EAF4EE;color:var(--green)}
+dialog{border:1px solid var(--line);border-radius:10px;padding:0;width:min(620px,92vw)}
+dialog::backdrop{background:rgba(0,48,73,.4)}
+.foot{text-align:center;font-size:11px;color:var(--steel);margin-top:20px}
+@media print{
+  @page{size:A3 landscape;margin:8mm}
+  body{background:#fff;padding:0}
+  header{background:#fff;color:var(--ink);border-bottom:2px solid var(--ink)}
+  .sub{color:var(--steel)} .noprint{display:none!important}
+  section{break-inside:avoid;border:1px solid #ccc}
+  .gantt{overflow:visible} .gl{position:static}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head">
+    <div>
+      <h1>Master Schedule Builder</h1>
+      <div class="sub">เครื่องมือจัดทำแผนงานหลักงานก่อสร้าง — Gantt + S-Curve + ส่งออก Excel</div>
+    </div>
+    <div class="tools noprint">
+      <button class="ghost" onclick="openTpl()">เทมเพลตงาน</button>
+      <button class="ghost" onclick="openPaste()">วางจาก Excel</button>
+      <button class="ghost" onclick="saveFile()">บันทึกโครงการนี้</button>
+      <button class="ghost" onclick="backupAll()">สำรองทุกโครงการ</button>
+      <button class="ghost" onclick="fileIn.click()">เปิดไฟล์</button>
+      <button class="ghost" onclick="toXlsx()">ส่งออก Excel</button>
+      <button class="ghost" onclick="window.print()">พิมพ์ / PDF</button>
+    </div>
+  </div>
+  <div class="wrap"><div class="tabbar noprint" id="tabs"></div></div>
+</header>
+<input type="file" id="fileIn" accept=".json" hidden onchange="loadFile(this)">
+
+<div class="wrap">
+
+  <section>
+    <div class="sec-h"><h2>ข้อมูลโครงการ</h2>
+      <span class="hint"><b id="revbadge" style="color:var(--accent)"></b> · แก้ไขแล้วแผนคำนวณใหม่อัตโนมัติ</span>
+      <button class="noprint" onclick="bumpRev()" title="เพิ่มเลข Rev. ขึ้น 1 และตั้งวันที่เป็นวันนี้">↑ ออก Rev. ใหม่</button></div>
+    <div class="pad grid" id="info"></div>
+  </section>
+
+  <section>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section>
+    <div class="sec-h">
+      <h2>รายการงาน (Work Breakdown)</h2>
+      <div class="tools noprint">
+        <button onclick="addRow()">+ เพิ่มงาน</button>
+        <button onclick="addRow(true)">+ เพิ่มหัวข้อ/เฟส</button>
+        <button onclick="autoWeight()">คิดน้ำหนักอัตโนมัติ</button>
+        <button onclick="clearAll()">ล้างทั้งหมด</button>
+      </div>
+    </div>
+    <div id="warn" class="pad" style="padding-bottom:0"></div>
+    <div class="scroll"><table class="tbl" id="tbl"></table></div>
+  </section>
+
+  <section>
+    <div class="sec-h">
+      <h2>แผนภูมิ Gantt</h2>
+      <div class="tools noprint">
+        <label style="margin:0"><select id="scale" onchange="refresh()" style="width:auto">
+          <option value="day">รายวัน</option><option value="week" selected>รายสัปดาห์</option><option value="month">รายเดือน</option>
+        </select></label>
+      </div>
+    </div>
+    <div class="gantt" id="gantt"></div>
+    <div class="legend">
+      <span><i style="background:var(--ink-soft)"></i>First Fix</span>
+      <span><i style="background:#5A7D8C"></i>Second Fix</span>
+      <span><i style="background:var(--grid)"></i>งานทั่วไป</span>
+      <span><i style="background:repeating-linear-gradient(45deg,#D8D6D1,#D8D6D1 4px,#EDEBE7 4px,#EDEBE7 8px)"></i>งานที่รอผู้อื่น (ไม่นับน้ำหนัก)</span>
+      <span><i style="background:var(--accent);transform:rotate(45deg);width:9px"></i>Milestone / Hold Point</span>
+      <span><i style="background:rgba(0,0,0,.3)"></i>ส่วนที่ทำเสร็จแล้ว</span>
+      <span><i style="background:var(--accent);width:3px;height:12px"></i>วันนี้</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-h"><h2>S-Curve ความก้าวหน้าตามแผน</h2><span class="hint">เส้นทึบ = แผนสะสม · จุดแดง = ผลงานจริงวันนี้ (จากคอลัมน์ %จริง)</span></div>
+    <div class="pad" id="curve"></div>
+  </section>
+
+  <div class="foot">Coral Life · IAQ Construction Management — ไฟล์เดียว ทำงานออฟไลน์ได้ ไม่ต้องติดตั้งอะไร</div>
+</div>
+
+<dialog id="dlgTpl">
+  <div class="sec-h"><h2>เลือกเทมเพลต</h2></div>
+  <div class="pad">
+    <p style="font-size:12.5px;color:var(--steel);margin-bottom:12px">เลือกแล้วจะแทนที่รายการงานทั้งหมดที่มีอยู่</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button onclick="useTpl('A')">ฉบับ A — โครงการใหญ่ (WP-01…13 + Hold Point 4 จุด)</button>
+      <button onclick="useTpl('B')">ฉบับ B — โครงการเล็ก / บ้าน (B-1…B-8)</button>
+      <button onclick="useTpl('blank')">เริ่มจากตารางว่าง</button>
+    </div>
+    <div style="text-align:right;margin-top:14px"><button onclick="dlgTpl.close()">ปิด</button></div>
+  </div>
+</dialog>
+
+<dialog id="dlgPaste">
+  <div class="sec-h"><h2>วางรายการงานจาก Excel</h2></div>
+  <div class="pad">
+    <p style="font-size:12.5px;color:var(--steel);margin-bottom:8px">
+      คัดลอกจาก Excel แล้ววางที่นี่ — คอลัมน์: <b>ชื่องาน · ระยะเวลา(วัน) · น้ำหนัก% · ผู้รับผิดชอบ</b>
+      (ขั้นต่ำแค่ชื่องานกับระยะเวลา) แต่ละงานจะต่อท้ายงานก่อนหน้าให้อัตโนมัติ</p>
+    <textarea id="pasteBox" rows="10" placeholder="สำรวจหน้างาน&#9;3&#9;5&#10;เจาะผนัง&#9;5&#9;10"></textarea>
+    <div style="text-align:right;margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="dlgPaste.close()">ยกเลิก</button>
+      <button class="pri" onclick="doPaste()">เพิ่มเข้าตาราง</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+/* ══════════════════ STATE ══════════════════ */
+const KEY='ms-builder-v2', OLDKEY='ms-builder-v1';
+function blankProj(){return {info:{name:'',owner:'',site:'',doc:'',rev:'R0',revdate:today0(),by:'',start:today0(),cdays:120,wmode:'mon-sat',holi:''},tasks:[]}}
+let WS={cur:0,projects:[]};   // ทุกโครงการอยู่ในไฟล์เดียว สลับด้วยแท็บด้านบน
+let S=blankProj();            // โครงการที่กำลังเปิดอยู่
+let seq=1;
+
+function today0(){const d=new Date();return iso(d)}
+function iso(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+function p2(n){return String(n).padStart(2,'0')}
+function D(s){const[y,m,d]=String(s).split('-').map(Number);return new Date(y,m-1,d)}
+const TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function fmt(d){return d?p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(2):'—'}
+function addD(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function days(a,b){return Math.round((b-a)/864e5)}
+
+/* ── ปฏิทินทำงาน ── */
+let HOLI=new Set();
+function isWork(d){
+  if(HOLI.has(iso(d)))return false;
+  const w=d.getDay(), m=S.info.wmode;
+  if(m==='all')return true;
+  if(m==='mon-sat')return w!==0;
+  return w!==0&&w!==6;
+}
+function nextWork(d,n){ // เลื่อนไป n วันทำงาน (n<0 = ถอยหลัง)
+  let x=new Date(d),step=n<0?-1:1,k=Math.abs(n);
+  while(k>0){x=addD(x,step); if(isWork(x))k--;}
+  return x;
+}
+function snapWork(d){let x=new Date(d);let g=0;while(!isWork(x)&&g++<400)x=addD(x,1);return x}
+
+/* ══════════════════ COMPUTE ══════════════════ */
+function compute(){
+  HOLI=new Set(String(S.info.holi||'').split(/[,\s]+/).filter(Boolean));
+  const p0=snapWork(D(S.info.start));
+  const by={},idx={};
+  S.tasks.forEach((t,i)=>{by[t.id]=t;idx[t.id]=i});
+  const depOf=t=>{const d=t.dep&&by[t.dep];return d&&!d.phase&&d!==t?d:null};
+  const place=(t,dep)=>{
+    let s;
+    if(!dep) s=p0;
+    else if(t.dt==='SS') s=t.lag?nextWork(dep.s,t.lag):new Date(dep.s);
+    else s=nextWork(dep.f,(+t.lag||0)+1);
+    if(s<p0)s=new Date(p0);
+    t.s=snapWork(s);
+    const dur=Math.max(0,+t.dur||0);
+    t.f=dur<=1?new Date(t.s):nextWork(t.s,dur-1);
+  };
+  // คำนวณแบบไม่ยึดลำดับแถว — งานอ้างอิงงานที่อยู่ใต้มันในตารางก็คำนวณถูก
+  S.tasks.forEach(t=>{if(t.phase){t.s=null;t.f=null}});
+  let pend=S.tasks.filter(t=>!t.phase);
+  const ok=new Set(), loop=[];
+  let guard=0;
+  while(pend.length&&guard++<999){
+    const next=[];
+    pend.forEach(t=>{
+      const d=depOf(t);
+      if(d&&!ok.has(d.id)){next.push(t);return}
+      place(t,d);ok.add(t.id);
+    });
+    if(next.length===pend.length){ next.forEach(t=>{place(t,null);ok.add(t.id);loop.push(t)}); break; }
+    pend=next;
+  }
+  const back=S.tasks.filter(t=>{const d=depOf(t);return d&&idx[d.id]>idx[t.id]});
+  // สรุปหัวข้อ/เฟส = คลุมงานลูกที่ตามมาจนถึงหัวข้อถัดไป
+  S.tasks.forEach((t,i)=>{
+    if(!t.phase)return;
+    let s=null,f=null;
+    for(let j=i+1;j<S.tasks.length;j++){
+      const c=S.tasks[j]; if(c.phase)break;
+      if(!s||c.s<s)s=c.s; if(!f||c.f>f)f=c.f;
+    }
+    t.s=s;t.f=f;
+  });
+  const real=S.tasks.filter(t=>!t.phase&&!t.ext);
+  const wsum=real.reduce((a,t)=>a+(+t.w||0),0);
+  const st=real.length?new Date(Math.min(...real.map(t=>+t.s))):p0;
+  const en=real.length?new Date(Math.max(...real.map(t=>+t.f))):p0;
+  const cend=addD(p0,Math.max(1,+S.info.cdays||1)-1);
+  return {p0,st,en,cend,wsum,real,loop,back};
+}
+function wnorm(t,wsum){return wsum>0?(+t.w||0)/wsum:0}
+
+/* ความก้าวหน้าตามแผน ณ วันที่ d (0-1) */
+function plannedAt(d,C){
+  let v=0;
+  C.real.forEach(t=>{
+    const w=wnorm(t,C.wsum); if(!w)return;
+    if(d>=t.f)v+=w;
+    else if(d>t.s){
+      const tot=days(t.s,t.f)||1;
+      v+=w*Math.min(1,days(t.s,d)/tot);
+    }
+  });
+  return v;
+}
+function actualNow(C){return C.real.reduce((a,t)=>a+wnorm(t,C.wsum)*Math.min(100,Math.max(0,+t.act||0))/100,0)}
+
+/* ══════════════════ RENDER: ข้อมูลโครงการ ══════════════════ */
+const F=[['name','ชื่อโครงการ','text'],['owner','ผู้ว่าจ้าง','text'],['site','สถานที่','text'],
+  ['doc','เลขที่สัญญา / เอกสาร','text'],['rev','Rev. (ครั้งที่แก้ไขแผน)','text'],['revdate','วันที่ออก Rev.','date'],
+  ['by','ผู้จัดทำแผน','text'],['start','วันเริ่มงาน','date'],['cdays','ระยะเวลาสัญญา (วันปฏิทิน)','number']];
+function buildInfo(){
+  info.innerHTML=F.map(([k,l,t])=>
+    `<div><label>${l}</label><input type="${t}" value="${esc(S.info[k])}" oninput="S.info.${k}=this.value;refresh()"></div>`).join('')
+  +`<div><label>วันทำงาน</label><select onchange="S.info.wmode=this.value;refresh()">
+      ${[['mon-sat','จ.–ส. (หยุดอาทิตย์)'],['mon-fri','จ.–ศ. (หยุด ส.–อา.)'],['all','ทำงานทุกวัน']]
+        .map(([v,l])=>`<option value="${v}" ${S.info.wmode===v?'selected':''}>${l}</option>`).join('')}
+    </select></div>
+   <div><label>วันหยุดพิเศษ (YYYY-MM-DD คั่นด้วยลูกน้ำ)</label>
+     <input value="${esc(S.info.holi)}" oninput="S.info.holi=this.value;refresh()" placeholder="2026-04-13, 2026-04-14"></div>`;
+}
+function esc(v){return String(v??'').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+
+/* ══════════════════ RENDER: ตารางงาน ══════════════════ */
+const COLS=['#','WBS','ชื่องาน','เฟส','เริ่มหลังจาก','ชนิด','Lag','วัน','เริ่ม','เสร็จ','น้ำหนัก%','%จริง','ผู้รับผิดชอบ','MS','รอผู้อื่น',''];
+/* ความกว้างคอลัมน์ — ชื่องานเว้นว่างไว้ให้ยืดกินพื้นที่ที่เหลือ */
+const CW=[36,78,0,104,210,64,58,58,84,84,74,64,132,40,62,110];
+function buildTable(){
+  const cols='<colgroup>'+CW.map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
+  const head='<thead><tr>'+COLS.map(c=>`<th>${c}</th>`).join('')+'</tr></thead>';
+  const body=S.tasks.map((t,i)=>t.phase?rowPhase(t,i):rowTask(t,i)).join('');
+  tbl.innerHTML=cols+head+'<tbody>'+body+'</tbody>';
+}
+function rowPhase(t,i){
+  return `<tr class="ph"><td class="derived">${i+1}</td><td colspan="2">
+    <input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;refresh()" style="font-weight:700"></td>
+    <td colspan="5"></td>
+    <td class="derived" id="s${i}"></td><td class="derived" id="f${i}"></td>
+    <td colspan="5"></td><td>${act(i)}</td></tr>`;
+}
+function rowTask(t,i){
+  const opts=['<option value="">— เริ่มพร้อมโครงการ —</option>'].concat(
+    S.tasks.slice(0,i).filter(x=>!x.phase).map(x=>{
+      const lb=(x.wbs?x.wbs+' ':'')+x.name;
+      return `<option value="${x.id}" ${t.dep===x.id?'selected':''}>${esc(lb.length>24?lb.slice(0,23)+'…':lb)}</option>`;
+    })).join('');
+  const dep=S.tasks.find(x=>x.id===t.dep);
+  const P=[['','—'],['1','First Fix'],['2','Second Fix']];
+  return `<tr>
+   <td class="derived">${i+1}</td>
+   <td><input value="${esc(t.wbs)}" oninput="S.tasks[${i}].wbs=this.value;refresh()"></td>
+   <td><input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;this.title=this.value;refresh()"></td>
+   <td><select onchange="S.tasks[${i}].pf=this.value;refresh()">
+       ${P.map(([v,l])=>`<option value="${v}" ${t.pf===v?'selected':''}>${l}</option>`).join('')}</select></td>
+   <td><select title="${esc(dep?(dep.wbs?dep.wbs+' ':'')+dep.name:'เริ่มพร้อมโครงการ')}" onchange="S.tasks[${i}].dep=this.value;refresh()">${opts}</select></td>
+   <td><select onchange="S.tasks[${i}].dt=this.value;refresh()">
+       <option value="FS" ${t.dt!=='SS'?'selected':''}>FS</option><option value="SS" ${t.dt==='SS'?'selected':''}>SS</option></select></td>
+   <td><input type="number" value="${t.lag||0}" oninput="S.tasks[${i}].lag=+this.value;refresh()"></td>
+   <td><input type="number" min="0" value="${t.dur}" oninput="S.tasks[${i}].dur=+this.value;refresh()"></td>
+   <td class="derived" id="s${i}"></td>
+   <td class="derived" id="f${i}"></td>
+   <td><input type="number" min="0" step="0.5" value="${t.w}" oninput="S.tasks[${i}].w=+this.value;refresh()"></td>
+   <td><input type="number" min="0" max="100" value="${t.act||0}" oninput="S.tasks[${i}].act=+this.value;refresh()"></td>
+   <td><input value="${esc(t.own)}" title="${esc(t.own)}" oninput="S.tasks[${i}].own=this.value;this.title=this.value;refresh()"></td>
+   <td style="text-align:center"><input type="checkbox" ${t.ms?'checked':''} onchange="S.tasks[${i}].ms=this.checked;refresh()"></td>
+   <td style="text-align:center"><input type="checkbox" ${t.ext?'checked':''} onchange="S.tasks[${i}].ext=this.checked;refresh()"></td>
+   <td>${act(i)}</td></tr>`;
+}
+function act(i){
+  return `<span class="rowact noprint">
+    <button class="mini" onclick="move(${i},-1)" title="เลื่อนขึ้น">↑</button>
+    <button class="mini" onclick="move(${i},1)" title="เลื่อนลง">↓</button>
+    <button class="mini" onclick="dup(${i})" title="ทำซ้ำ">⧉</button>
+    <button class="mini" onclick="del(${i})" title="ลบ">✕</button></span>`;
+}
+
+/* ══════════════════ RENDER: GANTT ══════════════════ */
+function drawGantt(C){
+  const scale=document.getElementById('scale').value;
+  const px={day:24,week:12,month:4.2}[scale];
+  const g0=addD(C.p0,-2), g1=addD(new Date(Math.max(+C.en,+C.cend)),3);
+  const total=Math.max(1,days(g0,g1)+1), W=Math.round(total*px);
+
+  // หัวตาราง
+  let t1='',t2='';
+  if(scale==='month'){
+    let d=new Date(g0.getFullYear(),g0.getMonth(),1);
+    while(d<g1){
+      const nx=new Date(d.getFullYear(),d.getMonth()+1,1);
+      const a=d<g0?g0:d, b=nx>g1?g1:nx;
+      t2+=`<div class="tick" style="width:${days(a,b)*px}px">${TH[d.getMonth()]} ${String(d.getFullYear()+543).slice(2)}</div>`;
+      d=nx;
+    }
+    t1=`<div class="tick" style="width:${W}px">ภาพรวมโครงการ</div>`;
+  }else{
+    let d=new Date(g0.getFullYear(),g0.getMonth(),1);
+    while(d<g1){
+      const nx=new Date(d.getFullYear(),d.getMonth()+1,1);
+      const a=d<g0?g0:d, b=nx>g1?g1:nx;
+      t1+=`<div class="tick" style="width:${days(a,b)*px}px">${TH[d.getMonth()]} ${String(d.getFullYear()+543).slice(2)}</div>`;
+      d=nx;
+    }
+    if(scale==='day'){
+      for(let i=0;i<total;i++){const d2=addD(g0,i);
+        t2+=`<div class="tick" style="width:${px}px;${isWork(d2)?'':'background:#F4F3F0'}">${d2.getDate()}</div>`;}
+    }else{
+      let d3=new Date(g0); while(d3.getDay()!==1)d3=addD(d3,-1);
+      let wk=1;
+      while(d3<g1){
+        const b=addD(d3,7), a=d3<g0?g0:d3, e=b>g1?g1:b;
+        if(e>a)t2+=`<div class="tick" style="width:${days(a,e)*px}px">W${wk} ${p2(d3.getDate())}/${p2(d3.getMonth()+1)}</div>`;
+        d3=b;wk++;
+      }
+    }
+  }
+
+  const L=[`<div class="ghead" style="height:44px"><div style="width:270px;padding-left:8px">งาน</div><div style="width:150px;text-align:right;padding-right:8px">เริ่ม – เสร็จ</div></div>`];
+  const R=[`<div style="width:${W}px"><div class="ghead">${t1}</div><div class="ghead">${t2}</div></div>`];
+  const now=new Date(); now.setHours(0,0,0,0);
+
+  S.tasks.forEach(t=>{
+    L.push(`<div class="grow"><div class="gname" title="${esc((t.wbs?t.wbs+' ':'')+t.name)}" style="${t.phase?'font-weight:700':''}">${t.phase?'':'&nbsp;&nbsp;'}${esc(t.wbs?t.wbs+' ':'')}${esc(t.name)||'<i style="color:#bbb">(ไม่มีชื่อ)</i>'}</div>
+      <div class="gdate">${t.s?fmt(t.s)+' – '+fmt(t.f):''}</div></div>`);
+    let bar='';
+    if(t.s){
+      const x=days(g0,t.s)*px, w=Math.max(px*0.8,(days(t.s,t.f)+1)*px);
+      if(t.ms||(+t.dur===0&&!t.phase)){
+        bar=`<div class="ms" style="left:${x}px" title="${esc(t.name)}"></div>`;
+      }else if(t.phase){
+        bar=`<div class="bar" style="left:${x}px;width:${w}px;background:var(--ink);opacity:.85">${esc(t.name)}</div>`;
+      }else{
+        const late=t.f>C.cend, cls=t.ext?'ext':late?'late':t.pf==='1'?'p1':t.pf==='2'?'p2':'';
+        const pc=Math.min(100,Math.max(0,+t.act||0));
+        bar=`<div class="bar ${cls}" style="left:${x}px;width:${w}px" title="${esc(t.name)} · ${t.dur} วัน · ${pc}%">
+          ${pc>0?`<div class="fill" style="width:${pc}%"></div>`:''}<span style="position:relative">${t.dur} วัน${pc?' · '+pc+'%':''}</span></div>`;
+      }
+    }
+    let wknd='';
+    if(scale==='day')for(let i=0;i<total;i++){const d2=addD(g0,i);if(!isWork(d2))wknd+=`<div class="wknd" style="left:${i*px}px;width:${px}px"></div>`}
+    R.push(`<div class="lane" style="width:${W}px">${wknd}${bar}</div>`);
+  });
+  const tx=days(g0,now)*px;
+  const todayline=(now>=g0&&now<=g1)?`<div class="today" style="left:${tx}px;height:${S.tasks.length*26+44}px;top:0;position:absolute"></div>`:'';
+  gantt.innerHTML=`<div class="gl">${L.join('')}</div>
+    <div class="gr" style="position:relative;width:${W}px">${R.join('')}${todayline}</div>`;
+}
+
+/* ══════════════════ RENDER: S-CURVE ══════════════════ */
+function drawCurve(C){
+  const w=980,h=260,ml=42,mr=16,mt=14,mb=34;
+  const n=Math.max(2,Math.ceil(days(C.st,C.en)/7)+1);
+  const pts=[];
+  for(let i=0;i<n;i++){
+    const d=i===n-1?C.en:addD(C.st,i*7);
+    pts.push([d,plannedAt(d,C)]);
+  }
+  const x=d=>ml+(w-ml-mr)*(days(C.st,d)/Math.max(1,days(C.st,C.en)));
+  const y=v=>mt+(h-mt-mb)*(1-v);
+  const line=pts.map((p,i)=>(i?'L':'M')+x(p[0]).toFixed(1)+','+y(p[1]).toFixed(1)).join(' ');
+  const area=line+` L${x(C.en).toFixed(1)},${y(0)} L${x(C.st).toFixed(1)},${y(0)} Z`;
+  let grid='';
+  for(let v=0;v<=1.0001;v+=0.25){
+    grid+=`<line x1="${ml}" y1="${y(v)}" x2="${w-mr}" y2="${y(v)}" stroke="#E3E2DE"/>
+      <text x="${ml-6}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="#787774">${Math.round(v*100)}%</text>`;
+  }
+  let xl='';
+  pts.forEach((p,i)=>{ if(i%Math.ceil(n/10)===0||i===n-1)
+    xl+=`<text x="${x(p[0])}" y="${h-14}" text-anchor="middle" font-size="9.5" fill="#787774">${fmt(p[0])}</text>`});
+  const now=new Date(); now.setHours(0,0,0,0);
+  let nowmark='';
+  if(now>=C.st&&now<=C.en){
+    const a=actualNow(C), pl=plannedAt(now,C);
+    nowmark=`<line x1="${x(now)}" y1="${mt}" x2="${x(now)}" y2="${h-mb}" stroke="#C1121F" stroke-dasharray="3 3"/>
+      <circle cx="${x(now)}" cy="${y(pl)}" r="4" fill="#0F4C6B"/>
+      <circle cx="${x(now)}" cy="${y(a)}" r="5" fill="#C1121F"/>
+      <text x="${x(now)+8}" y="${y(a)+4}" font-size="11" font-weight="700" fill="#C1121F">จริง ${(a*100).toFixed(1)}%</text>
+      <text x="${x(now)+8}" y="${y(pl)-6}" font-size="11" font-weight="700" fill="#0F4C6B">แผน ${(pl*100).toFixed(1)}%</text>`;
+  }
+  curve.innerHTML=`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;max-height:300px">
+    ${grid}<path d="${area}" fill="#669BBC" opacity=".16"/>
+    <path d="${line}" fill="none" stroke="#0F4C6B" stroke-width="2.2"/>${nowmark}${xl}
+    <line x1="${ml}" y1="${h-mb}" x2="${w-mr}" y2="${h-mb}" stroke="#003049"/></svg>`;
+}
+
+/* ══════════════════ KPI + WARNING ══════════════════ */
+function drawKpi(C){
+  const dur=days(C.st,C.en)+1, over=days(C.cend,C.en);
+  const now=new Date();now.setHours(0,0,0,0);
+  const pl=plannedAt(now,C)*100, ac=actualNow(C)*100, dv=ac-pl;
+  const wOK=Math.abs(C.wsum-100)<0.5;
+  kpis.innerHTML=[
+    ['วันเริ่ม – วันแล้วเสร็จ',fmt(C.st)+' – '+fmt(C.en),dur+' วันปฏิทิน · '+C.real.length+' งาน',''],
+    ['ครบกำหนดตามสัญญา',fmt(C.cend),over>0?`ช้ากว่าสัญญา ${over} วัน`:`เหลือ buffer ${-over} วัน`,over>0?'bad':'ok'],
+    ['น้ำหนักงานรวม',C.wsum.toFixed(1)+'%',wOK?'ครบ 100%':'ต้องเท่ากับ 100%',wOK?'ok':'warn'],
+    ['แผน ณ วันนี้',pl.toFixed(1)+'%','คำนวณจากเส้น S-Curve',''],
+    ['ผลงานจริง',ac.toFixed(1)+'%',(dv>=0?'เร็วกว่าแผน +':'ช้ากว่าแผน ')+dv.toFixed(1)+'%',dv<-2?'bad':dv<0?'warn':'ok']
+  ].map(([k,v,n,c])=>`<div class="kpi"><div class="k">${k}</div><div class="v ${c}">${v}</div><div class="n ${c}">${n}</div></div>`).join('');
+
+  const nm=t=>(t.wbs||t.name||'(ไม่มีชื่อ)').slice(0,24);
+  const es=[];
+  if(!S.tasks.length)es.push('ยังไม่มีรายการงาน — กด "เทมเพลตงาน" เพื่อเริ่มเร็ว หรือ "+ เพิ่มงาน"');
+  if(C.real.length&&Math.abs(C.wsum-100)>0.5)es.push(`น้ำหนักงานรวม ${C.wsum.toFixed(1)}% ไม่เท่ากับ 100% — กด "คิดน้ำหนักอัตโนมัติ" ให้เกลี่ยตามระยะเวลาได้`);
+  if(days(C.cend,C.en)>0)es.push(`แผนสิ้นสุด ${fmt(C.en)} เกินกำหนดสัญญา ${fmt(C.cend)} อยู่ ${days(C.cend,C.en)} วัน`);
+  const zero=C.real.filter(t=>!(+t.dur>0)&&!t.ms).length;
+  if(zero)es.push(`มี ${zero} งานที่ยังไม่ได้ใส่ระยะเวลา (ถ้าตั้งใจให้เป็น Milestone ให้ติ๊กช่อง MS)`);
+  if(C.loop.length)es.push(`งานอ้างอิงวนกลับหากัน: ${C.loop.map(nm).join(', ')} — ตั้งให้เริ่มวันแรกของโครงการชั่วคราว กรุณาแก้ช่อง "เริ่มหลังจาก"`);
+  if(C.back.length)es.push(`ลำดับแถวไม่ตรงกับความจริง: ${C.back.map(nm).join(', ')} อ้างอิงงานที่อยู่ "ใต้" มันในตาราง — วันที่คำนวณถูกแล้ว แต่ควรกด ↑ ↓ ย้ายแถวให้เรียงตามลำดับงานจริง`);
+  warn.innerHTML=es.map(e=>`<div class="msg e">⚠ ${e}</div>`).join('');
+}
+
+/* ══════════════════ REFRESH ══════════════════ */
+function refresh(){
+  const C=compute();
+  S.tasks.forEach((t,i)=>{
+    const a=document.getElementById('s'+i), b=document.getElementById('f'+i);
+    if(a)a.textContent=t.s?fmt(t.s):'—'; if(b)b.textContent=t.f?fmt(t.f):'—';
+  });
+  drawKpi(C); drawGantt(C); drawCurve(C);
+  save();
+  revbadge.textContent='Rev. '+(S.info.rev||'R0')+(S.info.revdate?' · ออกเมื่อ '+fmt(D(S.info.revdate)):'');
+  const lb=document.querySelector(".tab.on .lbl"), cn=document.querySelector(".tab.on .cnt");
+  if(lb)lb.textContent=pname(S); if(cn)cn.textContent=S.tasks.filter(t=>!t.phase).length;
+}
+function rebuild(){buildTable();refresh()}
+
+/* ══════════════════ ACTIONS ══════════════════ */
+function newT(o={}){return Object.assign({id:'t'+(seq++),wbs:'',name:'',pf:'',dep:'',dt:'FS',lag:0,dur:1,w:0,act:0,own:'',ms:false,ext:false,phase:false},o)}
+function addRow(phase){
+  const last=[...S.tasks].reverse().find(t=>!t.phase);
+  S.tasks.push(newT({phase:!!phase,dep:phase?'':(last?last.id:''),dur:phase?0:1}));
+  rebuild();
+}
+function del(i){S.tasks.splice(i,1);rebuild()}
+function dup(i){const c=JSON.parse(JSON.stringify(S.tasks[i]));c.id='t'+(seq++);S.tasks.splice(i+1,0,c);rebuild()}
+function move(i,d){const j=i+d;if(j<0||j>=S.tasks.length)return;[S.tasks[i],S.tasks[j]]=[S.tasks[j],S.tasks[i]];rebuild()}
+function clearAll(){if(confirm('ลบรายการงานทั้งหมด?')){S.tasks=[];rebuild()}}
+function autoWeight(){
+  const r=S.tasks.filter(t=>!t.phase&&!t.ext);
+  const tot=r.reduce((a,t)=>a+Math.max(+t.dur||0,0.5),0);
+  r.forEach(t=>t.w=+(Math.max(+t.dur||0,0.5)/tot*100).toFixed(1));
+  const diff=+(100-r.reduce((a,t)=>a+t.w,0)).toFixed(1);
+  if(r.length)r[r.length-1].w=+(r[r.length-1].w+diff).toFixed(1);
+  rebuild();
+}
+function openTpl(){dlgTpl.showModal()}
+function openPaste(){pasteBox.value='';dlgPaste.showModal()}
+function doPaste(){
+  const rows=pasteBox.value.split(/\r?\n/).map(r=>r.split('\t')).filter(r=>r[0]&&r[0].trim());
+  let last=[...S.tasks].reverse().find(t=>!t.phase);
+  rows.forEach(r=>{
+    const t=newT({name:r[0].trim(),dur:+String(r[1]||'').replace(/[^\d.]/g,'')||1,
+      w:+String(r[2]||'').replace(/[^\d.]/g,'')||0,own:(r[3]||'').trim(),dep:last?last.id:''});
+    S.tasks.push(t);last=t;
+  });
+  dlgPaste.close();rebuild();
+}
+
+/* ══════════════════ TEMPLATES ══════════════════ */
+const TPL_A=[
+ ['PH','First Fix — ก่อนปิดฝ้า'],
+ ['WP-01','สำรวจหน้างาน & Setting Out (มาร์กแนวท่อ/ตำแหน่งเครื่อง)',3,'1'],
+ ['WP-02','★ เจาะผนัง/พื้น & ติดตั้งปลอกท่อ (Core Drill / Sleeve)',5,'1',1],
+ ['WP-03','งานแขวน-ยึดท่อลม (Duct Support & Hanger)',7,'1'],
+ ['WP-04','เดินท่อลมหลัก & ท่อแยก (Ductwork)',10,'1'],
+ ['WP-05','ซีลรอยต่อ & หุ้มฉนวน (Sealing & Insulation)',6,'1'],
+ ['WP-06','ท่อร้อยสายไฟ & สายคอนโทรล (Conduit)',4,'1'],
+ ['WP-07','★ ตรวจรับก่อนปิดฝ้า (Pre-Closing Inspection)',2,'1',1],
+ ['PH','ช่วงรอผู้อื่น'],
+ ['GAP','รอ Main Contractor ปิดฝ้า / เก็บงานสถาปัตย์',14,'',0,1],
+ ['PH','Second Fix — หลังปิดฝ้า'],
+ ['WP-08','ติดตั้งเครื่อง ERV',5,'2'],
+ ['WP-09','★ งานไฟฟ้า & คอนโทรล',5,'2',1],
+ ['WP-10','หัวจ่าย/หัวดูด & Louver ภายนอก',6,'2'],
+ ['WP-11','★ Testing, Adjusting & Balancing (TAB)',4,'2',1],
+ ['WP-12','ฝึกอบรมผู้ใช้งาน',1,'2'],
+ ['WP-13','เอกสารส่งมอบ (As-built / O&M / Warranty)',5,'2'],
+ ['MS','ส่งมอบงาน (Handover)',0,'2',1]
+];
+const TPL_B=[
+ ['PH','First Fix — ก่อนปิดฝ้า'],
+ ['B-1','สำรวจหน้างาน & มาร์กแนว',1,'1'],
+ ['B-2','เจาะผนัง/พื้น & ติดตั้งปลอกท่อ',2,'1'],
+ ['B-3','แขวน-ยึด & เดินท่อลม',4,'1'],
+ ['B-4','ซีลรอยต่อ & หุ้มฉนวน',2,'1'],
+ ['B-5','★ ตรวจรับก่อนปิดฝ้า',1,'1',1],
+ ['PH','ช่วงรอผู้อื่น'],
+ ['GAP','รอเจ้าของบ้าน/ผู้รับเหมาหลักปิดฝ้า',10,'',0,1],
+ ['PH','Second Fix — หลังปิดฝ้า'],
+ ['B-6','ติดตั้งเครื่อง ERV & งานไฟฟ้า-คอนโทรล',2,'2'],
+ ['B-7','★ หัวจ่าย/Louver & วัดปริมาณลม',2,'2',1],
+ ['B-8','ส่งมอบ สอนใช้งาน & เอกสาร',1,'2'],
+ ['MS','ส่งมอบงาน (Handover)',0,'2',1]
+];
+function useTpl(k){
+  dlgTpl.close();
+  S.tasks=[];
+  if(k==='blank'){addRow();return}
+  const src=k==='A'?TPL_A:TPL_B;
+  let last=null;
+  src.forEach(r=>{
+    const [code,name,dur,pf,hold,ext]=r;
+    if(code==='PH'){S.tasks.push(newT({phase:true,name,dur:0}));return}
+    const t=newT({wbs:code==='MS'||code==='GAP'?'':code,name,dur:dur||0,pf:pf||'',
+      dep:last?last.id:'',ms:code==='MS'||!dur,ext:!!ext,own:ext?'Main Contractor':'Coral Life'});
+    if(hold)t.name=t.name.startsWith('★')?t.name:'★ '+t.name;
+    S.tasks.push(t);last=t;
+  });
+  autoWeight();
+}
+
+/* ══════════════════ หลายโครงการ (แท็บ) ══════════════════ */
+function save(){try{localStorage.setItem(KEY,JSON.stringify(WS))}catch(e){}}
+function pname(p){return p.info.name||'โครงการใหม่'}
+function useProj(i){
+  WS.cur=Math.max(0,Math.min(i,WS.projects.length-1));
+  S=WS.projects[WS.cur];
+  seq=Math.max(0,...S.tasks.map(t=>+String(t.id).replace(/\D/g,'')||0))+1;
+  buildTabs();buildInfo();rebuild();
+}
+function buildTabs(){
+  tabs.innerHTML=WS.projects.map((p,i)=>{
+    const cnt=p.tasks.filter(t=>!t.phase).length;
+    return `<button class="tab ${i===WS.cur?'on':''}" onclick="useProj(${i})" title="${esc(p.info.owner||'')}">
+      <span class="lbl">${esc(pname(p))}</span><span class="cnt">${cnt}</span>
+      ${i===WS.cur&&WS.projects.length>1?`<span class="x" onclick="event.stopPropagation();delProj(${i})" title="ลบโครงการนี้">✕</span>`:''}</button>`;
+  }).join('')
+  +`<button class="tab add" onclick="newProj()">+ เพิ่มโครงการ</button>
+    <button class="tab add" onclick="dupProj()">⧉ ทำสำเนา</button>`;
+}
+function bumpRev(){                       // R0 → R1 → R2 … พร้อมตั้งวันที่ออก Rev. เป็นวันนี้
+  const cur=String(S.info.rev||'R0');
+  S.info.rev=/\d/.test(cur)?cur.replace(/(\d+)(\D*)$/,(m,n,tail)=>(+n+1)+tail):cur+'1';
+  S.info.revdate=today0();
+  buildInfo();refresh();
+}
+function newProj(){WS.projects.push(blankProj());useProj(WS.projects.length-1);dlgTpl.showModal()}
+function dupProj(){
+  const c=JSON.parse(JSON.stringify(S));
+  c.info.name=pname(S)+' (สำเนา)';
+  c.tasks.forEach(t=>{t.act=0});
+  WS.projects.push(c);useProj(WS.projects.length-1);
+}
+function delProj(i){
+  if(!confirm('ลบโครงการ "'+pname(WS.projects[i])+'" พร้อมแผนงานทั้งหมด?'))return;
+  WS.projects.splice(i,1);
+  if(!WS.projects.length)WS.projects.push(blankProj());
+  useProj(Math.min(i,WS.projects.length-1));
+}
+
+/* ══════════════════ SAVE / LOAD / EXPORT ══════════════════ */
+/* ชื่อไฟล์ = ชื่อโครงการ_Rev เช่น อาคารธานีนพรัตน์_R2 */
+function fname(){
+  return ((S.info.name||'Master_Schedule')+'_'+(S.info.rev||'R0')).replace(/[\\/:*?"<>|]/g,'_');
+}
+function saveFile(){
+  const n=fname();
+  dl(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),n+'.json');
+}
+function backupAll(){
+  dl(new Blob([JSON.stringify(WS,null,1)],{type:'application/json'}),
+    'Master_Schedule_ทุกโครงการ_'+iso(new Date())+'.json');
+}
+function loadFile(el){
+  const f=el.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const o=JSON.parse(r.result);
+    if(o&&Array.isArray(o.projects)&&o.projects.length){          // ไฟล์สำรองทุกโครงการ
+      if(!confirm(`ไฟล์นี้มี ${o.projects.length} โครงการ — จะแทนที่ทุกโครงการที่เปิดอยู่ตอนนี้`))return;
+      WS=o;
+    }else if(o&&o.tasks){                                          // ไฟล์โครงการเดียว → เพิ่มเป็นแท็บใหม่
+      WS.projects.push(o);WS.cur=WS.projects.length-1;
+    }else throw 0;
+    WS.projects.forEach(p=>p.tasks.forEach((t,i)=>{if(!t.id)t.id='t'+(i+1)}));
+    useProj(WS.cur);
+  }catch(e){alert('ไฟล์ไม่ถูกต้อง')} el.value='';};
+  r.readAsText(f);
+}
+function dl(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+function toXlsx(){
+  const C=compute();
+  const rows=[['ลำดับ','WBS','ชื่องาน','เฟส','ระยะเวลา (วัน)','วันเริ่ม','วันเสร็จ','น้ำหนัก %','% จริง','ผู้รับผิดชอบ','หมายเหตุ']];
+  S.tasks.forEach((t,i)=>rows.push([i+1,t.wbs,(t.phase?'':'   ')+t.name,
+    t.phase?'':t.pf==='1'?'First Fix':t.pf==='2'?'Second Fix':'',
+    t.phase?'':t.dur, t.s?fmt(t.s):'', t.f?fmt(t.f):'',
+    t.phase||t.ext?'':t.w, t.phase||t.ext?'':(t.act||0), t.own||'',
+    t.ext?'งานที่รอผู้อื่น':t.ms?'Milestone':'']));
+  rows.push([],['รวมน้ำหนัก','','','','','','',C.wsum.toFixed(1)]);
+  const info=[['ชื่อโครงการ',S.info.name],['ผู้ว่าจ้าง',S.info.owner],['สถานที่',S.info.site],
+    ['เลขที่สัญญา/เอกสาร',S.info.doc],['Rev.',S.info.rev||'R0'],
+    ['วันที่ออก Rev.',S.info.revdate?fmt(D(S.info.revdate)):''],['ผู้จัดทำแผน',S.info.by||''],
+    ['วันเริ่มงาน',fmt(C.p0)],['ระยะเวลาสัญญา (วัน)',S.info.cdays],
+    ['ครบกำหนดตามสัญญา',fmt(C.cend)],['แผนสิ้นสุด',fmt(C.en)],
+    ['สถานะเทียบสัญญา',days(C.cend,C.en)>0?'ช้ากว่าสัญญา '+days(C.cend,C.en)+' วัน':'อยู่ในกำหนด'],
+    ['วันทำงาน',{'mon-sat':'จ.–ส.','mon-fri':'จ.–ศ.',all:'ทุกวัน'}[S.info.wmode]],
+    ['ออกรายงานเมื่อ',fmt(new Date())]];
+  const sc=[['สัปดาห์ที่','วันที่','แผนสะสม %']];
+  const n=Math.ceil(days(C.st,C.en)/7)+1;
+  for(let i=0;i<n;i++){const d=i===n-1?C.en:addD(C.st,i*7);sc.push([i+1,fmt(d),+(plannedAt(d,C)*100).toFixed(1)])}
+  if(typeof XLSX==='undefined'){
+    const csv='﻿'+rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    dl(new Blob([csv],{type:'text/csv'}),fname()+'.csv');return;
+  }
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:6},{wch:9},{wch:46},{wch:12},{wch:12},{wch:11},{wch:11},{wch:10},{wch:8},{wch:16},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'Master Schedule');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(info),'ข้อมูลโครงการ');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sc),'S-Curve');
+  XLSX.writeFile(wb,fname()+'.xlsx');
+}
+
+/* ══════════════════ INIT ══════════════════ */
+(function(){
+  const rd=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
+  const o=rd(KEY);
+  if(o&&Array.isArray(o.projects)&&o.projects.length)WS=o;
+  else{const old=rd(OLDKEY); if(old&&old.tasks)WS.projects.push(old);}   // ย้ายงานเดิมมาเป็นโครงการแรก
+  if(!WS.projects.length)WS.projects.push(blankProj());
+  WS.projects.forEach(p=>{p.tasks=p.tasks||[];p.tasks.forEach((t,i)=>{if(!t.id)t.id='t'+(i+1)});
+    p.info=Object.assign({rev:'R0',revdate:p.info.start||today0(),by:''},p.info);});
+  useProj(WS.cur||0);
+  if(!S.tasks.length)useTpl('A');
+})();
+</script>
+</body>
+</html>
