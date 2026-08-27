@@ -463,6 +463,51 @@
   .collapsible > summary:focus-visible { outline: 2px solid var(--stat-con); outline-offset: 1px; }
   .collapsible > summary .sec-head { margin-bottom: 0; }
   .collapsible:not([open]) > summary { margin-bottom: 0; }
+
+  /* ---------- Report: laid out as a document, not a dashboard ---------- */
+  .repmast { border-bottom: 2px solid var(--text-primary); padding-bottom: 14px; margin: 8px 0 22px; }
+  .repmast-top { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;
+    justify-content: space-between; margin-bottom: 14px; }
+  .repmast-org { font-size: 11.5px; letter-spacing: .10em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 3px; }
+  .repmast-title { font-size: 23px; font-weight: 650; letter-spacing: -0.02em; margin: 0; }
+  .repmast-meta { font-size: 12px; color: var(--text-secondary); text-align: right;
+    line-height: 1.7; font-variant-numeric: tabular-nums; }
+  .repmast-meta b { color: var(--text-primary); font-weight: 600; }
+  .rephint { font-size: 11.5px; color: var(--text-muted); margin-left: auto; }
+
+  /* the one paragraph a CEO reads before anything else */
+  .repsum { border: 1px solid var(--border); border-left: 3px solid var(--stat-con);
+    border-radius: 10px; background: var(--surface-1); padding: 16px 18px; margin-bottom: 18px; }
+  .repsum h3 { font-size: 12px; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--text-muted); margin: 0 0 8px; font-weight: 600; }
+  .repsum p { margin: 0; font-size: 14px; line-height: 1.75; }
+  .repsum p + p { margin-top: 7px; }
+  .repsum b { font-weight: 650; }
+  .repsum .good { color: var(--good); }
+  .repsum .bad  { color: var(--series-exp); }
+
+  /* exceptions block - what needs a decision, before any detail table */
+  .repflag { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+  .repflag > div { border: 1px solid var(--border); border-radius: 9px; padding: 12px 14px;
+    background: var(--surface-1); }
+  .repflag .n { font-size: 21px; font-weight: 650; letter-spacing: -0.02em; }
+  .repflag .t { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .repflag .s { font-size: 11.5px; color: var(--text-muted); margin-top: 5px; }
+  .repflag .alert .n { color: var(--series-exp); }
+  .repflag .ok .n { color: var(--good); }
+
+  #repbody section.sec > .sec-head h2 { font-size: 15px; }
+
+  @media print {
+    @page { margin: 14mm; }
+    .repmast { break-after: avoid; }
+    .repsum, .repflag > div { break-inside: avoid; }
+    #repbody section.sec { break-inside: avoid; }
+    .rephint { display: none !important; }
+    .repmast-title { font-size: 20px; }
+    a[href]::after { content: ''; }
+  }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -697,10 +742,13 @@
   <!-- ======================= Report ======================= -->
   <div id="page-report" role="tabpanel" aria-labelledby="tab-report" hidden>
 
-    <section class="sec">
-      <div class="sec-head">
-        <h2>รายงานสรุปงาน</h2>
-        <p>สรุปสิ่งที่เกิดขึ้นจริงในช่วงที่เลือก นับย้อนจากวันที่ Sync ล่าสุด — กด Ctrl+P เพื่อบันทึกเป็น PDF</p>
+    <div class="repmast">
+      <div class="repmast-top">
+        <div>
+          <div class="repmast-org">Construction Management IAQ</div>
+          <h2 class="repmast-title">รายงานสรุปผลการดำเนินงาน</h2>
+        </div>
+        <div class="repmast-meta" id="repmeta"></div>
       </div>
       <div class="filterbar">
         <div class="seg" id="repfilter" role="group" aria-label="ช่วงรายงาน">
@@ -708,8 +756,9 @@
           <button data-days="30" aria-pressed="false">1 เดือน</button>
         </div>
         <span class="repwindow" id="repwindow"></span>
+        <span class="rephint">กด Ctrl+P เพื่อบันทึกเป็น PDF</span>
       </div>
-    </section>
+    </div>
 
     <div id="repbody"></div>
 
@@ -759,7 +808,7 @@ const GEN = {
 "PROGRESS": [],
 "PORTFOLIO": {"sale":11894264,"budgetActual":7093832,"projects":20},
 "REVMETA": {"rows":110,"rate":0.4,"today":"2026-08-27","noEnd":[],"noJoin":[],"unsched":[]},
-"META": {"projects":20,"rows":39,"generated":"2026-08-27 09:50","missing":[["The Grand Pinklao","Second Fix"]]}
+"META": {"projects":20,"rows":39,"generated":"2026-08-27 09:56","missing":[["The Grand Pinklao","Second Fix"]]}
 };
 /* DATA:END */
 
@@ -1929,6 +1978,70 @@ const iwColor = s => `var(${IW_VAR[s] || '--text-muted'})`;
           <td><div class="hbar" style="min-width:120px"><i class="c1" style="width:${pctOf(s.progress)}%"></i></div></td></tr>`).join('')}</tbody>
       </table></div></div>` : note('ตอนนี้ไม่มีโครงการที่อยู่ในสถานะ Construction');
 
+    /* ---- masthead meta + executive summary ----
+       A CEO reads the top of the page and stops. Put the conclusion and the
+       things needing a decision there; the tables below are the evidence. */
+    const THMON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const thaiDate = iso => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return d + ' ' + THMON[m - 1] + ' ' + (y + 543);
+    };
+    document.getElementById('repmeta').innerHTML =
+      `รอบรายงาน <b>${thaiDate(isoOf(from))} – ${thaiDate(isoOf(to))}</b><br>
+       ระยะเวลา <b>${days} วัน</b> · ข้อมูล ณ <b>${thaiDate(today)}</b>`;
+
+    const net = inAmt - outAmt;
+    const conProj = STAT.filter(s => s.status === 'Construction');
+    const avgCon = conProj.length ? sum(conProj.map(s => s.progress || 0)) / conProj.length : 0;
+
+    // Things that need a decision, gathered from the checks the page already runs.
+    const byCode = {}; PROJ.forEach(p => { if (p.code) byCode[p.code] = p; });
+    let dataIssues = 0, dataBaht = 0;
+    STAT.forEach(s => {
+      const src = byCode[s.code] || PROJ.find(p => p.name === s.name);
+      if (!src) return;
+      let rec = 0, pay = 0, due = 0;
+      src.flows.forEach(([k, amt, d]) => {
+        if (KIND_IN[k]) { rec += amt; if (d <= today) due += amt; } else pay += amt;
+      });
+      [[s.sale && rec - s.sale, s.sale], [(s.contract || pay) && pay - s.contract, s.contract],
+       [(s.collected || due) && due - s.collected, s.collected]].forEach(([d]) => {
+        if (d && Math.abs(Math.round(d)) > 2) { dataIssues++; dataBaht += Math.abs(Math.round(d)); }
+      });
+    });
+
+    const overdueIn = FLOWS_ALL.filter(f => KIND_IN[f.kind] && f.d <= today).length;
+    const nextNet = inNextAmt - outNextAmt;
+
+    const sumBlock = `<div class="repsum">
+      <h3>สรุปสำหรับผู้บริหาร</h3>
+      <p>ในรอบ ${days} วันที่ผ่านมา มีเงินเข้า <b>${fmtFull(inAmt)}</b> บาท และจ่ายออก
+         <b>${fmtFull(outAmt)}</b> บาท คิดเป็นกระแสเงินสดสุทธิ
+         <b class="${net >= 0 ? 'good' : 'bad'}">${net >= 0 ? '+' : ''}${fmtFull(net)}</b> บาท</p>
+      <p>ขณะนี้มีโครงการอยู่ระหว่างก่อสร้าง <b>${conProj.length}</b> โครงการ
+         ความคืบหน้าเฉลี่ย <b>${Math.round(avgCon * 100)}%</b>
+         ${moved.length ? `มี <b>${moved.length}</b> โครงการที่ความคืบหน้าขยับในรอบนี้` : 'ยังไม่มีโครงการใดที่ความคืบหน้าขยับในรอบนี้'}</p>
+      <p>ช่วง ${days} วันข้างหน้า คาดว่าจะรับ <b>${fmtFull(inNextAmt)}</b> บาท และต้องจ่าย
+         <b>${fmtFull(outNextAmt)}</b> บาท สุทธิ
+         <b class="${nextNet >= 0 ? 'good' : 'bad'}">${nextNet >= 0 ? '+' : ''}${fmtFull(nextNet)}</b> บาท
+         ${iwLate.length ? `· มีงานภายใน <b>${iwLate.length}</b> รายการเลยกำหนด` : ''}</p>
+    </div>`;
+
+    const flagBlock = `<div class="repflag">
+      <div class="${net >= 0 ? 'ok' : 'alert'}"><div class="n">${net >= 0 ? '+' : ''}${fmtShort(net)}</div>
+        <div class="t">กระแสเงินสดสุทธิรอบนี้</div>
+        <div class="s">เข้า ${fmtShort(inAmt)} · ออก ${fmtShort(outAmt)}</div></div>
+      <div><div class="n">${Math.round(avgCon * 100)}%</div>
+        <div class="t">ความคืบหน้าเฉลี่ย</div>
+        <div class="s">${conProj.length} โครงการที่กำลังก่อสร้าง</div></div>
+      <div class="${iwLate.length ? 'alert' : 'ok'}"><div class="n">${iwLate.length}</div>
+        <div class="t">งานภายในเลยกำหนด</div>
+        <div class="s">จากทั้งหมด ${iwOpen.length} รายการที่ยังไม่ปิด</div></div>
+      <div class="${dataIssues ? 'alert' : 'ok'}"><div class="n">${dataIssues}</div>
+        <div class="t">รายการข้อมูลที่ต้องแก้</div>
+        <div class="s">${dataIssues ? 'คลาดเคลื่อนรวม ' + fmtFull(dataBaht) + ' บาท' : 'ข้อมูลตรงกันทั้งหมด'}</div></div>
+    </div>`;
+
     const kpi = `<section class="sec"><div class="card"><div class="pm-sum">
       ${tile('เงินเข้า', fmtFull(inAmt), fl.filter(f => KIND_IN[f.kind]).length + ' รายการ')}
       ${tile('เงินออก', fmtFull(outAmt), fl.filter(f => !KIND_IN[f.kind]).length + ' รายการ')}
@@ -1996,7 +2109,7 @@ const iwColor = s => `var(${IW_VAR[s] || '--text-muted'})`;
     </div></div>`;
 
     document.getElementById('repbody').innerHTML =
-      kpi +
+      sumBlock + flagBlock +
       section('1 · ความคืบหน้าที่เปลี่ยนไป', 'เฉพาะหมวด Construction — % หรือสถานะขยับในช่วงนี้ เทียบกับที่บันทึกไว้ครั้งก่อน', movedTbl) +
       section('2 · ความคืบหน้าปัจจุบัน', 'เฉพาะหมวด Construction เรียงจากคืบหน้ามากไปน้อย', standingTbl) +
       section('3 · การเงินที่เกิดขึ้นจริง', 'ทุกรายการรับ–จ่ายที่ลงวันที่ในช่วงนี้', moneyTbl) +
