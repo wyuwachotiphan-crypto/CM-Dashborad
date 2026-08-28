@@ -30,6 +30,11 @@ header{background:var(--ink);color:#fff;padding:16px 0 0}
 .tabbar .tab .x{opacity:.45;font-size:11px}
 .tabbar .tab .x:hover{opacity:1;color:var(--accent)}
 .tabbar .tab.add{background:transparent;color:#9EC4D8;font-size:12px}
+.defbadge{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:700;color:#fff;
+  background:var(--amber);border-radius:9px;padding:0 6px;cursor:pointer;vertical-align:1px}
+.defbadge.crit{background:var(--accent)}
+.defbadge:hover{filter:brightness(1.15)}
+.tbl.def td{font-size:12px}
 .fchip{display:inline-block;font-size:11.5px;color:#9EC4D8;border:1px solid rgba(255,255,255,.28);
   border-radius:20px;padding:4px 11px;white-space:nowrap}
 .fchip.on{color:#B7E7C6;border-color:rgba(120,220,150,.55)}
@@ -192,6 +197,18 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 
   <section>
     <div class="sec-h">
+      <h2>Defect / สิ่งที่ต้องแก้</h2>
+      <span class="hint" id="defchips"></span>
+      <div class="tools noprint">
+        <span id="deffilter"></span>
+        <button onclick="addDef()">+ เพิ่ม Defect</button>
+      </div>
+    </div>
+    <div class="scroll" id="defbox"><table class="tbl def" id="deftbl"></table></div>
+  </section>
+
+  <section>
+    <div class="sec-h">
       <h2>แผนภูมิ Gantt</h2>
       <div class="tools noprint">
         <label style="margin:0"><select id="scale" onchange="refresh()" style="width:auto">
@@ -251,7 +268,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 <script>
 /* ══════════════════ STATE ══════════════════ */
 const KEY='ms-builder-v2', OLDKEY='ms-builder-v1';
-function blankProj(){return {info:{name:'',owner:'',site:'',doc:'',rev:'R0',revdate:today0(),by:'',start:today0(),cdays:120,wmode:'mon-sat',holi:''},tasks:[]}}
+function blankProj(){return {info:{name:'',owner:'',site:'',doc:'',rev:'R0',revdate:today0(),by:'',start:today0(),cdays:120,wmode:'mon-sat',holi:''},tasks:[],defects:[]}}
 let WS={cur:0,projects:[]};   // ทุกโครงการอยู่ในไฟล์เดียว สลับด้วยแท็บด้านบน
 let S=blankProj();            // โครงการที่กำลังเปิดอยู่
 let seq=1;
@@ -395,7 +412,12 @@ function buildTable(){
 /* เฝ้าดูความกว้างของกล่องตารางโดยตรง — ครอบคลุมทั้งตอนโหลดเสร็จ ย่อ-ขยายหน้าต่าง และเปลี่ยนโหมดซูม */
 function watchWidth(){
   const box=document.getElementById('tblbox'); if(!box)return;
-  const recheck=()=>{const now=[...hiddenCols()].join(',');if(now!==lastHide){buildTable();refresh()}};
+  const recheck=()=>{
+    const now=[...hiddenCols()].join(',');
+    const dNow=[...dHidden()].join(',');
+    if(dNow!==lastDHide)buildDefects();
+    if(now!==lastHide){buildTable();refresh()}
+  };
   if(window.ResizeObserver)new ResizeObserver(recheck).observe(box);
   addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(recheck,120)});
   addEventListener('load',recheck);
@@ -452,6 +474,131 @@ function act(i){
     <button class="mini" onclick="del(${i})" title="ลบ">✕</button></span>`;
 }
 
+/* ══════════════════ DEFECT — สิ่งที่ต้องแก้ ══════════════════
+   ค่าทุกช่องใช้ข้อความชุดเดียวกับ Defect_Report.xlsx เพื่อให้ copy ไป paste ต่อท้ายได้ตรง ๆ  */
+const D_WP=['WP-01 สำรวจหน้างาน & Setting Out','WP-02 เจาะผนัง/พื้น & ปลอกท่อ','WP-03 งานแขวน-ยึดท่อลม',
+ 'WP-04 เดินท่อลมหลัก & ท่อแยก','WP-05 ฉนวน & ซีลรอยต่อ','WP-06 ท่อร้อยสายไฟ & สายคอนโทรล','WP-07 ตรวจรับก่อนปิดฝ้า',
+ 'WP-08 ติดตั้งเครื่อง ERV','WP-09 งานไฟฟ้า & คอนโทรล','WP-10 หัวจ่าย/หัวดูด & Louver','WP-11 Testing & Balancing (TAB)',
+ 'WP-12 ทำความสะอาด & สอนใช้งาน','WP-13 เอกสารส่งมอบ','อื่นๆ / ยังระบุไม่ได้'];
+const D_CAT=['ท่อลมรั่ว / Air leakage','แขวน-ยึดไม่ได้มาตรฐาน / Support','ท่ออ่อนย่น-หักงอ / Flex duct',
+ 'ฉนวนไม่ครบ-ควบแน่น / Insulation','ตำแหน่ง-แนวไม่ตรงแบบ / Alignment','ปริมาณลมไม่ได้สเปค / Airflow',
+ 'เสียงดัง-สั่นสะเทือน / Noise','งานไฟฟ้า-คอนโทรล / Electrical','น้ำทิ้ง-ท่อ drain / Drainage',
+ 'วัสดุผิดสเปค / Wrong material','งานเก็บความเรียบร้อย / Finishing','เอกสาร-ข้อมูลไม่ครบ / Document',
+ 'ความปลอดภัย / Safety','อื่นๆ / Other'];
+const D_SEV=[['Critical / วิกฤต - หยุดงาน','Critical วิกฤต'],['Major / สำคัญ - แก้ก่อนส่งมอบ','Major สำคัญ'],
+ ['Minor / เล็กน้อย - แก้ภายหลังได้','Minor เล็กน้อย']];
+const D_ST=[['Open / เปิด','Open เปิด'],['In Progress / กำลังแก้','กำลังแก้'],['Fixed / แก้แล้ว รอตรวจ','แก้แล้ว รอตรวจ'],
+ ['Verified / ตรวจผ่านแล้ว','ตรวจผ่านแล้ว'],['Closed / ปิดงาน','ปิดงาน']];
+let defFilter='';                      // กรองเฉพาะงานเดียว (task id)
+const defs=()=>S.defects||(S.defects=[]);
+const sevLv=d=>{const s=String(d.sev||'');                 // 3=Critical 2=Major 1=Minor
+  return s.startsWith('Critical')?3:s.startsWith('Major')?2:1};
+const defOpen=d=>{const s=String(d.st||'');return !(s.startsWith('Verified')||s.startsWith('Closed'))};
+const defLate=d=>defOpen(d)&&d.due&&D(d.due)<todayD();
+function todayD(){const t=new Date();t.setHours(0,0,0,0);return t}
+
+/* กำหนดแก้ตามกฎในมาตรฐาน: Critical +1 วันทำงาน · Major = วันเสร็จของ WP นั้น · Minor = วันส่งมอบ */
+function autoDue(d){
+  const base=d.date?D(d.date):todayD();
+  const t=S.tasks.find(x=>x.id===d.task);
+  if(sevLv(d)===3)return iso(nextWork(base,1));
+  if(sevLv(d)===2)return iso(t&&t.f&&t.f>base?t.f:nextWork(base,7));
+  const C=compute(); return iso(C.en>base?C.en:nextWork(base,14));
+}
+function wpFromTask(t){
+  if(!t)return '';
+  const m=String(t.wbs||'').match(/WP-(\d{2})/i);
+  return m?(D_WP.find(w=>w.startsWith('WP-'+m[1]))||'อื่นๆ / ยังระบุไม่ได้'):'อื่นๆ / ยังระบุไม่ได้';
+}
+function defStat(){
+  const list=defs(), open=list.filter(defOpen);
+  return {n:list.length, open:open.length, late:list.filter(defLate).length,
+    crit:open.filter(d=>sevLv(d)===3).length,
+    closedPct:list.length?Math.round((list.length-open.length)/list.length*100):0};
+}
+function defByTask(){                   // นับ defect ที่ยังค้าง แยกตามงานในแผน
+  const m={}; defs().forEach(d=>{if(d.task&&defOpen(d)){(m[d.task]=m[d.task]||{n:0,crit:0}).n++; if(sevLv(d)===3)m[d.task].crit++}});
+  return m;
+}
+let DEFBY={};
+
+const DCW=[28,96,96,92,96,168,0,122,122,88,92,92,100,36];
+const DCOLS=['#','ผูกกับงาน','WP Code (ทะเบียน)','วันที่พบ','จุด/พื้นที่','หมวด Defect','รายละเอียด',
+ 'ความรุนแรง','สถานะ','ผู้แก้ไข','กำหนดแก้','วันที่แก้เสร็จ','หมายเหตุ',''];
+/* ซ่อนคอลัมน์รองของตาราง Defect ตามความกว้างจอ (แนวเดียวกับตารางงาน) */
+const DHIDE=[[1428,[12]],[1328,[4]],[1232,[9]],[1144,[11]]];
+let lastDHide='';
+function dHidden(){
+  const h=new Set(); if(showAll)return h;
+  const box=document.getElementById('defbox'); const w=box?box.clientWidth:1500;
+  DHIDE.forEach(([lim,cs])=>{if(w<lim)cs.forEach(c=>h.add(c))});
+  return h;
+}
+function buildDefects(){
+  const H=dHidden(); lastDHide=[...H].join(',');
+  const keep=(v,i)=>!H.has(i);
+  const rows=defs().map((d,i)=>[d,i]).filter(([d])=>!defFilter||d.task===defFilter);
+  const cols='<colgroup>'+DCW.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
+  const head='<thead><tr>'+DCOLS.filter(keep).map(c=>`<th>${c}</th>`).join('')+'</tr></thead>';
+  const body=rows.length?rows.map(([d,i])=>defRow(d,i,H)).join('')
+    :`<tr><td colspan="${DCOLS.filter(keep).length}" style="padding:14px;color:var(--steel)">ยังไม่มี Defect${defFilter?' ของงานที่กรอง':''} — กด “+ เพิ่ม Defect” เมื่อพบปัญหาหน้างาน</td></tr>`;
+  deftbl.innerHTML=cols+head+'<tbody>'+body+'</tbody>';
+  const box=document.getElementById('defbox'), avail=box?box.clientWidth:1500;
+  const fixed=DCW.filter(keep).reduce((a,w)=>a+w,0);
+  deftbl.style.minWidth=Math.min(fixed+200,Math.max(avail,fixed+90))+'px';
+  defChips(H);
+}
+function opt(list,cur){return list.map(v=>{const[val,lb]=Array.isArray(v)?v:[v,v];
+  return `<option value="${esc(val)}" ${cur===val?'selected':''}>${esc(lb)}</option>`}).join('')}
+function defRow(d,i,H){
+  H=H||new Set();
+  const tOpts=['<option value="">— ไม่ผูก —</option>'].concat(S.tasks.filter(t=>!t.phase).map(t=>
+    `<option value="${t.id}" ${d.task===t.id?'selected':''} title="${esc(t.name)}">${esc(t.wbs||t.name.slice(0,14))}</option>`)).join('');
+  const cls=defLate(d)?' style="box-shadow:inset 3px 0 0 var(--accent)"':defOpen(d)&&sevLv(d)===3?' style="box-shadow:inset 3px 0 0 var(--amber)"':'';
+  const set=(f,v)=>`S.defects[${i}].${f}=${v};refreshDef()`;
+  const c=[
+   `<td class="derived">${i+1}</td>`,
+   `<td><select onchange="${set('task','this.value')};syncWp(${i})">${tOpts}</select></td>`,
+   `<td><select title="${esc(d.wp)}" onchange="${set('wp','this.value')}">${opt(D_WP.map(v=>[v,v.split(' ')[0]]),d.wp)}</select></td>`,
+   `<td><input type="date" value="${esc(d.date)}" oninput="${set('date','this.value')}"></td>`,
+   `<td><input value="${esc(d.loc)}" title="${esc(d.loc)}" oninput="${set('loc','this.value')}"></td>`,
+   `<td><select title="${esc(d.cat)}" onchange="${set('cat','this.value')}">${opt(D_CAT.map(v=>[v,v.split(' / ')[0]]),d.cat)}</select></td>`,
+   `<td><input value="${esc(d.desc)}" title="${esc(d.desc)}" oninput="${set('desc','this.value')}"></td>`,
+   `<td><select onchange="S.defects[${i}].sev=this.value;S.defects[${i}].due=autoDue(S.defects[${i}]);buildDefects();refreshDef()">${opt(D_SEV,d.sev)}</select></td>`,
+   `<td><select onchange="${set('st','this.value')};stampFixed(${i})">${opt(D_ST,d.st)}</select></td>`,
+   `<td><input value="${esc(d.by)}" title="${esc(d.by)}" oninput="${set('by','this.value')}"></td>`,
+   `<td><input type="date" value="${esc(d.due)}" oninput="${set('due','this.value')}"></td>`,
+   `<td><input type="date" value="${esc(d.fixed)}" oninput="${set('fixed','this.value')}"></td>`,
+   `<td><input value="${esc(d.note)}" title="${esc(d.note)}" oninput="${set('note','this.value')}"></td>`,
+   `<td><span class="rowact noprint"><button class="mini" onclick="delDef(${i})" title="ลบ">✕</button></span></td>`];
+  return `<tr${cls}>`+c.filter((x,ix)=>!H.has(ix)).join('')+'</tr>';
+}
+function addDef(){
+  const t=S.tasks.find(x=>x.id===defFilter)||S.tasks.find(x=>!x.phase&&(+x.act||0)>0&&(+x.act||0)<100)||S.tasks.find(x=>!x.phase);
+  const d={task:t?t.id:'',wp:wpFromTask(t),date:today0(),loc:'',cat:D_CAT[0],desc:'',
+    sev:D_SEV[1][0],st:D_ST[0][0],by:t&&t.own||'',due:'',fixed:'',note:''};
+  d.due=autoDue(d); defs().push(d); buildDefects(); refreshDef();
+}
+function delDef(i){if(confirm('ลบ Defect รายการนี้?')){defs().splice(i,1);buildDefects();refreshDef()}}
+function syncWp(i){const d=defs()[i];d.wp=wpFromTask(S.tasks.find(t=>t.id===d.task));d.due=autoDue(d);buildDefects();refreshDef()}
+function stampFixed(i){const d=defs()[i];
+  if(!defOpen(d)&&!d.fixed)d.fixed=today0();          // ปิดงานแล้วลงวันที่ให้อัตโนมัติ
+  buildDefects();refreshDef();}
+function filterDef(id){defFilter=(defFilter===id?'':id);buildDefects();refreshDef();
+  document.getElementById('defbox').scrollIntoView({behavior:'smooth',block:'center'})}
+function defChips(H){
+  const s=defStat();
+  const hid=H&&H.size?` · <span style="opacity:.75">ย่อคอลัมน์: ซ่อน ${[...H].map(i=>DCOLS[i]).join(' / ')}</span>`:'';
+  defchips.innerHTML=(s.n?`ค้าง <b>${s.open}</b> รายการ`
+    +(s.crit?` · <b style="color:var(--accent)">Critical ${s.crit}</b>`:'')
+    +(s.late?` · <b style="color:var(--accent)">เกินกำหนดแก้ ${s.late}</b>`:'')
+    +` · ปิดแล้ว ${s.closedPct}% (${s.n} รายการทั้งหมด)`
+    :'บันทึกปัญหาหน้างานที่นี่ แล้วส่งออกไปต่อท้าย Defect_Report.xlsx ได้')+hid;
+  const t=S.tasks.find(x=>x.id===defFilter);
+  deffilter.innerHTML=t?`<button onclick="filterDef('')" title="ล้างตัวกรอง">กรอง: ${esc(t.wbs||t.name.slice(0,16))} ✕</button>`:'';
+}
+function refreshDef(){DEFBY=defByTask();refresh()}
+
 /* ══════════════════ RENDER: GANTT ══════════════════ */
 /* ความคืบหน้าของหัวข้อ/เฟส = ถัวเฉลี่ยตามน้ำหนักของงานลูกที่ตามมาจนถึงหัวข้อถัดไป */
 function phaseProgress(i){
@@ -507,7 +654,9 @@ function drawGantt(C){
   const now=new Date(); now.setHours(0,0,0,0);
 
   S.tasks.forEach((t,idx)=>{
-    L.push(`<div class="grow"><div class="gname" title="${esc((t.wbs?t.wbs+' ':'')+t.name)}" style="${t.phase?'font-weight:700':''}">${t.phase?'':'&nbsp;&nbsp;'}${esc(t.wbs?t.wbs+' ':'')}${esc(t.name)||'<i style="color:#bbb">(ไม่มีชื่อ)</i>'}</div>
+    const df=DEFBY[t.id];
+    const badge=df?`<span class="defbadge ${df.crit?'crit':''}" title="Defect ค้าง ${df.n} รายการ${df.crit?' (Critical '+df.crit+')':''} — คลิกเพื่อดูเฉพาะงานนี้" onclick="filterDef('${t.id}')">▲${df.n}</span>`:'';
+    L.push(`<div class="grow"><div class="gname" title="${esc((t.wbs?t.wbs+' ':'')+t.name)}" style="${t.phase?'font-weight:700':''}">${t.phase?'':'&nbsp;&nbsp;'}${esc(t.wbs?t.wbs+' ':'')}${esc(t.name)||'<i style="color:#bbb">(ไม่มีชื่อ)</i>'}${badge}</div>
       <div class="gdate">${t.s?fmt(t.s)+' – '+fmt(t.f):''}</div></div>`);
     let bar='';
     if(t.s){
@@ -595,6 +744,14 @@ function drawKpi(C){
   if(days(C.cend,C.en)>0)es.push(`แผนสิ้นสุด ${fmt(C.en)} เกินกำหนดสัญญา ${fmt(C.cend)} อยู่ ${days(C.cend,C.en)} วัน`);
   const zero=C.real.filter(t=>!(+t.dur>0)&&!t.ms).length;
   if(zero)es.push(`มี ${zero} งานที่ยังไม่ได้ใส่ระยะเวลา (ถ้าตั้งใจให้เป็น Milestone ให้ติ๊กช่อง MS)`);
+  /* ── กฎ Defect ── */
+  const hold=S.tasks.filter(t=>!t.phase&&/★/.test(t.name||'')&&DEFBY[t.id]);
+  hold.forEach(t=>{const d=DEFBY[t.id];
+    es.push(`ห้ามผ่าน Hold Point ${nm(t)} — ยังมี Defect ค้าง ${d.n} รายการ${d.crit?` (Critical ${d.crit})`:''} ต้องปิดก่อนลงนาม`)});
+  const fake=S.tasks.filter(t=>!t.phase&&(+t.act||0)>=100&&DEFBY[t.id]&&DEFBY[t.id].crit);
+  if(fake.length)es.push(`${fake.map(nm).join(', ')} กรอก %จริง 100 แต่ยังมี Defect ระดับ Critical ค้างอยู่ — งานยังปิดไม่ได้`);
+  const dl=defs().filter(defLate);
+  if(dl.length)es.push(`Defect เกินกำหนดแก้แล้ว ${dl.length} รายการ (Critical ${dl.filter(d=>sevLv(d)===3).length}) — ดูตาราง Defect ด้านบน`);
   if(C.loop.length)es.push(`งานอ้างอิงวนกลับหากัน: ${C.loop.map(nm).join(', ')} — ตั้งให้เริ่มวันแรกของโครงการชั่วคราว กรุณาแก้ช่อง "เริ่มหลังจาก"`);
   if(C.back.length)es.push(`ลำดับแถวไม่ตรงกับความจริง: ${C.back.map(nm).join(', ')} อ้างอิงงานที่อยู่ "ใต้" มันในตาราง — วันที่คำนวณถูกแล้ว แต่ควรกด ↑ ↓ ย้ายแถวให้เรียงตามลำดับงานจริง`);
   warn.innerHTML=es.map(e=>`<div class="msg e">⚠ ${e}</div>`).join('');
@@ -602,6 +759,7 @@ function drawKpi(C){
 
 /* ══════════════════ REFRESH ══════════════════ */
 function refresh(){
+  DEFBY=defByTask();
   const C=compute();
   S.tasks.forEach((t,i)=>{
     const a=document.getElementById('s'+i), b=document.getElementById('f'+i);
@@ -707,7 +865,7 @@ function useProj(i){
   WS.cur=Math.max(0,Math.min(i,WS.projects.length-1));
   S=WS.projects[WS.cur];
   seq=Math.max(0,...S.tasks.map(t=>+String(t.id).replace(/\D/g,'')||0))+1;
-  buildTabs();buildInfo();rebuild();
+  DEFBY=defByTask();defFilter='';buildTabs();buildInfo();buildDefects();rebuild();
 }
 function buildTabs(){
   tabs.innerHTML=WS.projects.map((p,i)=>{
@@ -802,6 +960,15 @@ function toXlsx(){
   XLSX.utils.book_append_sheet(wb,ws,'Master Schedule');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(info),'ข้อมูลโครงการ');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sc),'S-Curve');
+  /* ชีต Defect — คอลัมน์เรียงตรงกับ Defect_Report.xlsx เพื่อ copy ไป paste ต่อท้ายได้ทันที */
+  const dh=[['วันที่ / Date','Project','จุด/พื้นที่ / Location','รหัสงาน / WP Code','หมวด Defect / Category',
+    'รายละเอียด / Description','ความรุนแรง / Severity','สถานะ / Status','Contractor','กำหนดแก้',
+    'วันที่แก้เสร็จ','หมายเหตุ / Remarks','รูป ก่อนแก้','รูป หลังแก้']];
+  defs().forEach(d=>dh.push([d.date?fmt(D(d.date)):'',S.info.name||'',d.loc||'',d.wp||'',d.cat||'',d.desc||'',
+    d.sev||'',d.st||'',d.by||'',d.due?fmt(D(d.due)):'',d.fixed?fmt(D(d.fixed)):'',d.note||'','','']));
+  const dws=XLSX.utils.aoa_to_sheet(dh);
+  dws['!cols']=[{wch:11},{wch:22},{wch:18},{wch:30},{wch:28},{wch:44},{wch:26},{wch:22},{wch:16},{wch:11},{wch:12},{wch:26},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,dws,'Defect Report');
   XLSX.writeFile(wb,fname()+'.xlsx');
 }
 
@@ -901,7 +1068,7 @@ async function loadTeam(){
 /* ══════════════════ INIT ══════════════════ */
 function normalize(){
   if(!WS.projects||!WS.projects.length)WS.projects=[blankProj()];
-  WS.projects.forEach(p=>{p.tasks=p.tasks||[];p.tasks.forEach((t,i)=>{if(!t.id)t.id='t'+(i+1)});
+  WS.projects.forEach(p=>{p.tasks=p.tasks||[];p.defects=p.defects||[];p.tasks.forEach((t,i)=>{if(!t.id)t.id='t'+(i+1)});
     p.info=Object.assign({rev:'R0',revdate:(p.info&&p.info.start)||today0(),by:''},p.info||{});});
 }
 (function(){
