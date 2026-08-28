@@ -1,0 +1,211 @@
+<meta charset="UTF-8">
+<title>คู่มือ Master Schedule Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ink:#00293D;         /* หมึกน้ำเงินเข้ม — ตัวอักษรหลัก */
+  --steel:#4E7A93;       /* น้ำเงินเหล็ก — หัวข้อรอง เส้นคั่น */
+  --stamp:#B01019;       /* แดงตราประทับ — เลขลำดับ จุดเน้น */
+  --sheet:#FFFFFF;       /* กระดาษ */
+  --ground:#EDEAE3;      /* พื้นโต๊ะ */
+  --hair:#D6D3CA;        /* เส้นขอบบาง */
+  --tint:#F4F1E9;        /* พื้นอ่อนในตาราง */
+  --mute:#6E7C84;        /* ตัวอักษรรอง */
+  --gap:14px;
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#DCE7ED; --steel:#8CB4C9; --stamp:#E8636B; --sheet:#132430;
+    --ground:#0B1620; --hair:#2A3F4D; --tint:#182D3A; --mute:#8FA3AE;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#DCE7ED; --steel:#8CB4C9; --stamp:#E8636B; --sheet:#132430;
+  --ground:#0B1620; --hair:#2A3F4D; --tint:#182D3A; --mute:#8FA3AE;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ground);color:var(--ink);
+  font-family:'IBM Plex Sans Thai','Segoe UI',sans-serif;font-size:11.5px;line-height:1.5;
+  padding:22px 14px;-webkit-font-smoothing:antialiased}
+.sheet{width:100%;max-width:794px;margin:0 auto;background:var(--sheet);
+  padding:18px 20px 14px;box-shadow:0 3px 22px rgba(0,25,40,.16);
+  display:flex;flex-direction:column;gap:var(--gap)}
+
+/* ── หัวกระดาษแบบ title block ── */
+.tb{border:1.4px solid var(--ink);display:grid;grid-template-columns:1fr 96px 96px 118px}
+.tb>div{padding:7px 10px;border-left:1px solid var(--hair)}
+.tb>div:first-child{border-left:0}
+.lab{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--mute);display:block;margin-bottom:2px}
+h1{font-size:17px;font-weight:700;line-height:1.25;letter-spacing:-.2px;text-wrap:balance}
+h1 span{color:var(--steel);font-weight:500}
+.val{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+.val.rev{color:var(--stamp)}
+
+.lead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;
+  border-left:3px solid var(--stamp);padding-left:9px}
+.lead p{max-width:62ch;color:var(--mute)}
+.url{font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--tint);
+  border:1px solid var(--hair);padding:3px 7px;color:var(--ink);word-break:break-all}
+
+/* ── เนื้อหา 2 คอลัมน์ ── */
+.body{display:grid;grid-template-columns:1.06fr 1fr;gap:var(--gap) 20px;align-items:start}
+h2{font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--ink);
+  border-bottom:1.4px solid var(--ink);padding-bottom:4px;margin-bottom:8px;
+  display:flex;justify-content:space-between;align-items:baseline}
+h2 em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:8px;
+  letter-spacing:.12em;color:var(--mute);text-transform:uppercase}
+section{break-inside:avoid}
+.col{display:flex;flex-direction:column;gap:var(--gap)}
+
+/* ขั้นตอน */
+ol.steps{list-style:none;display:flex;flex-direction:column;gap:7px}
+ol.steps li{display:grid;grid-template-columns:19px 1fr;gap:8px;align-items:start}
+ol.steps b{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;
+  color:var(--stamp);line-height:1.15;font-variant-numeric:tabular-nums}
+ol.steps strong{font-weight:600;display:block}
+ol.steps span{color:var(--mute)}
+kbd{font-family:'IBM Plex Sans Thai',sans-serif;font-size:10px;font-weight:600;
+  background:var(--tint);border:1px solid var(--hair);border-bottom-width:2px;
+  padding:1px 5px;white-space:nowrap;color:var(--ink)}
+
+/* ตาราง */
+table{width:100%;border-collapse:collapse;font-size:10.5px}
+th{text-align:left;font-weight:600;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--mute);padding:0 6px 4px 0;border-bottom:1px solid var(--hair)}
+td{padding:4px 6px 4px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+td:first-child{font-weight:600;white-space:nowrap;width:82px}
+tr:last-child td{border-bottom:0}
+td small{color:var(--mute);font-size:10px}
+
+/* สัญลักษณ์ */
+.keys{display:flex;flex-direction:column;gap:5px}
+.key{display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:center}
+.sw{height:9px;border-radius:2px;background:var(--steel)}
+.sw.p1{background:#0F4C6B} .sw.p2{background:#5A7D8C}
+.sw.ext{background:repeating-linear-gradient(45deg,#C9C6BF,#C9C6BF 3px,#EDEBE6 3px,#EDEBE6 6px)}
+.sw.late{background:var(--stamp)}
+.sw.dia{width:9px;height:9px;background:var(--stamp);transform:rotate(45deg);margin-left:8px;border-radius:1px}
+.sw.line{width:3px;height:12px;background:var(--stamp);margin-left:11px}
+
+/* ข้อควรระวัง */
+.warn{background:var(--tint);border-left:3px solid var(--stamp);padding:8px 10px;
+  display:flex;flex-direction:column;gap:5px}
+.warn p{padding-left:13px;text-indent:-13px}
+.warn p::before{content:'!';font-family:'IBM Plex Mono',monospace;font-weight:600;
+  color:var(--stamp);margin-right:7px}
+.warn b{font-weight:600}
+
+footer{border-top:1.4px solid var(--ink);padding-top:6px;display:flex;
+  justify-content:space-between;gap:12px;flex-wrap:wrap;
+  font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.04em;color:var(--mute)}
+
+@media (max-width:680px){
+  .body{grid-template-columns:1fr}
+  .tb{grid-template-columns:1fr 1fr;}
+  .tb>div:nth-child(3){border-left:0}
+}
+@media print{
+  @page{size:A4 portrait;margin:9mm}
+  body{background:#fff;padding:0;font-size:9.6pt}
+  .sheet{max-width:none;box-shadow:none;padding:0;gap:10px}
+  :root{--sheet:#fff;--ink:#00293D;--ground:#fff;--tint:#F4F1E9;--hair:#CFCCC3;--mute:#5C6A72}
+}
+</style>
+
+<div class="sheet">
+
+  <div class="tb">
+    <div>
+      <span class="lab">คู่มือการใช้งาน · User Manual</span>
+      <h1>Master Schedule Builder <span>— เครื่องมือจัดทำแผนงานหลักงานก่อสร้าง</span></h1>
+    </div>
+    <div><span class="lab">Rev.</span><span class="val rev">R0</span></div>
+    <div><span class="lab">วันที่</span><span class="val">27/08/26</span></div>
+    <div><span class="lab">ผู้จัดทำ</span><span class="val" style="font-size:10px">CM — IAQ</span></div>
+  </div>
+
+  <div class="lead">
+    <p>กรอกรายการงานกับจำนวนวัน แล้วเครื่องมือคำนวณวันเริ่ม–วันเสร็จเป็นวันทำงานจริงให้เอง
+      พร้อมวาด Gantt, S-Curve และส่งออกเป็น Excel หรือ PDF · เปิดใช้ได้ที่</p>
+    <span class="url">wyuwachotiphan-crypto.github.io/CM-Dashborad/Master_Schedule_Builder.html</span>
+  </div>
+
+  <div class="body">
+
+    <div class="col">
+      <section>
+        <h2>ขั้นตอนการใช้งาน <em>6 steps</em></h2>
+        <ol class="steps">
+          <li><b>1</b><div><strong>ตั้งค่าโครงการ</strong><span>กรอกชื่อโครงการ ผู้ว่าจ้าง <b style="color:inherit;font:inherit">วันเริ่มงาน</b> และ <b style="color:inherit;font:inherit">ระยะเวลาสัญญา</b> เลือกวันทำงาน (จ.–ส. / จ.–ศ. / ทุกวัน) แล้วใส่วันหยุดพิเศษเช่นสงกรานต์เป็น <span style="font-family:'IBM Plex Mono',monospace">2026-04-13</span> คั่นด้วยลูกน้ำ</span></div></li>
+          <li><b>2</b><div><strong>เลือกเทมเพลต</strong><span>กด <kbd>เทมเพลตงาน</kbd> → <b style="color:inherit;font:inherit">ฉบับ A</b> สำหรับงานอาคาร (WP-01…13) หรือ <b style="color:inherit;font:inherit">ฉบับ B</b> สำหรับบ้าน (B-1…8) ทั้งสองแบบมีช่วงรอ Main Contractor ปิดฝ้าคั่นให้แล้ว</span></div></li>
+          <li><b>3</b><div><strong>แก้รายการงาน</strong><span>พิมพ์ทับได้เลย วันที่คำนวณใหม่ทันที ปุ่มท้ายแถว <kbd>↑</kbd> <kbd>↓</kbd> เลื่อน · <kbd>⧉</kbd> ทำซ้ำ · <kbd>✕</kbd> ลบ · หรือกด <kbd>วางจาก Excel</kbd> เพื่อวางรายการยกชุด</span></div></li>
+          <li><b>4</b><div><strong>ตั้งน้ำหนักงาน</strong><span>กด <kbd>คิดน้ำหนักอัตโนมัติ</kbd> เกลี่ยตามจำนวนวันให้ครบ 100% แล้วปรับงานที่มีมูลค่าสูงเพิ่มเอง</span></div></li>
+          <li><b>5</b><div><strong>อัปเดตทุกสัปดาห์</strong><span>ใส่ตัวเลขช่อง <b style="color:inherit;font:inherit">%จริง</b> ของแต่ละงาน แถบ KPI จะบอกทันทีว่าแผน ณ วันนี้กี่ % ทำได้จริงกี่ % และช้ากว่าแผนเท่าไร</span></div></li>
+          <li><b>6</b><div><strong>ส่งออก</strong><span><kbd>ส่งออก Excel</kbd> ได้ 3 ชีต (ตารางแผน · ข้อมูลโครงการ · S-Curve) · <kbd>พิมพ์ / PDF</kbd> จัดหน้า A3 แนวนอนไว้แล้ว · ชื่อไฟล์ติด Rev. ให้อัตโนมัติ</span></div></li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>หลายโครงการ &amp; Rev. <em>tabs &amp; revision</em></h2>
+        <table>
+          <tr><td><kbd>+ เพิ่มโครงการ</kbd></td><td>เปิดแท็บใหม่ แล้วเลือกเทมเพลต — แต่ละแท็บมีข้อมูลของตัวเองแยกกัน</td></tr>
+          <tr><td><kbd>⧉ ทำสำเนา</kbd></td><td>ก็อปทั้งแผนไปเป็นโครงการใหม่ พร้อมล้าง %จริง ให้เป็น 0</td></tr>
+          <tr><td><kbd>↑ ออก Rev. ใหม่</kbd></td><td>บวกเลข Rev. ขึ้น 1 และตั้งวันที่เป็นวันนี้ (R0 → R1 → R2)</td></tr>
+          <tr><td><kbd>บันทึกโครงการนี้</kbd></td><td>ไฟล์ <span style="font-family:'IBM Plex Mono',monospace">.json</span> เฉพาะแท็บที่เปิดอยู่ — ส่งให้เพื่อนร่วมงานได้</td></tr>
+          <tr><td><kbd>สำรองทุกโครงการ</kbd></td><td>ไฟล์เดียวรวมทุกแท็บ ไว้แบ็กอัปหรือย้ายเครื่อง</td></tr>
+          <tr><td><kbd>เปิดไฟล์</kbd></td><td>ไฟล์โครงการเดียว = เพิ่มเป็นแท็บใหม่ · ไฟล์สำรอง = แทนที่ทั้งหมด (ถามก่อน)</td></tr>
+        </table>
+      </section>
+    </div>
+
+    <div class="col">
+      <section>
+        <h2>คอลัมน์ที่ต้องเข้าใจ <em>columns</em></h2>
+        <table>
+          <thead><tr><th>คอลัมน์</th><th>ความหมาย</th></tr></thead>
+          <tbody>
+            <tr><td>เริ่มหลังจาก</td><td>งานที่ต้องเสร็จก่อน — ตัวที่ทำให้แผนเลื่อนตามกันทั้งสาย</td></tr>
+            <tr><td>ชนิด</td><td><b>FS</b> เริ่มหลังงานก่อนเสร็จ · <b>SS</b> เริ่มพร้อมกัน</td></tr>
+            <tr><td>Lag</td><td>เว้นกี่วันทำงาน · <b>ใส่ติดลบ</b> ได้ถ้าต้องการให้งานคาบเกี่ยวกัน</td></tr>
+            <tr><td>วัน</td><td>ระยะเวลา นับเฉพาะวันทำงาน (ข้ามวันหยุดให้เอง)</td></tr>
+            <tr><td>น้ำหนัก%</td><td>สัดส่วนของงานนั้นในโครงการ รวมทุกงานต้องได้ 100%</td></tr>
+            <tr><td>%จริง</td><td>ทำไปแล้วกี่ % ใช้คำนวณผลงานจริงเทียบแผน</td></tr>
+            <tr><td>MS</td><td>ติ๊ก = หมุดหมาย / Hold Point ★ แสดงเป็นข้าวหลามตัดแดง</td></tr>
+            <tr><td>รอผู้อื่น</td><td>ติ๊กสำหรับช่วงที่เราไม่ได้ทำ เช่นรอปิดฝ้า — กินเวลาแต่<b>ไม่นับน้ำหนัก</b></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>สัญลักษณ์ในแผนภูมิ Gantt <em>legend</em></h2>
+        <div class="keys">
+          <div class="key"><span class="sw p1"></span><span>งาน First Fix — ก่อนปิดฝ้า</span></div>
+          <div class="key"><span class="sw p2"></span><span>งาน Second Fix — หลังปิดฝ้า</span></div>
+          <div class="key"><span class="sw ext"></span><span>ช่วงรอผู้อื่น เช่น Main Contractor ปิดฝ้า</span></div>
+          <div class="key"><span class="sw late"></span><span>งานที่เลยกำหนดแล้วเสร็จตามสัญญา</span></div>
+          <div class="key"><span class="sw dia"></span><span>Milestone / จุด Hold Point</span></div>
+          <div class="key"><span class="sw line"></span><span>เส้นวันนี้ · แถบทึบในแท่ง = ส่วนที่ทำเสร็จแล้ว</span></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>ข้อควรระวัง <em>important</em></h2>
+        <div class="warn">
+          <p><b>ข้อมูลเก็บอยู่ในเบราว์เซอร์ของเครื่องที่ใช้เท่านั้น</b> เปิดลิงก์เดียวกันคนละเครื่องจะไม่เห็นแผนของกันและกัน — จะแชร์ต้องส่งไฟล์ <span style="font-family:'IBM Plex Mono',monospace">.json</span> หากัน</p>
+          <p>ล้างประวัติเบราว์เซอร์แล้วข้อมูลหายได้ — <b>ทุกสิ้นสัปดาห์ให้กดสำรองทุกโครงการเก็บไว้</b></p>
+          <p>เจอแถบเตือนสีแดง อ่านก่อนเสมอ: น้ำหนักไม่ครบ 100% · แผนเกินกำหนดสัญญา · หรือ<b>ลำดับแถวไม่ตรงกับงานจริง</b> (ให้กด ↑ ↓ ย้ายแถว)</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    <span>MSB-MANUAL-R0 · CORAL LIFE — IAQ CONSTRUCTION MANAGEMENT</span>
+    <span>ไฟล์เครื่องมือ: Desktop\Dashboard\Master_Schedule_Builder.html</span>
+  </footer>
+</div>

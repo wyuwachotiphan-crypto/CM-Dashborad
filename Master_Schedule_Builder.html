@@ -16,7 +16,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--canvas);color:var(--text);padding-bottom:60px;font-size:14px}
-.wrap{max-width:1500px;margin:0 auto;padding:0 20px}
+.wrap{max-width:1680px;margin:0 auto;padding:0 20px}
 header{background:var(--ink);color:#fff;padding:16px 0 0}
 .head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:14px}
 /* แท็บโครงการ */
@@ -30,6 +30,10 @@ header{background:var(--ink);color:#fff;padding:16px 0 0}
 .tabbar .tab .x{opacity:.45;font-size:11px}
 .tabbar .tab .x:hover{opacity:1;color:var(--accent)}
 .tabbar .tab.add{background:transparent;color:#9EC4D8;font-size:12px}
+.fchip{display:inline-block;font-size:11.5px;color:#9EC4D8;border:1px solid rgba(255,255,255,.28);
+  border-radius:20px;padding:4px 11px;white-space:nowrap}
+.fchip.on{color:#B7E7C6;border-color:rgba(120,220,150,.55)}
+.fchip.bad{color:#FFC9C9;border-color:rgba(255,120,120,.6)}
 h1{font-size:19px;font-weight:700;letter-spacing:.2px}
 .sub{font-size:12px;color:#9EC4D8;margin-top:2px}
 .tools{display:flex;gap:8px;flex-wrap:wrap}
@@ -39,7 +43,7 @@ button:hover{border-color:var(--grid)}
 button.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
 button.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
 button.ghost:hover{background:rgba(255,255,255,.12)}
-button.mini{padding:3px 7px;font-size:12px;line-height:1.2}
+button.mini{padding:3px 5px;font-size:12px;line-height:1.2}
 section{background:var(--paper);border:1px solid var(--line);border-radius:10px;margin-top:16px;overflow:hidden}
 .sec-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   padding:11px 16px;border-bottom:1px solid var(--line);background:#FBFBFA}
@@ -59,9 +63,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .kpi .n{font-size:11px;color:var(--steel);margin-top:1px}
 .ok{color:var(--green)} .bad{color:var(--accent)} .warn{color:var(--amber)}
 /* table */
-.tbl{width:100%;min-width:1600px;border-collapse:collapse;table-layout:fixed}
-.tbl th{background:var(--ink-soft);color:#fff;font-size:11px;font-weight:600;padding:7px 6px;text-align:left;white-space:nowrap}
-.tbl td{border-bottom:1px solid var(--line);padding:3px 5px;vertical-align:middle;overflow:hidden}
+.tbl{width:100%;border-collapse:collapse;table-layout:fixed}
+.tbl th{background:var(--ink-soft);color:#fff;font-size:10.5px;font-weight:600;padding:7px 4px;text-align:left;white-space:nowrap}
+.tbl td{border-bottom:1px solid var(--line);padding:2px 4px;vertical-align:middle;overflow:hidden}
 .tbl tr:hover td{background:#FBFAF7}
 .tbl td input,.tbl td select{width:100%;padding:4px 6px;font-size:12.5px;border-color:transparent;
   background:transparent;text-overflow:ellipsis}
@@ -75,7 +79,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .derived{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--steel);white-space:nowrap}
 .ph{background:var(--accent-soft);font-weight:700;font-size:12px}
 .scroll{overflow-x:auto}
-.rowact{display:flex;gap:3px}
+.rowact{display:flex;gap:2px}
 /* gantt */
 .gantt{display:flex;overflow-x:auto;border-top:1px solid var(--line)}
 .gl{flex:0 0 auto;background:var(--paper);border-right:2px solid var(--ink-soft);position:sticky;left:0;z-index:3}
@@ -126,6 +130,10 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
     <div class="tools noprint">
       <button class="ghost" onclick="openTpl()">เทมเพลตงาน</button>
       <button class="ghost" onclick="openPaste()">วางจาก Excel</button>
+      <button class="ghost" id="flink" onclick="linkFile()">เชื่อมไฟล์ถาวร</button>
+      <button class="pri" id="fgrant" style="display:none" onclick="grantFile()">อนุญาตเขียนไฟล์</button>
+      <button class="ghost" onclick="saveTeam()">สแนปชอตให้ทีม</button>
+      <button class="ghost" onclick="loadTeam()">โหลดของทีม</button>
       <button class="ghost" onclick="saveFile()">บันทึกโครงการนี้</button>
       <button class="ghost" onclick="backupAll()">สำรองทุกโครงการ</button>
       <button class="ghost" onclick="fileIn.click()">เปิดไฟล์</button>
@@ -133,6 +141,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
       <button class="ghost" onclick="window.print()">พิมพ์ / PDF</button>
     </div>
   </div>
+  <div class="wrap" style="padding-bottom:10px"><span class="fchip noprint" id="fstat"></span></div>
   <div class="wrap"><div class="tabbar noprint" id="tabs"></div></div>
 </header>
 <input type="file" id="fileIn" accept=".json" hidden onchange="loadFile(this)">
@@ -153,7 +162,11 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
   <section>
     <div class="sec-h">
       <h2>รายการงาน (Work Breakdown)</h2>
+      <span class="hint noprint" id="colhint"></span>
       <div class="tools noprint">
+        <label style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--steel);margin:0;white-space:nowrap">
+          <input type="checkbox" id="allcols" style="width:auto" onchange="showAll=this.checked;buildTable();refresh()"> แสดงทุกคอลัมน์
+        </label>
         <button onclick="addRow()">+ เพิ่มงาน</button>
         <button onclick="addRow(true)">+ เพิ่มหัวข้อ/เฟส</button>
         <button onclick="autoWeight()">คิดน้ำหนักอัตโนมัติ</button>
@@ -161,7 +174,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
       </div>
     </div>
     <div id="warn" class="pad" style="padding-bottom:0"></div>
-    <div class="scroll"><table class="tbl" id="tbl"></table></div>
+    <div class="scroll" id="tblbox"><table class="tbl" id="tbl"></table></div>
   </section>
 
   <section>
@@ -339,47 +352,82 @@ function esc(v){return String(v??'').replace(/"/g,'&quot;').replace(/</g,'&lt;')
 /* ══════════════════ RENDER: ตารางงาน ══════════════════ */
 const COLS=['#','WBS','ชื่องาน','เฟส','เริ่มหลังจาก','ชนิด','Lag','วัน','เริ่ม','เสร็จ','น้ำหนัก%','%จริง','ผู้รับผิดชอบ','MS','รอผู้อื่น',''];
 /* ความกว้างคอลัมน์ — ชื่องานเว้นว่างไว้ให้ยืดกินพื้นที่ที่เหลือ */
-const CW=[36,78,0,104,210,64,58,58,84,84,74,64,132,40,62,110];
+const CW=[32,64,0,98,160,56,52,52,76,76,68,58,120,36,64,106];
+/* ซ่อนคอลัมน์รองตามความกว้างจอ เพื่อให้ตารางพอดีจอโดยไม่ต้องเลื่อนซ้าย-ขวา
+   ลำดับการซ่อน: ชนิด+Lag → เฟส → ผู้รับผิดชอบ → MS+รอผู้อื่น (ติ๊ก "แสดงทุกคอลัมน์" เพื่อดูครบ) */
+let showAll=false, lastHide='';
+const HIDE_STEPS=[[1448,[5,6]],[1340,[3]],[1242,[12]],[1122,[13,14]]];
+function hiddenCols(){
+  const h=new Set();
+  if(showAll)return h;
+  const box=document.getElementById('tblbox');
+  const w=box?box.clientWidth:1500;
+  HIDE_STEPS.forEach(([lim,cols])=>{if(w<lim)cols.forEach(c=>h.add(c))});
+  return h;
+}
 function buildTable(){
-  const cols='<colgroup>'+CW.map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
-  const head='<thead><tr>'+COLS.map(c=>`<th>${c}</th>`).join('')+'</tr></thead>';
-  const body=S.tasks.map((t,i)=>t.phase?rowPhase(t,i):rowTask(t,i)).join('');
+  const H=hiddenCols(); lastHide=[...H].join(',');
+  const keep=(v,i)=>!H.has(i);
+  const cols='<colgroup>'+CW.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
+  const head='<thead><tr>'+COLS.filter(keep).map(c=>`<th>${c}</th>`).join('')+'</tr></thead>';
+  const body=S.tasks.map((t,i)=>t.phase?rowPhase(t,i,H):rowTask(t,i,H)).join('');
   tbl.innerHTML=cols+head+'<tbody>'+body+'</tbody>';
+  const box=document.getElementById('tblbox'), avail=box?box.clientWidth:1500;
+  const fixed=CW.filter(keep).reduce((a,w)=>a+w,0);        // 330 = ที่ว่างสำหรับชื่องานที่ยาวที่สุด
+  tbl.style.minWidth=Math.min(fixed+330,Math.max(avail,fixed+120))+'px';
+  colhint.textContent=H.size?`ย่อให้พอดีจอ — ซ่อน ${[...H].map(i=>COLS[i]).join(' / ')} ไว้ชั่วคราว`:'';
 }
-function rowPhase(t,i){
-  return `<tr class="ph"><td class="derived">${i+1}</td><td colspan="2">
-    <input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;refresh()" style="font-weight:700"></td>
-    <td colspan="5"></td>
-    <td class="derived" id="s${i}"></td><td class="derived" id="f${i}"></td>
-    <td colspan="5"></td><td>${act(i)}</td></tr>`;
+/* เฝ้าดูความกว้างของกล่องตารางโดยตรง — ครอบคลุมทั้งตอนโหลดเสร็จ ย่อ-ขยายหน้าต่าง และเปลี่ยนโหมดซูม */
+function watchWidth(){
+  const box=document.getElementById('tblbox'); if(!box)return;
+  const recheck=()=>{const now=[...hiddenCols()].join(',');if(now!==lastHide){buildTable();refresh()}};
+  if(window.ResizeObserver)new ResizeObserver(recheck).observe(box);
+  addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(recheck,120)});
+  addEventListener('load',recheck);
+  requestAnimationFrame(recheck);
+  [120,500,1200].forEach(d=>setTimeout(recheck,d));   // เผื่อหน้าจัดวางเสร็จช้า (ฟอนต์/สกรอลล์บาร์)
+  setInterval(recheck,1000);                          // กันเหนียว: ถ้าเบราว์เซอร์ไม่ส่ง event ก็ยังปรับเองได้
 }
-function rowTask(t,i){
+function rowPhase(t,i,H){
+  H=H||new Set();
+  const span=(a,b)=>{let n=0;for(let k=a;k<=b;k++)if(!H.has(k))n++;return n};
+  const s1=span(1,7), s2=span(10,14);
+  return `<tr class="ph"><td class="derived">${i+1}</td>`
+   +(s1?`<td colspan="${s1}"><input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;refresh()" style="font-weight:700"></td>`:'')
+   +`<td class="derived" id="s${i}"></td><td class="derived" id="f${i}"></td>`
+   +(s2?`<td colspan="${s2}"></td>`:'')
+   +(H.has(15)?'':`<td>${act(i)}</td>`)+`</tr>`;
+}
+function rowTask(t,i,H){
+  H=H||new Set();
   const opts=['<option value="">— เริ่มพร้อมโครงการ —</option>'].concat(
-    S.tasks.slice(0,i).filter(x=>!x.phase).map(x=>{
-      const lb=(x.wbs?x.wbs+' ':'')+x.name;
-      return `<option value="${x.id}" ${t.dep===x.id?'selected':''}>${esc(lb.length>24?lb.slice(0,23)+'…':lb)}</option>`;
+    S.tasks.map((x,xi)=>[x,xi]).filter(([x,xi])=>xi<i&&!x.phase).map(([x,xi])=>{
+      /* ป้ายสั้นแต่ครบ — ใช้รหัส WBS ถ้ามี ไม่มีก็อ้างเลขแถว ชื่อเต็มดูที่ tooltip */
+      const lb=x.wbs||('แถว '+(xi+1));
+      return `<option value="${x.id}" ${t.dep===x.id?'selected':''} title="${esc((x.wbs?x.wbs+' ':'')+x.name)}">${esc(lb)}</option>`;
     })).join('');
   const dep=S.tasks.find(x=>x.id===t.dep);
   const P=[['','—'],['1','First Fix'],['2','Second Fix']];
-  return `<tr>
-   <td class="derived">${i+1}</td>
-   <td><input value="${esc(t.wbs)}" oninput="S.tasks[${i}].wbs=this.value;refresh()"></td>
-   <td><input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;this.title=this.value;refresh()"></td>
-   <td><select onchange="S.tasks[${i}].pf=this.value;refresh()">
-       ${P.map(([v,l])=>`<option value="${v}" ${t.pf===v?'selected':''}>${l}</option>`).join('')}</select></td>
-   <td><select title="${esc(dep?(dep.wbs?dep.wbs+' ':'')+dep.name:'เริ่มพร้อมโครงการ')}" onchange="S.tasks[${i}].dep=this.value;refresh()">${opts}</select></td>
-   <td><select onchange="S.tasks[${i}].dt=this.value;refresh()">
-       <option value="FS" ${t.dt!=='SS'?'selected':''}>FS</option><option value="SS" ${t.dt==='SS'?'selected':''}>SS</option></select></td>
-   <td><input type="number" value="${t.lag||0}" oninput="S.tasks[${i}].lag=+this.value;refresh()"></td>
-   <td><input type="number" min="0" value="${t.dur}" oninput="S.tasks[${i}].dur=+this.value;refresh()"></td>
-   <td class="derived" id="s${i}"></td>
-   <td class="derived" id="f${i}"></td>
-   <td><input type="number" min="0" step="0.5" value="${t.w}" oninput="S.tasks[${i}].w=+this.value;refresh()"></td>
-   <td><input type="number" min="0" max="100" value="${t.act||0}" oninput="S.tasks[${i}].act=+this.value;refresh()"></td>
-   <td><input value="${esc(t.own)}" title="${esc(t.own)}" oninput="S.tasks[${i}].own=this.value;this.title=this.value;refresh()"></td>
-   <td style="text-align:center"><input type="checkbox" ${t.ms?'checked':''} onchange="S.tasks[${i}].ms=this.checked;refresh()"></td>
-   <td style="text-align:center"><input type="checkbox" ${t.ext?'checked':''} onchange="S.tasks[${i}].ext=this.checked;refresh()"></td>
-   <td>${act(i)}</td></tr>`;
+  const c=[
+   `<td class="derived">${i+1}</td>`,
+   `<td><input value="${esc(t.wbs)}" oninput="S.tasks[${i}].wbs=this.value;refresh()"></td>`,
+   `<td><input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;this.title=this.value;refresh()"></td>`,
+   `<td><select onchange="S.tasks[${i}].pf=this.value;refresh()">
+       ${P.map(([v,l])=>`<option value="${v}" ${t.pf===v?'selected':''}>${l}</option>`).join('')}</select></td>`,
+   `<td><select title="${esc(dep?(dep.wbs?dep.wbs+' ':'')+dep.name:'เริ่มพร้อมโครงการ')}" onchange="S.tasks[${i}].dep=this.value;refresh()">${opts}</select></td>`,
+   `<td><select onchange="S.tasks[${i}].dt=this.value;refresh()">
+       <option value="FS" ${t.dt!=='SS'?'selected':''}>FS</option><option value="SS" ${t.dt==='SS'?'selected':''}>SS</option></select></td>`,
+   `<td><input type="number" value="${t.lag||0}" oninput="S.tasks[${i}].lag=+this.value;refresh()"></td>`,
+   `<td><input type="number" min="0" value="${t.dur}" oninput="S.tasks[${i}].dur=+this.value;refresh()"></td>`,
+   `<td class="derived" id="s${i}"></td>`,
+   `<td class="derived" id="f${i}"></td>`,
+   `<td><input type="number" min="0" step="0.5" value="${t.w}" oninput="S.tasks[${i}].w=+this.value;refresh()"></td>`,
+   `<td><input type="number" min="0" max="100" value="${t.act||0}" oninput="S.tasks[${i}].act=+this.value;refresh()"></td>`,
+   `<td><input value="${esc(t.own)}" title="${esc(t.own)}" oninput="S.tasks[${i}].own=this.value;this.title=this.value;refresh()"></td>`,
+   `<td style="text-align:center"><input type="checkbox" ${t.ms?'checked':''} onchange="S.tasks[${i}].ms=this.checked;refresh()"></td>`,
+   `<td style="text-align:center"><input type="checkbox" ${t.ext?'checked':''} onchange="S.tasks[${i}].ext=this.checked;refresh()"></td>`,
+   `<td>${act(i)}</td>`];
+  return '<tr>'+c.filter((x,ix)=>!H.has(ix)).join('')+'</tr>';
 }
 function act(i){
   return `<span class="rowact noprint">
@@ -531,7 +579,7 @@ function refresh(){
     if(a)a.textContent=t.s?fmt(t.s):'—'; if(b)b.textContent=t.f?fmt(t.f):'—';
   });
   drawKpi(C); drawGantt(C); drawCurve(C);
-  save();
+  save(); queueWrite();
   revbadge.textContent='Rev. '+(S.info.rev||'R0')+(S.info.revdate?' · ออกเมื่อ '+fmt(D(S.info.revdate)):'');
   const lb=document.querySelector(".tab.on .lbl"), cn=document.querySelector(".tab.on .cnt");
   if(lb)lb.textContent=pname(S); if(cn)cn.textContent=S.tasks.filter(t=>!t.phase).length;
@@ -615,7 +663,7 @@ function useTpl(k){
   src.forEach(r=>{
     const [code,name,dur,pf,hold,ext]=r;
     if(code==='PH'){S.tasks.push(newT({phase:true,name,dur:0}));return}
-    const t=newT({wbs:code==='MS'||code==='GAP'?'':code,name,dur:dur||0,pf:pf||'',
+    const t=newT({wbs:code==='MS'?'':code,name,dur:dur||0,pf:pf||'',
       dep:last?last.id:'',ms:code==='MS'||!dur,ext:!!ext,own:ext?'Main Contractor':'Coral Life'});
     if(hold)t.name=t.name.startsWith('★')?t.name:'★ '+t.name;
     S.tasks.push(t);last=t;
@@ -728,17 +776,115 @@ function toXlsx(){
   XLSX.writeFile(wb,fname()+'.xlsx');
 }
 
+/* ══════════════════ เก็บถาวรในไฟล์จริง (File System Access API) ══════════════════ */
+const FSA=!!window.showSaveFilePicker;
+const TEAM_FILE='Master_Schedule_Team.json';
+const TEAM_URL='https://wyuwachotiphan-crypto.github.io/CM-Dashborad/'+TEAM_FILE;
+let fh=null, fhName='', teamFh=null, lastWrite=0, wTimer=null;
+const JTYPE=[{description:'ข้อมูลแผนงาน (JSON)',accept:{'application/json':['.json']}}];
+
+/* IndexedDB จิ๋ว — ใช้จำ handle ของไฟล์ข้ามการเปิดเบราว์เซอร์ */
+function idb(mode,fn){return new Promise((ok,no)=>{const r=indexedDB.open('msb',1);
+  r.onupgradeneeded=()=>r.result.createObjectStore('h');
+  r.onsuccess=()=>{const tx=r.result.transaction('h',mode),q=fn(tx.objectStore('h'));
+    tx.oncomplete=()=>ok(q&&q.result); tx.onerror=()=>no(tx.error)};
+  r.onerror=()=>no(r.error)})}
+const idbGet=k=>idb('readonly',s=>s.get(k)).catch(()=>null);
+const idbSet=(k,v)=>idb('readwrite',s=>s.put(v,k)).catch(()=>null);
+
+function fileStatus(err){
+  const el=document.getElementById('fstat'); if(!el)return;
+  if(err){el.textContent='⚠ '+err; el.className='fchip bad'; return}
+  if(fh){const t=lastWrite?new Date(lastWrite).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
+    el.textContent='● เก็บถาวรใน '+fhName+(t?' · บันทึก '+t:''); el.className='fchip on';
+    flink.textContent='เปลี่ยนไฟล์';
+  }else{el.textContent=FSA?'○ ยังไม่เชื่อมไฟล์ — เก็บในเบราว์เซอร์เท่านั้น'
+    :'เบราว์เซอร์นี้เชื่อมไฟล์ไม่ได้ — ใช้ปุ่มสำรองทั้งหมดแทน'; el.className='fchip';}
+}
+async function linkFile(){
+  if(!FSA){alert('เบราว์เซอร์นี้ไม่รองรับ — เปิดด้วย Chrome หรือ Edge ผ่านลิงก์ https จะใช้ได้');return}
+  try{
+    fh=await showSaveFilePicker({suggestedName:'Master_Schedule_Data.json',types:JTYPE});
+    fhName=fh.name; await idbSet('file',fh); await writeFile(true);
+  }catch(e){if(e.name!=='AbortError')fileStatus('เชื่อมไฟล์ไม่สำเร็จ — '+e.message)}
+}
+async function writeFile(force){
+  if(!fh)return;
+  try{
+    if(!force&&lastWrite){                       // มีใครแก้ไฟล์นี้จากที่อื่นหรือเปล่า
+      const f=await fh.getFile();
+      if(f.lastModified>lastWrite+2000){
+        if(!confirm('ไฟล์ข้อมูลถูกแก้จากที่อื่น (อาจเป็นอีกเครื่องผ่าน OneDrive)\n\nตกลง = ทับด้วยข้อมูลในหน้านี้\nยกเลิก = หยุดบันทึกอัตโนมัติไว้ก่อน')){
+          fh=null;fhName='';fileStatus('หยุดบันทึกอัตโนมัติแล้ว — กดเชื่อมไฟล์ใหม่เมื่อพร้อม');return}
+      }
+    }
+    const w=await fh.createWritable(); await w.write(JSON.stringify(WS,null,1)); await w.close();
+    lastWrite=(await fh.getFile()).lastModified; fileStatus();
+  }catch(e){fileStatus('เขียนไฟล์ไม่สำเร็จ — '+e.message)}
+}
+function queueWrite(){if(fh){clearTimeout(wTimer);wTimer=setTimeout(()=>writeFile(),800)}}
+async function loadFromFile(){
+  try{
+    const f=await fh.getFile(), txt=await f.text();
+    if(txt.trim()){const o=JSON.parse(txt);
+      if(o&&Array.isArray(o.projects)&&o.projects.length){WS=o;normalize();useProj(WS.cur||0)}}
+    lastWrite=f.lastModified; fgrant.style.display='none'; fileStatus();
+  }catch(e){fileStatus('อ่านไฟล์ไม่ได้ — '+e.message)}
+}
+async function grantFile(){
+  if(!fh)return;
+  try{ if(await fh.requestPermission({mode:'readwrite'})==='granted')await loadFromFile();
+  }catch(e){fileStatus(e.message)}
+}
+async function restoreFile(){
+  if(!FSA){fileStatus();return}
+  const h=await idbGet('file'); teamFh=await idbGet('team');
+  if(!h){fileStatus();return}
+  fh=h; fhName=h.name;
+  try{
+    if(await h.queryPermission({mode:'readwrite'})==='granted')await loadFromFile();
+    else{fgrant.style.display=''; fileStatus();}      // ต้องกดอนุญาต 1 ครั้งต่อการเปิดเบราว์เซอร์
+  }catch(e){fileStatus(e.message)}
+}
+
+/* ── สแนปชอตให้ทีมดูผ่าน GitHub ── */
+async function saveTeam(){
+  const data=JSON.stringify(Object.assign({},WS,{snapshotAt:new Date().toISOString()}),null,1);
+  if(!FSA){dl(new Blob([data],{type:'application/json'}),TEAM_FILE);
+    alert('ดาวน์โหลด '+TEAM_FILE+' แล้ว — ย้ายไปไว้ในโฟลเดอร์ Dashboard แล้วดับเบิลคลิก "Update Dashboard to GitHub.bat"');return}
+  try{
+    if(!teamFh){teamFh=await showSaveFilePicker({suggestedName:TEAM_FILE,types:JTYPE});await idbSet('team',teamFh)}
+    const w=await teamFh.createWritable(); await w.write(data); await w.close();
+    alert('บันทึกสแนปชอตแล้ว ('+WS.projects.length+' โครงการ)\n\nขั้นต่อไป: ดับเบิลคลิก "Update Dashboard to GitHub.bat" เพื่อส่งขึ้นเว็บให้ทีมเห็น');
+  }catch(e){if(e.name!=='AbortError')alert('บันทึกไม่สำเร็จ: '+e.message)}
+}
+async function loadTeam(){
+  if(!confirm('โหลดแผนล่าสุดของทีมจาก GitHub มาแทนที่ทุกโครงการในหน้านี้?'))return;
+  try{
+    const r=await fetch(TEAM_URL+'?t='+Date.now());
+    if(!r.ok)throw new Error('ยังไม่มีไฟล์ของทีมบนเว็บ (ต้องกดสแนปชอต + push ก่อน)');
+    const o=await r.json(); if(!o||!Array.isArray(o.projects))throw new Error('ไฟล์ไม่ถูกต้อง');
+    WS=o; normalize(); useProj(0);
+    alert('โหลดแผนของทีมแล้ว '+o.projects.length+' โครงการ'+(o.snapshotAt?'\nสแนปชอตเมื่อ '+new Date(o.snapshotAt).toLocaleString('th-TH'):''));
+  }catch(e){alert('โหลดไม่สำเร็จ: '+e.message)}
+}
+
 /* ══════════════════ INIT ══════════════════ */
+function normalize(){
+  if(!WS.projects||!WS.projects.length)WS.projects=[blankProj()];
+  WS.projects.forEach(p=>{p.tasks=p.tasks||[];p.tasks.forEach((t,i)=>{if(!t.id)t.id='t'+(i+1)});
+    p.info=Object.assign({rev:'R0',revdate:(p.info&&p.info.start)||today0(),by:''},p.info||{});});
+}
 (function(){
   const rd=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
   const o=rd(KEY);
   if(o&&Array.isArray(o.projects)&&o.projects.length)WS=o;
   else{const old=rd(OLDKEY); if(old&&old.tasks)WS.projects.push(old);}   // ย้ายงานเดิมมาเป็นโครงการแรก
-  if(!WS.projects.length)WS.projects.push(blankProj());
-  WS.projects.forEach(p=>{p.tasks=p.tasks||[];p.tasks.forEach((t,i)=>{if(!t.id)t.id='t'+(i+1)});
-    p.info=Object.assign({rev:'R0',revdate:p.info.start||today0(),by:''},p.info);});
+  normalize();
   useProj(WS.cur||0);
   if(!S.tasks.length)useTpl('A');
+  watchWidth();
+  restoreFile();          // ไฟล์ถาวรคือแหล่งข้อมูลจริง — ถ้าเชื่อมไว้จะโหลดทับของในเบราว์เซอร์
 })();
 </script>
 </body>
