@@ -93,13 +93,26 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .tick{border-left:1px solid var(--line);height:100%;display:flex;align-items:center;padding-left:3px;overflow:hidden;flex:0 0 auto}
 .lane{position:relative;height:26px;border-bottom:1px solid #F0EFEC}
 .lane .wknd{position:absolute;top:0;bottom:0;background:#F4F3F0}
-.bar{position:absolute;top:5px;height:16px;border-radius:3px;background:var(--grid);
-  color:#fff;font-size:10px;line-height:16px;padding:0 4px;overflow:hidden;white-space:nowrap}
-.bar.p1{background:var(--ink-soft)} .bar.p2{background:#5A7D8C}
-.bar.late{background:var(--accent)}
-.bar.ext{background:repeating-linear-gradient(45deg,#D8D6D1,#D8D6D1 4px,#EDEBE7 4px,#EDEBE7 8px);color:var(--steel)}
-.bar .fill{position:absolute;left:0;top:0;bottom:0;background:rgba(0,0,0,.30);border-radius:3px 0 0 3px}
-.ms{position:absolute;top:6px;width:14px;height:14px;background:var(--accent);transform:rotate(45deg)}
+/* แท่งงาน — สีทึบ = ทำแล้วจริง (%จริง) · สีจาง = ตามแผน ยังไม่เกิดขึ้น */
+.bar{--solid:var(--grid); --plan:rgba(102,155,188,.20);
+  position:absolute;top:5px;height:16px;border-radius:3px;
+  background:var(--plan);border:1px solid var(--solid);
+  color:var(--text);font-size:10px;padding:0 5px;overflow:hidden;white-space:nowrap;
+  display:flex;align-items:center;justify-content:flex-end}
+.bar>span{position:relative;z-index:1;background:rgba(255,255,255,.78);border-radius:2px;padding:0 3px}
+.bar.done>span,.bar.ext>span{background:transparent;padding:0}
+.bar.done>span,.bar.ext>span{background:transparent;padding:0}
+.bar.p1{--solid:var(--ink-soft); --plan:rgba(15,76,107,.18)}
+.bar.p2{--solid:#5A7D8C; --plan:rgba(90,125,140,.20)}
+.bar.late{--solid:var(--accent); --plan:rgba(193,18,31,.16)}
+.bar.phase{--solid:var(--ink); --plan:rgba(0,48,73,.14); font-weight:600; justify-content:flex-start}
+.bar.done{color:#fff}
+.bar.ext{--plan:transparent;border-color:#C9C6BF;color:var(--steel);
+  background:repeating-linear-gradient(45deg,#DEDCD7,#DEDCD7 4px,#F5F4F1 4px,#F5F4F1 8px)}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--solid);border-radius:2px 0 0 2px}
+.ms{position:absolute;top:6px;width:13px;height:13px;background:transparent;
+  border:2px solid var(--accent);transform:rotate(45deg)}
+.ms.done{background:var(--accent)}
 .today{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);z-index:2}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--steel);padding:8px 16px;border-top:1px solid var(--line)}
 .legend i{display:inline-block;width:14px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}
@@ -188,12 +201,14 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
     </div>
     <div class="gantt" id="gantt"></div>
     <div class="legend">
+      <span style="font-weight:600;color:var(--text)"><i style="background:var(--ink-soft)"></i>สีทึบ = ทำแล้วจริง</span>
+      <span style="font-weight:600;color:var(--text)"><i style="background:rgba(15,76,107,.18);border:1px solid var(--ink-soft)"></i>สีจาง = ตามแผน ยังไม่เกิดขึ้น</span>
       <span><i style="background:var(--ink-soft)"></i>First Fix</span>
       <span><i style="background:#5A7D8C"></i>Second Fix</span>
-      <span><i style="background:var(--grid)"></i>งานทั่วไป</span>
-      <span><i style="background:repeating-linear-gradient(45deg,#D8D6D1,#D8D6D1 4px,#EDEBE7 4px,#EDEBE7 8px)"></i>งานที่รอผู้อื่น (ไม่นับน้ำหนัก)</span>
-      <span><i style="background:var(--accent);transform:rotate(45deg);width:9px"></i>Milestone / Hold Point</span>
-      <span><i style="background:rgba(0,0,0,.3)"></i>ส่วนที่ทำเสร็จแล้ว</span>
+      <span><i style="background:var(--accent)"></i>เลยกำหนดตามสัญญา</span>
+      <span><i style="background:repeating-linear-gradient(45deg,#DEDCD7,#DEDCD7 4px,#F5F4F1 4px,#F5F4F1 8px);border:1px solid #C9C6BF"></i>รอผู้อื่น (ไม่นับน้ำหนัก)</span>
+      <span><i style="background:var(--accent);transform:rotate(45deg);width:9px"></i>Milestone ผ่านแล้ว</span>
+      <span><i style="border:2px solid var(--accent);transform:rotate(45deg);width:9px;height:9px"></i>Milestone ยังไม่ถึง</span>
       <span><i style="background:var(--accent);width:3px;height:12px"></i>วันนี้</span>
     </div>
   </section>
@@ -438,6 +453,16 @@ function act(i){
 }
 
 /* ══════════════════ RENDER: GANTT ══════════════════ */
+/* ความคืบหน้าของหัวข้อ/เฟส = ถัวเฉลี่ยตามน้ำหนักของงานลูกที่ตามมาจนถึงหัวข้อถัดไป */
+function phaseProgress(i){
+  let w=0,a=0;
+  for(let j=i+1;j<S.tasks.length;j++){
+    const c=S.tasks[j]; if(c.phase)break; if(c.ext)continue;
+    const cw=Math.max(+c.w||0,0.001);
+    w+=cw; a+=cw*Math.min(100,Math.max(0,+c.act||0));
+  }
+  return w?Math.round(a/w):0;
+}
 function drawGantt(C){
   const scale=document.getElementById('scale').value;
   const px={day:24,week:12,month:4.2}[scale];
@@ -481,21 +506,25 @@ function drawGantt(C){
   const R=[`<div style="width:${W}px"><div class="ghead">${t1}</div><div class="ghead">${t2}</div></div>`];
   const now=new Date(); now.setHours(0,0,0,0);
 
-  S.tasks.forEach(t=>{
+  S.tasks.forEach((t,idx)=>{
     L.push(`<div class="grow"><div class="gname" title="${esc((t.wbs?t.wbs+' ':'')+t.name)}" style="${t.phase?'font-weight:700':''}">${t.phase?'':'&nbsp;&nbsp;'}${esc(t.wbs?t.wbs+' ':'')}${esc(t.name)||'<i style="color:#bbb">(ไม่มีชื่อ)</i>'}</div>
       <div class="gdate">${t.s?fmt(t.s)+' – '+fmt(t.f):''}</div></div>`);
     let bar='';
     if(t.s){
       const x=days(g0,t.s)*px, w=Math.max(px*0.8,(days(t.s,t.f)+1)*px);
       if(t.ms||(+t.dur===0&&!t.phase)){
-        bar=`<div class="ms" style="left:${x}px" title="${esc(t.name)}"></div>`;
+        const done=(+t.act||0)>=100;   // ทึบ = ผ่านจุดนี้จริงแล้ว · โปร่ง = ยังไม่ถึง
+        bar=`<div class="ms ${done?'done':''}" style="left:${x}px" title="${esc(t.name)} · ${done?'ผ่านแล้ว':'ยังไม่ถึง'}"></div>`;
       }else if(t.phase){
-        bar=`<div class="bar" style="left:${x}px;width:${w}px;background:var(--ink);opacity:.85">${esc(t.name)}</div>`;
+        const pc=phaseProgress(idx);
+        bar=`<div class="bar phase ${pc>=92?'done':''}" style="left:${x}px;width:${w}px" title="${esc(t.name)} · ทำแล้ว ${pc}%">
+          ${pc>0?`<div class="fill" style="width:${pc}%"></div>`:''}<span>${esc(t.name)}${pc?' · '+pc+'%':''}</span></div>`;
       }else{
         const late=t.f>C.cend, cls=t.ext?'ext':late?'late':t.pf==='1'?'p1':t.pf==='2'?'p2':'';
-        const pc=Math.min(100,Math.max(0,+t.act||0));
-        bar=`<div class="bar ${cls}" style="left:${x}px;width:${w}px" title="${esc(t.name)} · ${t.dur} วัน · ${pc}%">
-          ${pc>0?`<div class="fill" style="width:${pc}%"></div>`:''}<span style="position:relative">${t.dur} วัน${pc?' · '+pc+'%':''}</span></div>`;
+        const pc=t.ext?0:Math.min(100,Math.max(0,+t.act||0));
+        const done=pc>0&&(pc>=80||w*pc/100>w-52);   // สีทึบกินพื้นที่ข้อความแล้ว → ใช้ตัวหนังสือขาว
+        bar=`<div class="bar ${cls} ${done?'done':''}" style="left:${x}px;width:${w}px" title="${esc(t.name)} · ${t.dur} วัน · ทำแล้ว ${pc}%">
+          ${pc>0?`<div class="fill" style="width:${pc}%"></div>`:''}<span>${t.dur} วัน${pc?' · '+pc+'%':''}</span></div>`;
       }
     }
     let wknd='';
