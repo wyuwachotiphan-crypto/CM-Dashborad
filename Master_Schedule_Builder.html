@@ -217,17 +217,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
       </div>
     </div>
     <div class="gantt" id="gantt"></div>
-    <div class="legend">
-      <span style="font-weight:600;color:var(--text)"><i style="background:var(--ink-soft)"></i>สีทึบ = ทำแล้วจริง</span>
-      <span style="font-weight:600;color:var(--text)"><i style="background:rgba(15,76,107,.18);border:1px solid var(--ink-soft)"></i>สีจาง = ตามแผน ยังไม่เกิดขึ้น</span>
-      <span><i style="background:var(--ink-soft)"></i>First Fix</span>
-      <span><i style="background:#5A7D8C"></i>Second Fix</span>
-      <span><i style="background:var(--accent)"></i>เลยกำหนดตามสัญญา</span>
-      <span><i style="background:repeating-linear-gradient(45deg,#DEDCD7,#DEDCD7 4px,#F5F4F1 4px,#F5F4F1 8px);border:1px solid #C9C6BF"></i>รอผู้อื่น (ไม่นับน้ำหนัก)</span>
-      <span><i style="background:var(--accent);transform:rotate(45deg);width:9px"></i>Milestone ผ่านแล้ว</span>
-      <span><i style="border:2px solid var(--accent);transform:rotate(45deg);width:9px;height:9px"></i>Milestone ยังไม่ถึง</span>
-      <span><i style="background:var(--accent);width:3px;height:12px"></i>วันนี้</span>
-    </div>
+    <div class="legend" id="legend"></div>
   </section>
 
   <section>
@@ -398,6 +388,7 @@ function hiddenCols(){
   return h;
 }
 function buildTable(){
+  GRP=groupMap();
   const H=hiddenCols(); lastHide=[...H].join(',');
   const keep=(v,i)=>!H.has(i);
   const cols='<colgroup>'+CW.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
@@ -427,9 +418,10 @@ function watchWidth(){
 }
 function rowPhase(t,i,H){
   H=H||new Set();
+  const gc=(GRP[i]||{}).c||PAL[0];
   const span=(a,b)=>{let n=0;for(let k=a;k<=b;k++)if(!H.has(k))n++;return n};
   const s1=span(1,7), s2=span(10,14);
-  return `<tr class="ph"><td class="derived">${i+1}</td>`
+  return `<tr class="ph" style="background:${tint(gc,.13)};box-shadow:inset 4px 0 0 ${gc}"><td class="derived">${i+1}</td>`
    +(s1?`<td colspan="${s1}"><input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;refresh()" style="font-weight:700"></td>`:'')
    +`<td class="derived" id="s${i}"></td><td class="derived" id="f${i}"></td>`
    +(s2?`<td colspan="${s2}"></td>`:'')
@@ -464,7 +456,8 @@ function rowTask(t,i,H){
    `<td style="text-align:center"><input type="checkbox" ${t.ms?'checked':''} onchange="S.tasks[${i}].ms=this.checked;refresh()"></td>`,
    `<td style="text-align:center"><input type="checkbox" ${t.ext?'checked':''} onchange="S.tasks[${i}].ext=this.checked;refresh()"></td>`,
    `<td>${act(i)}</td>`];
-  return '<tr>'+c.filter((x,ix)=>!H.has(ix)).join('')+'</tr>';
+  const gc=(GRP[i]||{}).c||PAL[0];
+  return `<tr style="box-shadow:inset 3px 0 0 ${tint(gc,.55)}">`+c.filter((x,ix)=>!H.has(ix)).join('')+'</tr>';
 }
 function act(i){
   return `<span class="rowact noprint">
@@ -600,6 +593,26 @@ function defChips(H){
 function refreshDef(){DEFBY=defByTask();refresh()}
 
 /* ══════════════════ RENDER: GANTT ══════════════════ */
+/* ══════ สีประจำหมวดงาน — แต่ละหัวข้อได้สีของตัวเอง ทั้งใน Gantt และตารางงาน ══════ */
+const PAL=['#0F4C6B','#2F7D62','#7A5C9E','#B07A1E','#3D6EA8','#4E8C4A','#A15C7B','#5A7D8C'];
+const WAITC='#98A5AD';
+function tint(hex,a){const n=parseInt(hex.slice(1),16);
+  return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
+let GRP=[];
+function groupMap(){
+  const g=[]; let ci=-1, cur={c:PAL[0],name:'ไม่ระบุหมวด',wait:false};
+  S.tasks.forEach((t,i)=>{
+    if(t.phase){
+      let all=true,any=false;                       // หมวดที่มีแต่งานรอผู้อื่น ใช้สีเทาเสมอ
+      for(let j=i+1;j<S.tasks.length;j++){const c=S.tasks[j];if(c.phase)break;any=true;if(!c.ext)all=false}
+      const wait=any&&all;
+      if(!wait)ci++;
+      cur={c:wait?WAITC:PAL[ci%PAL.length],name:t.name||('หมวดที่ '+(ci+1)),wait};
+    }
+    g[i]=cur;
+  });
+  return g;
+}
 /* ความคืบหน้าของหัวข้อ/เฟส = ถัวเฉลี่ยตามน้ำหนักของงานลูกที่ตามมาจนถึงหัวข้อถัดไป */
 function phaseProgress(i){
   let w=0,a=0;
@@ -665,14 +678,16 @@ function drawGantt(C){
         const done=(+t.act||0)>=100;   // ทึบ = ผ่านจุดนี้จริงแล้ว · โปร่ง = ยังไม่ถึง
         bar=`<div class="ms ${done?'done':''}" style="left:${x}px" title="${esc(t.name)} · ${done?'ผ่านแล้ว':'ยังไม่ถึง'}"></div>`;
       }else if(t.phase){
-        const pc=phaseProgress(idx);
-        bar=`<div class="bar phase ${pc>=92?'done':''}" style="left:${x}px;width:${w}px" title="${esc(t.name)} · ทำแล้ว ${pc}%">
+        const pc=phaseProgress(idx), gc=(GRP[idx]||{}).c||PAL[0];
+        bar=`<div class="bar phase ${pc>=92?'done':''}" style="left:${x}px;width:${w}px;--solid:${gc};--plan:${tint(gc,.14)}" title="${esc(t.name)} · ทำแล้ว ${pc}%">
           ${pc>0?`<div class="fill" style="width:${pc}%"></div>`:''}<span>${esc(t.name)}${pc?' · '+pc+'%':''}</span></div>`;
       }else{
-        const late=t.f>C.cend, cls=t.ext?'ext':late?'late':t.pf==='1'?'p1':t.pf==='2'?'p2':'';
+        const late=t.f>C.cend, cls=t.ext?'ext':late?'late':'';
+        const gc=(GRP[idx]||{}).c||PAL[0];
+        const col=(t.ext||late)?'':`--solid:${gc};--plan:${tint(gc,.18)};`;
         const pc=t.ext?0:Math.min(100,Math.max(0,+t.act||0));
         const done=pc>0&&(pc>=80||w*pc/100>w-52);   // สีทึบกินพื้นที่ข้อความแล้ว → ใช้ตัวหนังสือขาว
-        bar=`<div class="bar ${cls} ${done?'done':''}" style="left:${x}px;width:${w}px" title="${esc(t.name)} · ${t.dur} วัน · ทำแล้ว ${pc}%">
+        bar=`<div class="bar ${cls} ${done?'done':''}" style="left:${x}px;width:${w}px;${col}" title="${esc(t.name)} · ${t.dur} วัน · ทำแล้ว ${pc}%${late?' · เลยกำหนดตามสัญญา':''}">
           ${pc>0?`<div class="fill" style="width:${pc}%"></div>`:''}<span>${t.dur} วัน${pc?' · '+pc+'%':''}</span></div>`;
       }
     }
@@ -680,6 +695,20 @@ function drawGantt(C){
     if(scale==='day')for(let i=0;i<total;i++){const d2=addD(g0,i);if(!isWork(d2))wknd+=`<div class="wknd" style="left:${i*px}px;width:${px}px"></div>`}
     R.push(`<div class="lane" style="width:${W}px">${wknd}${bar}</div>`);
   });
+  /* คำอธิบายสัญลักษณ์ — สร้างจากหมวดงานจริงในแผน */
+  const seen=[], out=[];
+  GRP.forEach(g=>{if(g&&!seen.includes(g.name)){seen.push(g.name);out.push(g)}});
+  legend.innerHTML=
+    `<span style="font-weight:600;color:var(--text)"><i style="background:var(--ink-soft)"></i>สีทึบ = ทำแล้วจริง</span>
+     <span style="font-weight:600;color:var(--text)"><i style="background:rgba(15,76,107,.18);border:1px solid var(--ink-soft)"></i>สีจาง = ตามแผน ยังไม่เกิดขึ้น</span>
+     <span style="width:100%;height:0"></span>`
+   +out.map(g=>`<span><i style="background:${g.c}"></i>${esc(g.name)}</span>`).join('')
+   +`<span><i style="background:var(--accent)"></i>เลยกำหนดตามสัญญา</span>
+     <span><i style="background:repeating-linear-gradient(45deg,#DEDCD7,#DEDCD7 4px,#F5F4F1 4px,#F5F4F1 8px);border:1px solid #C9C6BF"></i>รอผู้อื่น (ไม่นับน้ำหนัก)</span>
+     <span><i style="background:var(--accent);transform:rotate(45deg);width:9px"></i>Milestone ผ่านแล้ว</span>
+     <span><i style="border:2px solid var(--accent);transform:rotate(45deg);width:9px;height:9px"></i>Milestone ยังไม่ถึง</span>
+     <span><i style="background:var(--accent);width:3px;height:12px"></i>วันนี้</span>`;
+
   const tx=days(g0,now)*px;
   const todayline=(now>=g0&&now<=g1)?`<div class="today" style="left:${tx}px;height:${S.tasks.length*26+44}px;top:0;position:absolute"></div>`:'';
   gantt.innerHTML=`<div class="gl">${L.join('')}</div>
@@ -759,7 +788,7 @@ function drawKpi(C){
 
 /* ══════════════════ REFRESH ══════════════════ */
 function refresh(){
-  DEFBY=defByTask();
+  DEFBY=defByTask(); GRP=groupMap();
   const C=compute();
   S.tasks.forEach((t,i)=>{
     const a=document.getElementById('s'+i), b=document.getElementById('f'+i);
