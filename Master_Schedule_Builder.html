@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -179,14 +179,14 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
       <button class="ghost" onclick="openTpl()">เทมเพลตงาน</button>
       <button class="ghost" id="flink" onclick="linkFile()">เชื่อมไฟล์ถาวร</button>
       <button class="pri" id="fgrant" style="display:none" onclick="grantFile()">อนุญาตเขียนไฟล์</button>
-      <button class="ghost" onclick="teamOpen()">โหมดทีม (M365)</button>
+      <button class="ghost" onclick="teamOpen()">เข้าสู่ระบบ / ทีม</button>
       <button class="ghost" onclick="saveFile()">บันทึกโครงการนี้</button>
       <button class="ghost" onclick="backupAll()">สำรองทุกโครงการ</button>
       <button class="ghost" onclick="fileIn.click()">เปิดไฟล์</button>
       <button class="ghost pri" onclick="window.print()">พิมพ์ / PDF</button>
     </div>
   </div>
-  <div class="wrap" style="padding-bottom:10px;display:flex;gap:8px;flex-wrap:wrap"><span class="fchip noprint" id="fstat"></span><span class="fchip noprint" id="tstat" style="display:none"></span></div>
+  <div class="wrap" style="padding-bottom:10px;display:flex;gap:8px;flex-wrap:wrap"><span class="fchip noprint" id="ustat" style="display:none"></span><span class="fchip noprint" id="fstat"></span><span class="fchip noprint" id="tstat" style="display:none"></span></div>
   <div class="wrap"><div class="tabbar noprint" id="tabs"></div></div>
 </header>
 <input type="file" id="fileIn" accept=".json" hidden onchange="loadFile(this)">
@@ -198,7 +198,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
   <section>
     <div class="sec-h"><h2>ข้อมูลโครงการ</h2>
       <span class="hint"><b id="revbadge" style="color:var(--accent)"></b> · แก้ไขแล้วแผนคำนวณใหม่อัตโนมัติ</span>
-      <button class="noprint" onclick="bumpRev()" title="เพิ่มเลข Rev. ขึ้น 1 และตั้งวันที่เป็นวันนี้">↑ ออก Rev. ใหม่</button></div>
+      <button class="noprint pri" onclick="openSave()" title="ต้องระบุผู้จัดทำและวันที่ ระบบจะเลื่อน Rev. ให้เอง">บันทึกแผนงาน (ออก Rev.)</button></div>
     <div class="pad grid" id="info"></div>
   </section>
 
@@ -242,6 +242,12 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
     <div class="scroll" id="defbox"><table class="tbl def" id="deftbl"></table></div>
   </section>
 
+  <section>
+    <div class="sec-h"><h2>ประวัติการออก Rev.</h2>
+      <span class="hint">ทุกครั้งที่กด “บันทึกแผนงาน” จะบันทึกผู้จัดทำและวันที่ไว้ที่นี่</span></div>
+    <div class="scroll" id="histbox"></div>
+  </section>
+
   <section id="ganttsec">
     <div class="sec-h">
       <h2>แผนภูมิ Gantt</h2>
@@ -263,21 +269,41 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
   <div class="foot">Coral Life · IAQ Construction Management — ไฟล์เดียว ทำงานออฟไลน์ได้ ไม่ต้องติดตั้งอะไร</div>
 </div>
 
+<dialog id="dlgSave">
+  <div class="sec-h"><h2>บันทึกแผนงาน — ออก Rev. ใหม่</h2></div>
+  <div class="pad">
+    <p style="font-size:12.5px;color:var(--steel);margin-bottom:12px">
+      ทุกครั้งที่บันทึก ต้องระบุผู้จัดทำและวันที่ ระบบจะเลื่อนเลข Rev. ขึ้นให้เองและเก็บเป็นประวัติไว้</p>
+    <div style="display:grid;grid-template-columns:1fr 150px;gap:12px">
+      <div><label class="req">ผู้จัดทำ / ผู้แก้ไข</label>
+        <input id="svBy" placeholder="ชื่อ-นามสกุล หรืออีเมล"></div>
+      <div><label class="req">วันที่</label><input id="svDate" type="date"></div>
+    </div>
+    <div style="margin-top:12px"><label>รายละเอียดการแก้ไข (ไม่บังคับ)</label>
+      <input id="svNote" placeholder="เช่น ปรับแผนหลังเลื่อนงานปิดฝ้า"></div>
+    <div id="svMsg" class="msg" style="margin-top:12px;background:#F4F3F0;color:var(--steel)"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button onclick="dlgSave.close()">ยกเลิก</button>
+      <button class="pri" onclick="doIssueRev()">บันทึกและออก Rev. ใหม่</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="dlgTeam">
-  <div class="sec-h"><h2>โหมดทีม — เก็บแผนไว้ที่ OneDrive / SharePoint ของบริษัท</h2></div>
+  <div class="sec-h"><h2>เข้าสู่ระบบ</h2></div>
   <div class="pad">
     <p style="font-size:12.5px;color:var(--steel);margin-bottom:14px">
-      ใส่อีเมลบริษัทแล้วกดเข้าสู่ระบบ — ทุกคนจะเห็นแผนงานชุดเดียวกันจากไฟล์กลางของบริษัท
-      ระบบตรวจเวอร์ชันก่อนบันทึกทุกครั้ง และกันไม่ให้สองคนแก้โครงการเดียวกันพร้อมกัน</p>
+      ใส่อีเมลบริษัทกับรหัสเข้าใช้งานที่ได้จากผู้ดูแล — ทุกคนจะเห็นแผนงานชุดเดียวกัน</p>
 
-    <label class="req" for="tmMail">อีเมลบริษัท</label>
+    <label class="req" for="tmMail">อีเมลบริษัท (ต้องเป็น @coralesg.com)</label>
     <input id="tmMail" type="email" autocomplete="email" placeholder="ชื่อคุณ@coralesg.com"
            style="font-size:15px;padding:10px 12px" oninput="teamMailChanged()"
            onkeydown="if(event.key==='Enter')teamConnect()">
 
     <div id="tmCodeWrap" style="margin-top:12px">
-      <label for="tmCode">รหัสทีม <span style="font-weight:400">(ขอจากผู้ดูแลระบบ ใส่ครั้งเดียวจำไว้ให้)</span></label>
-      <input id="tmCode" placeholder="วางรหัสที่ได้จากผู้ดูแลที่นี่" style="font-family:var(--f-mono);font-size:12px"
+      <label class="req" for="tmCode">รหัสเข้าใช้งาน</label>
+      <input id="tmCode" type="password" placeholder="รหัสที่ได้จากผู้ดูแลระบบ"
+             style="font-size:15px;padding:10px 12px"
              onkeydown="if(event.key==='Enter')teamConnect()">
     </div>
 
@@ -303,11 +329,13 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
           <div><label>Directory (tenant) ID</label><input id="tmTenant" placeholder="00000000-0000-0000-0000-000000000000"></div>
         </div>
       </div>
+      <div style="margin-top:10px"><label>รหัสเข้าใช้งานของทีม (ผู้ดูแลกำหนดเอง)</label>
+        <input id="tmSetCode" placeholder="เช่น CORAL-ERV-2026"></div>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <button onclick="teamMakeCode()">สร้างรหัสทีมสำหรับแจกทีมงาน</button>
-        <button onclick="teamCopyCode()">คัดลอกรหัส</button>
+        <button onclick="teamMakeCode()">บันทึกค่าและสร้างรหัสตั้งค่าให้ทีม</button>
+        <button onclick="teamCopyCode()">คัดลอก</button>
       </div>
-      <textarea id="tmCodeOut" rows="3" readonly placeholder="กด “สร้างรหัสทีม” แล้วรหัสจะขึ้นตรงนี้ ส่งให้ทีมงานทางไลน์/อีเมลได้เลย"
+      <textarea id="tmCodeOut" rows="2" readonly placeholder="ข้อความตั้งค่าสำหรับส่งให้ทีม (ใช้เฉพาะกรณียังไม่ได้ฝังค่าลงไฟล์)"
         style="margin-top:8px;font-family:var(--f-mono);font-size:11.5px"></textarea>
       <p style="font-size:11.5px;color:var(--steel);margin-top:10px;line-height:1.6">
         <b>ค่าพวกนี้ได้จากไหน:</b> เข้า <span style="font-family:var(--f-mono)">entra.microsoft.com</span>
@@ -335,7 +363,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 <script>
 /* ══════════════════ STATE ══════════════════ */
 const KEY='ms-builder-v2', OLDKEY='ms-builder-v1';
-function blankProj(){return {info:{name:'',owner:'',site:'',doc:'',rev:'R0',revdate:today0(),by:'',start:today0(),cdays:120,wmode:'mon-sat',holi:''},tasks:[],defects:[]}}
+function blankProj(){return {info:{name:'',owner:'',site:'',doc:'',rev:'R0',revdate:today0(),by:'',start:today0(),cdays:120,wmode:'mon-sat',holi:''},tasks:[],defects:[],history:[]}}
 let WS={cur:0,projects:[]};   // ทุกโครงการอยู่ในไฟล์เดียว สลับด้วยแท็บด้านบน
 let S=blankProj();            // โครงการที่กำลังเปิดอยู่
 let seq=1;
@@ -1113,7 +1141,7 @@ function useProj(i){
   DEFBY=defByTask();defFilter='';
   viewMode=WS.mode||'normal'; showAll=(viewMode==='full');
   const vm=document.getElementById('viewmode'); if(vm)vm.value=viewMode;
-  buildTabs();buildInfo();buildDefects();rebuild();
+  buildTabs();buildInfo();buildDefects();buildHistory();rebuild();
 }
 function buildTabs(){
   tabs.innerHTML=WS.projects.map((p,i)=>{
@@ -1125,11 +1153,41 @@ function buildTabs(){
   +`<button class="tab add" onclick="newProj()">+ เพิ่มโครงการ</button>
     <button class="tab add" onclick="dupProj()">⧉ ทำสำเนา</button>`;
 }
-function bumpRev(){                       // R0 → R1 → R2 … พร้อมตั้งวันที่ออก Rev. เป็นวันนี้
-  const cur=String(S.info.rev||'R0');
-  S.info.rev=/\d/.test(cur)?cur.replace(/(\d+)(\D*)$/,(m,n,tail)=>(+n+1)+tail):cur+'1';
-  S.info.revdate=today0();
-  buildInfo();refresh();
+function nextRev(cur){
+  cur=String(cur||'R0');
+  return /\d/.test(cur)?cur.replace(/(\d+)(\D*)$/,(m,n,tail)=>(+n+1)+tail):cur+'1';
+}
+/* บันทึกแผนงาน = ต้องระบุผู้จัดทำ + วันที่ทุกครั้ง แล้วระบบเลื่อน Rev. ให้เอง และเก็บเป็นประวัติ */
+function openSave(){
+  svBy.value=S.info.by||USER||'';
+  svDate.value=today0();
+  svNote.value='';
+  svMsg.textContent=`Rev. ปัจจุบัน ${S.info.rev||'R0'} → จะออกเป็น ${nextRev(S.info.rev)}`;
+  svMsg.style.color='var(--steel)';
+  dlgSave.showModal(); setTimeout(()=>svBy.focus(),50);
+}
+function doIssueRev(){
+  const by=svBy.value.trim(), d=svDate.value;
+  if(!by){svMsg.textContent='ต้องใส่ชื่อผู้จัดทำก่อนบันทึก';svMsg.style.color='var(--red)';return svBy.focus()}
+  if(!d){svMsg.textContent='ต้องเลือกวันที่ก่อนบันทึก';svMsg.style.color='var(--red)';return svDate.focus()}
+  S.info.rev=nextRev(S.info.rev);
+  S.info.revdate=d; S.info.by=by;
+  S.history=(S.history||[]).concat([{rev:S.info.rev,date:d,by,note:svNote.value.trim()}]);
+  dlgSave.close();
+  buildInfo(); buildHistory(); refresh();
+  if(TM.item)teamPush();                         // ดันขึ้นไฟล์กลางทันที ไม่ต้องรอ
+  teamChip(`บันทึกเป็น ${S.info.rev} โดย ${by}`,'on');
+  setTimeout(()=>{if(TM.item)teamPull().catch(()=>{})},1500);
+}
+function buildHistory(){
+  const box=document.getElementById('histbox'); if(!box)return;
+  const h=(S.history||[]).slice().reverse();
+  box.innerHTML=h.length
+    ?`<table class="tbl" style="min-width:0"><thead><tr><th style="width:70px">Rev.</th><th style="width:110px">วันที่</th>
+       <th style="width:220px">ผู้จัดทำ</th><th>รายละเอียดการแก้ไข</th></tr></thead><tbody>`
+      +h.map(r=>`<tr><td class="derived">${esc(r.rev)}</td><td class="derived">${esc(r.date?fmt(D(r.date)):'')}</td>
+        <td>${esc(r.by)}</td><td>${esc(r.note||'—')}</td></tr>`).join('')+`</tbody></table>`
+    :`<div class="pad" style="color:var(--steel);font-size:12.5px">ยังไม่มีประวัติ — กด “บันทึกแผนงาน” เพื่อออก Rev. แรก</div>`;
 }
 function newProj(){WS.projects.push(blankProj());useProj(WS.projects.length-1);dlgTpl.showModal()}
 function dupProj(){
@@ -1252,13 +1310,21 @@ async function restoreFile(){
    ทุกคนอ่าน-เขียนไฟล์ .json ไฟล์เดียวผ่าน Microsoft Graph
    กันงานทับกันด้วย 2 ชั้น: ETag (ถ้าไฟล์ถูกแก้ไประหว่างนั้นจะไม่เขียนทับ) + ล็อกผู้แก้ไขพร้อม heartbeat */
 const MSAL_CDN='https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
-const LOCK_MS=120000;                       // ล็อกหมดอายุถ้าไม่ต่ออายุใน 2 นาที
 let TM={cfg:null,app:null,acct:null,item:null,etag:'',timer:null,beat:null,busy:false,applying:false};
 
 /* ค่าที่ผู้ดูแลตั้งครั้งเดียว — ฝังไว้ในไฟล์ได้เลย ผู้ใช้ทั่วไปจะไม่เห็นและไม่ต้องกรอก */
 const M365={clientId:'',tenantId:'',link:'',domain:'coralesg.com'};
-const TEAM_ADMIN='warid.y@coralesg.com';        // ผู้ดูแลระบบ — คนเดียวที่เห็นส่วนตั้งค่าและสร้างรหัสทีมได้
+const TEAM_ADMIN='warid.y@coralesg.com';        // ผู้ดูแลระบบ — คนเดียวที่เห็นส่วนตั้งค่า
+const ACCESS_CODE='CORAL-ERV-2026';             // รหัสเข้าใช้งานของทีม (ผู้ดูแลเปลี่ยนได้ในหน้าตั้งค่า)
 const isAdminMail=m=>String(m||'').trim().toLowerCase()===TEAM_ADMIN;
+const teamCode=()=>lsGet('msb-code')||ACCESS_CODE;
+let USER='';                                    // อีเมลของคนที่ใช้อยู่ — ตั้งค่าตอนเริ่มระบบ
+function userChip(){
+  const el=document.getElementById('ustat'); if(!el)return;
+  el.style.display=USER?'':'none';
+  el.textContent=USER?'ผู้ใช้: '+USER+(isAdminMail(USER)?' (ผู้ดูแลระบบ)':''):'';
+  el.className='fchip noprint'+(isAdminMail(USER)?' on':'');
+}
 
 /* รหัสทีม = ค่าตั้งค่าทั้งชุดที่เข้ารหัสเป็นข้อความเดียว ผู้ดูแลแจกให้ทีม ทีมวางแล้วใช้ได้เลย */
 function encodeCode(cfg){
@@ -1275,10 +1341,9 @@ function decodeCode(code){
 }
 function teamMakeCode(){
   const cfg={clientId:tmClient.value.trim(),tenantId:tmTenant.value.trim(),link:tmLink.value.trim()};
-  if(!cfg.clientId||!cfg.tenantId||!cfg.link)return teamMsg('กรอกให้ครบ 3 ช่องก่อนสร้างรหัส',1);
-  saveCfg(cfg);
-  tmCodeOut.value=encodeCode(cfg);
-  teamMsg('สร้างรหัสทีมแล้ว — ส่งข้อความในกรอบให้ทีมงาน แล้วให้เขาวางในช่อง "รหัสทีม"');
+  if(tmSetCode.value.trim())lsSet('msb-code',tmSetCode.value.trim());
+  if(cfg.clientId&&cfg.tenantId&&cfg.link){saveCfg(cfg);tmCodeOut.value=encodeCode(cfg)}
+  teamMsg('บันทึกแล้ว · รหัสเข้าใช้งานของทีมตอนนี้คือ "'+teamCode()+'" — แจ้งทีมงานได้เลย');
 }
 function teamCopyCode(){
   if(!tmCodeOut.value)return teamMsg('ยังไม่มีรหัส — กด "สร้างรหัสทีม" ก่อน',1);
@@ -1286,9 +1351,7 @@ function teamCopyCode(){
   teamMsg('คัดลอกรหัสแล้ว');
 }
 function teamMailChanged(){                      // ส่วนตั้งค่าโผล่เฉพาะตอนที่ผู้ดูแลใส่อีเมลตัวเอง
-  const admin=isAdminMail(tmMail.value);
-  document.getElementById('tmAdmin').style.display=admin?'':'none';
-  document.getElementById('tmCodeWrap').style.display=(admin||teamReady())?'none':'';
+  document.getElementById('tmAdmin').style.display=isAdminMail(tmMail.value)?'':'none';
 }
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -1306,11 +1369,10 @@ function teamOpen(){
   const c=teamCfg();
   tmLink.value=c.link; tmClient.value=c.clientId; tmTenant.value=c.tenantId;
   tmMail.value=lsGet('msb-mail')||(TM.acct?TM.acct.username:'');
-  tmCode.value=''; tmCodeOut.value=teamReady()?encodeCode(c):'';
+  tmCode.value=''; tmSetCode.value=teamCode(); tmCodeOut.value=teamReady()?encodeCode(c):'';
   teamMailChanged();
-  teamMsg(TM.acct?`เข้าสู่ระบบอยู่: ${TM.acct.username}`+(TM.item?` · ไฟล์ ${TM.item.name}`:'')
-    :(teamReady()?'ใส่อีเมลบริษัทแล้วกดเข้าสู่ระบบ'
-      :`ใส่อีเมลบริษัทและรหัสทีมที่ได้จากผู้ดูแล (${TEAM_ADMIN})`));
+  teamMsg(USER?`ใช้งานอยู่ในชื่อ ${USER}`
+    :`ใส่อีเมลบริษัทและรหัสเข้าใช้งานที่ได้จากผู้ดูแล (${TEAM_ADMIN})`);
   dlgTeam.showModal(); setTimeout(()=>tmMail.focus(),50);
 }
 function teamMsg(t,bad){const el=document.getElementById('tmStatus');if(el){el.textContent=t;
@@ -1324,35 +1386,34 @@ function loadScript(src){return new Promise((ok,no)=>{
   document.head.appendChild(s)})}
 
 async function teamConnect(){
-  /* ผู้ดูแลกรอก 3 ช่อง · ทีมงานวางรหัสทีมช่องเดียว */
-  const typed={link:tmLink.value.trim(),clientId:tmClient.value.trim(),tenantId:tmTenant.value.trim()};
-  if(typed.link&&typed.clientId&&typed.tenantId)saveCfg(typed);
-  if(tmCode.value.trim()){
-    const fromCode=decodeCode(tmCode.value);
-    if(!fromCode)return teamMsg('รหัสทีมไม่ถูกต้อง — ขอรหัสใหม่จากผู้ดูแล ('+TEAM_ADMIN+')',1);
-    saveCfg(fromCode);
-  }
-  const cfg=teamCfg();
-  if(!cfg.link||!cfg.clientId||!cfg.tenantId){
-    teamMailChanged();
-    return teamMsg(isAdminMail(tmMail.value)
-      ? 'กรอก 3 ช่องในส่วนผู้ดูแล แล้วกด "สร้างรหัสทีม" เพื่อแจกให้ทีมงาน'
-      : 'ยังไม่มีรหัสทีมในเครื่องนี้ — ขอรหัสจากผู้ดูแล ('+TEAM_ADMIN+') แล้ววางในช่องรหัสทีม',1);
-  }
   const mail=tmMail.value.trim();
+  const admin=isAdminMail(mail);
+  /* 1) ตรวจอีเมล — ต้องเป็นโดเมนบริษัท */
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail))return teamMsg('ใส่อีเมลบริษัทให้ถูกต้องก่อน',1);
   if(M365.domain&&!mail.toLowerCase().endsWith('@'+M365.domain))
     return teamMsg(`ต้องเป็นอีเมล @${M365.domain} เท่านั้น`,1);
-  lsSet('msb-mail',mail);
+  /* 2) ตรวจรหัสเข้าใช้งาน (ผู้ดูแลไม่ต้องใส่) */
+  if(!admin&&tmCode.value.trim()!==teamCode())
+    return teamMsg('รหัสเข้าใช้งานไม่ถูกต้อง — ขอรหัสจากผู้ดูแล ('+TEAM_ADMIN+')',1);
+  /* 3) ผู้ดูแลกรอกค่าตั้งค่าไว้ก็บันทึกให้ */
+  const typed={link:tmLink.value.trim(),clientId:tmClient.value.trim(),tenantId:tmTenant.value.trim()};
+  if(admin){ if(typed.link&&typed.clientId&&typed.tenantId)saveCfg(typed);
+             if(tmSetCode.value.trim())lsSet('msb-code',tmSetCode.value.trim()); }
+  USER=mail; lsSet('msb-mail',mail); userChip();
+  dlgTeam.close();
+  /* 4) ถ้าตั้งค่าไฟล์กลางไว้แล้วก็ซิงก์ให้เลย ถ้ายังไม่ได้ตั้ง ใช้งานแบบไฟล์ในเครื่องได้ตามปกติ */
+  const cfg=teamCfg();
+  if(!cfg.link||!cfg.clientId||!cfg.tenantId){
+    teamChip(admin?'ยังไม่ได้ตั้งค่าไฟล์กลาง — ตั้งได้ในหน้าเข้าสู่ระบบ':'ใช้งานแบบเก็บในเครื่อง (ยังไม่ได้ต่อไฟล์กลาง)','');
+    return;
+  }
   try{
-    teamMsg('กำลังเข้าสู่ระบบ…');
+    teamChip('กำลังเชื่อมไฟล์กลาง…','');
     await teamSignIn(cfg,mail);
-    teamMsg('กำลังเปิดไฟล์แผนงาน…');
     await teamResolveFile(cfg.link);
     await teamPull(true);
     teamStartWatch();
-    teamMsg(`พร้อมใช้งาน — ${TM.acct.username} · ไฟล์ ${TM.item.name}`);
-  }catch(e){teamMsg('ไม่สำเร็จ: '+e.message,1)}
+  }catch(e){teamChip('ต่อไฟล์กลางไม่ได้ — '+e.message+' (ยังทำงานแบบในเครื่องได้)','bad')}
 }
 async function teamSignIn(cfg,mail){
   await loadScript(MSAL_CDN);
@@ -1401,23 +1462,14 @@ async function teamPull(force){
       TM.applying=true; WS=o; normalize(); useProj(WS.cur||0); TM.applying=false;
     }
   }
-  teamShowLock(meta);
+  teamChip(`ทีม: เชื่อมกับ ${TM.item.name}`+
+    (meta.lastModifiedBy&&meta.lastModifiedBy.user?' · แก้ล่าสุดโดย '+meta.lastModifiedBy.user.displayName:''),'on');
   return true;
-}
-function lockHolder(){const l=WS.lock; return (l&&Date.now()-l.at<LOCK_MS)?l:null}
-function iHoldLock(){const l=lockHolder(); return !!(l&&TM.acct&&l.by===TM.acct.username)}
-function teamShowLock(meta){
-  const l=lockHolder(), who=meta&&meta.lastModifiedBy&&meta.lastModifiedBy.user?meta.lastModifiedBy.user.displayName:'';
-  if(l&&!iHoldLock())teamChip(`ทีม: ${l.by} กำลังแก้อยู่ — หน้านี้เป็นโหมดอ่าน`,'bad');
-  else teamChip(`ทีม: เชื่อมกับ ${TM.item.name}${who?' · แก้ล่าสุดโดย '+who:''}`,'on');
 }
 async function teamPush(){
   if(!TM.item||TM.busy||TM.applying)return;
-  const l=lockHolder();
-  if(l&&!iHoldLock()){teamChip(`ทีม: ${l.by} กำลังแก้อยู่ — ยังไม่บันทึกของคุณ`,'bad');return}
   TM.busy=true;
   try{
-    WS.lock={by:TM.acct.username,at:Date.now()};
     const body=JSON.stringify(WS,null,1);
     const r=await graph(`/drives/${TM.item.driveId}/items/${TM.item.id}/content`,
       {method:'PUT',headers:{'Content-Type':'application/json','if-match':TM.etag||'*'},body});
@@ -1437,12 +1489,11 @@ function queueTeamPush(){
   clearTimeout(tPush); tPush=setTimeout(teamPush,2500);
 }
 function teamStartWatch(){
-  clearInterval(TM.timer); clearInterval(TM.beat);
-  TM.timer=setInterval(()=>{if(!TM.busy&&!iHoldLock())teamPull().catch(()=>{})},20000);   // ดึงของใหม่ทุก 20 วิ
-  TM.beat=setInterval(()=>{if(iHoldLock())queueTeamPush()},60000);                        // ต่ออายุล็อกระหว่างแก้
+  clearInterval(TM.timer);
+  TM.timer=setInterval(()=>{if(!TM.busy)teamPull().catch(()=>{})},20000);   // ดึงของใหม่ทุก 20 วิ
 }
 async function teamLogout(){
-  clearInterval(TM.timer); clearInterval(TM.beat);
+  clearInterval(TM.timer);
   if(TM.app&&TM.acct){try{await TM.app.logoutPopup({account:TM.acct})}catch(e){}}
   TM={cfg:null,app:null,acct:null,item:null,etag:'',timer:null,beat:null,busy:false,applying:false};
   teamChip(''); teamMsg('ออกจากระบบแล้ว');
@@ -1503,7 +1554,8 @@ addEventListener('afterprint',afterPrint);
 function normalize(){
   if(!WS.projects||!WS.projects.length)WS.projects=[blankProj()];
   WS.projects.forEach(p=>{p.tasks=p.tasks||[];p.defects=p.defects||[];p.tasks.forEach((t,i)=>{if(!t.id)t.id='t'+(i+1)});
-    p.info=Object.assign({rev:'R0',revdate:(p.info&&p.info.start)||today0(),by:''},p.info||{});});
+    p.info=Object.assign({rev:'R0',revdate:(p.info&&p.info.start)||today0(),by:''},p.info||{});
+    p.history=p.history||[];});
 }
 (function(){
   const rd=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
@@ -1515,7 +1567,8 @@ function normalize(){
   if(!S.tasks.length)useTpl('A');
   watchWidth();
   restoreFile();            // ไฟล์ถาวรในเครื่อง (โหมดส่วนตัว)
-  teamAutoStart();          // ไฟล์กลางของทีมบน M365 — ถ้าเคยเชื่อมไว้จะดึงของล่าสุดมาให้
+  USER=lsGet('msb-mail')||'';
+  userChip(); teamAutoStart();          // ไฟล์กลางของทีมบน M365 — ถ้าเคยเชื่อมไว้จะดึงของล่าสุดมาให้
 })();
 </script>
 </body>
