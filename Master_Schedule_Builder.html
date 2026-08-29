@@ -81,6 +81,14 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .tbl td input:focus{position:absolute;left:5px;top:3px;z-index:5;width:max(100%,320px);
   background:#fff;box-shadow:0 2px 10px rgba(0,48,73,.18)}
 .tbl td input[type=number]:focus,.tbl td input[type=checkbox]:focus{position:static;width:100%;box-shadow:none}
+/* ── ช่องที่ต้องกรอก vs ช่องที่ระบบคำนวณให้ ── */
+.need{background:#FFF6E0!important;box-shadow:inset 0 0 0 1.5px #E0A93B;border-radius:4px}
+.need::placeholder{color:#B98A2E}
+td.autocell{background:#F4F3F0}
+label.req::after{content:' •';color:var(--accent);font-weight:700}
+.needchip{font-size:12px;font-weight:600;border-radius:20px;padding:3px 10px;border:1px solid;cursor:pointer}
+.needchip.on{color:#8A6412;border-color:#E0A93B;background:#FFF6E0}
+.needchip.off{color:var(--green);border-color:#BFE0CC;background:#EFF7F1;cursor:default}
 .derived{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--steel);white-space:nowrap}
 .ph{background:var(--accent-soft);font-weight:700;font-size:12px}
 .scroll{overflow-x:auto}
@@ -163,6 +171,8 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
   <div class="wrap"><div class="tabbar noprint" id="tabs"></div></div>
 </header>
 <input type="file" id="fileIn" accept=".json" hidden onchange="loadFile(this)">
+<datalist id="dl-wbs"></datalist><datalist id="dl-name"></datalist>
+<datalist id="dl-own"></datalist><datalist id="dl-loc"></datalist>
 
 <div class="wrap">
 
@@ -180,10 +190,16 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
   <section>
     <div class="sec-h">
       <h2>รายการงาน (Work Breakdown)</h2>
+      <span class="needchip off noprint" id="needchip"></span>
       <span class="hint noprint" id="colhint"></span>
       <div class="tools noprint">
         <label style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--steel);margin:0;white-space:nowrap">
-          <input type="checkbox" id="allcols" style="width:auto" onchange="showAll=this.checked;buildTable();refresh()"> แสดงทุกคอลัมน์
+          มุมมอง
+          <select id="viewmode" style="width:auto" onchange="setMode(this.value)">
+            <option value="easy">ง่าย — กรอกแค่ที่จำเป็น</option>
+            <option value="normal" selected>ปกติ</option>
+            <option value="full">ครบทุกคอลัมน์</option>
+          </select>
         </label>
         <button onclick="addRow()">+ เพิ่มงาน</button>
         <button onclick="addRow(true)">+ เพิ่มหัวข้อ/เฟส</button>
@@ -359,9 +375,11 @@ function actualNow(C){return C.real.reduce((a,t)=>a+wnorm(t,C.wsum)*Math.min(100
 const F=[['name','ชื่อโครงการ','text'],['owner','ผู้ว่าจ้าง','text'],['site','สถานที่','text'],
   ['doc','เลขที่สัญญา / เอกสาร','text'],['rev','Rev. (ครั้งที่แก้ไขแผน)','text'],['revdate','วันที่ออก Rev.','date'],
   ['by','ผู้จัดทำแผน','text'],['start','วันเริ่มงาน','date'],['cdays','ระยะเวลาสัญญา (วันปฏิทิน)','number']];
+const REQ=['name','start','cdays'];          // ช่องที่ต้องกรอกจริง ๆ ที่เหลือมีค่าตั้งต้นให้
 function buildInfo(){
-  info.innerHTML=F.map(([k,l,t])=>
-    `<div><label>${l}</label><input type="${t}" value="${esc(S.info[k])}" oninput="S.info.${k}=this.value;refresh()"></div>`).join('')
+  info.innerHTML=F.map(([k,l,t])=>{
+    const req=REQ.includes(k);
+    return `<div><label class="${req?'req':''}">${l}</label><input type="${t}" ${req?'data-need="'+(t==='number'?'num':'text')+'"':''} value="${esc(S.info[k])}" oninput="S.info.${k}=this.value;refresh()"></div>`}).join('')
   +`<div><label>วันทำงาน</label><select onchange="S.info.wmode=this.value;refresh()">
       ${[['mon-sat','จ.–ส. (หยุดอาทิตย์)'],['mon-fri','จ.–ศ. (หยุด ส.–อา.)'],['all','ทำงานทุกวัน']]
         .map(([v,l])=>`<option value="${v}" ${S.info.wmode===v?'selected':''}>${l}</option>`).join('')}
@@ -382,18 +400,53 @@ const TIP={'น้ำหนัก%':'สัดส่วนของงานน�
 const CW=[32,64,0,98,160,56,52,52,76,76,68,58,120,36,64,106];
 /* ซ่อนคอลัมน์รองตามความกว้างจอ เพื่อให้ตารางพอดีจอโดยไม่ต้องเลื่อนซ้าย-ขวา
    ลำดับการซ่อน: ชนิด+Lag → เฟส → ผู้รับผิดชอบ → MS+รอผู้อื่น (ติ๊ก "แสดงทุกคอลัมน์" เพื่อดูครบ) */
-let showAll=false, lastHide='';
+let showAll=false, lastHide='', viewMode='normal';
 const HIDE_STEPS=[[1448,[5,6]],[1340,[3]],[1242,[12]],[1122,[13,14]]];
+/* โหมดง่าย = โชว์เฉพาะช่องที่ต้องกรอกจริง ๆ · ที่เหลือใช้ค่าตั้งต้นและคำนวณให้ */
+const EASY_HIDE=[3,4,5,6,10,12,13,14];
 function hiddenCols(){
   const h=new Set();
-  if(showAll)return h;
+  if(viewMode==='full')return h;
+  if(viewMode==='easy'){EASY_HIDE.forEach(c=>h.add(c));return h}
   const box=document.getElementById('tblbox');
   const w=box?box.clientWidth:1500;
   HIDE_STEPS.forEach(([lim,cols])=>{if(w<lim)cols.forEach(c=>h.add(c))});
   return h;
 }
+function setMode(v){
+  viewMode=v; WS.mode=v; showAll=(v==='full');
+  buildTable(); buildDefects(); refresh();
+}
+/* รายการให้เลือกในช่องพิมพ์ — เลือกได้ พิมพ์เองก็ได้ */
+const OWNERS=['Coral Life','Main Contractor','เจ้าของโครงการ','ผู้ควบคุมงาน (Consultant)','ผู้รับเหมาไฟฟ้า','ผู้รับเหมาฝ้า'];
+function fillLists(){
+  const names=[...new Set(TPL_A.concat(TPL_B).filter(r=>r[0]!=='PH').map(r=>r[1]))];
+  const wbs=[...new Set(TPL_A.concat(TPL_B).map(r=>r[0]).filter(c=>/^(WP|B)-/.test(c)))];
+  const owns=[...new Set(OWNERS.concat(S.tasks.map(t=>t.own).filter(Boolean)))];
+  const locs=[...new Set(defs().map(d=>d.loc).filter(Boolean))].concat(['ชั้น 1','ชั้น 2','ชั้น 3','ห้องเครื่อง','ดาดฟ้า']);
+  const put=(id,arr)=>{const el=document.getElementById(id);
+    if(el)el.innerHTML=[...new Set(arr)].map(v=>`<option value="${esc(v)}">`).join('')};
+  put('dl-name',names); put('dl-wbs',wbs); put('dl-own',owns); put('dl-loc',locs);
+}
+/* นับช่องที่ยังต้องกรอก แล้วไฮไลต์ให้เห็น */
+function markNeeds(){
+  let n=0;
+  document.querySelectorAll('#tbl [data-need],#info [data-need],#deftbl [data-need]').forEach(el=>{
+    const empty=el.dataset.need==='num'?!(+el.value>0):!String(el.value).trim();
+    el.classList.toggle('need',empty); if(empty)n++;
+  });
+  const chip=document.getElementById('needchip');
+  if(chip){chip.className='needchip noprint '+(n?'on':'off');
+    chip.textContent=n?`ยังต้องกรอกอีก ${n} ช่อง — คลิกเพื่อไปช่องแรก`:'กรอกครบแล้ว';
+    chip.onclick=n?focusNeed:null;}
+  return n;
+}
+function focusNeed(){
+  const el=document.querySelector('#info .need,#tbl .need,#deftbl .need');
+  if(el){el.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>el.focus(),250)}
+}
 function buildTable(){
-  GRP=groupMap();
+  GRP=groupMap(); fillLists();
   const H=hiddenCols(); lastHide=[...H].join(',');
   const keep=(v,i)=>!H.has(i);
   const cols='<colgroup>'+CW.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
@@ -403,7 +456,10 @@ function buildTable(){
   const box=document.getElementById('tblbox'), avail=box?box.clientWidth:1500;
   const fixed=CW.filter(keep).reduce((a,w)=>a+w,0);        // 330 = ที่ว่างสำหรับชื่องานที่ยาวที่สุด
   tbl.style.minWidth=Math.min(fixed+330,Math.max(avail,fixed+120))+'px';
-  colhint.textContent=H.size?`ย่อให้พอดีจอ — ซ่อน ${[...H].map(i=>COLS[i]).join(' / ')} ไว้ชั่วคราว`:'';
+  colhint.textContent=viewMode==='easy'
+    ? 'โหมดง่าย — ช่องที่ซ่อนไว้ใช้ค่าตั้งต้นให้แล้ว (งานต่อกันเป็นลำดับ) · ช่องเหลือง = ต้องกรอก · ช่องเทา = ระบบคำนวณให้'
+    : (H.size?`ย่อให้พอดีจอ — ซ่อน ${[...H].map(i=>COLS[i]).join(' / ')} ไว้ชั่วคราว`
+             :'ช่องเหลือง = ต้องกรอก · ช่องเทา = ระบบคำนวณให้');
 }
 /* เฝ้าดูความกว้างของกล่องตารางโดยตรง — ครอบคลุมทั้งตอนโหลดเสร็จ ย่อ-ขยายหน้าต่าง และเปลี่ยนโหมดซูม */
 function watchWidth(){
@@ -444,22 +500,22 @@ function rowTask(t,i,H){
   const P=[['','—'],['1','First Fix'],['2','Second Fix']];
   const c=[
    `<td class="derived">${i+1}</td>`,
-   `<td><input value="${esc(t.wbs)}" oninput="S.tasks[${i}].wbs=this.value;refresh()"></td>`,
-   `<td><input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;this.title=this.value;refresh()"></td>`,
+   `<td><input list="dl-wbs" value="${esc(t.wbs)}" oninput="S.tasks[${i}].wbs=this.value;refresh()"></td>`,
+   `<td><input list="dl-name" data-need="text" placeholder="พิมพ์ชื่องาน หรือเลือกจากรายการ" value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;this.title=this.value;refresh()"></td>`,
    `<td><select onchange="S.tasks[${i}].pf=this.value;refresh()">
        ${P.map(([v,l])=>`<option value="${v}" ${t.pf===v?'selected':''}>${l}</option>`).join('')}</select></td>`,
    `<td><select title="${esc(dep?(dep.wbs?dep.wbs+' ':'')+dep.name:'เริ่มพร้อมโครงการ')}" onchange="S.tasks[${i}].dep=this.value;refresh()">${opts}</select></td>`,
    `<td><select onchange="S.tasks[${i}].dt=this.value;refresh()">
        <option value="FS" ${t.dt!=='SS'?'selected':''}>FS</option><option value="SS" ${t.dt==='SS'?'selected':''}>SS</option></select></td>`,
    `<td><input type="number" value="${t.lag||0}" oninput="S.tasks[${i}].lag=+this.value;refresh()"></td>`,
-   `<td><input type="number" min="0" value="${t.dur}" oninput="S.tasks[${i}].dur=+this.value;refresh()"></td>`,
-   `<td class="derived" id="s${i}"></td>`,
-   `<td class="derived" id="f${i}"></td>`,
+   `<td><input type="number" min="0" ${t.ms||t.ext?'':'data-need="num"'} value="${t.dur}" oninput="S.tasks[${i}].dur=+this.value;refresh()"></td>`,
+   `<td class="derived autocell" id="s${i}" title="ระบบคำนวณให้จากลำดับงานและวันทำงาน"></td>`,
+   `<td class="derived autocell" id="f${i}" title="ระบบคำนวณให้จากระยะเวลา"></td>`,
    t.ext?`<td class="derived" style="color:var(--gray);text-align:center" title="งานรอผู้อื่น — ไม่นับน้ำหนักและผลงาน">—</td>`
         :`<td><input type="number" min="0" step="0.5" value="${t.w}" title="สัดส่วนของงานนี้ในโครงการ · รวมทุกงาน = 100%" oninput="S.tasks[${i}].w=+this.value;refresh()"></td>`,
    t.ext?`<td class="derived" style="color:var(--gray);text-align:center" title="งานรอผู้อื่น — ไม่นับน้ำหนักและผลงาน">—</td>`
         :`<td><input type="number" min="0" max="100" value="${t.act||0}" title="ความคืบหน้าของงานนี้เอง 0–100 (เสร็จแล้ว = 100) ไม่ใช่ % ของทั้งโครงการ" oninput="const v=Math.min(100,Math.max(0,+this.value||0));S.tasks[${i}].act=v;if(+this.value!==v)this.value=v;refresh()"></td>`,
-   `<td><input value="${esc(t.own)}" title="${esc(t.own)}" oninput="S.tasks[${i}].own=this.value;this.title=this.value;refresh()"></td>`,
+   `<td><input list="dl-own" value="${esc(t.own)}" title="${esc(t.own)}" oninput="S.tasks[${i}].own=this.value;this.title=this.value;refresh()"></td>`,
    `<td style="text-align:center"><input type="checkbox" ${t.ms?'checked':''} onchange="S.tasks[${i}].ms=this.checked;refresh()"></td>`,
    `<td style="text-align:center"><input type="checkbox" ${t.ext?'checked':''} onchange="S.tasks[${i}].ext=this.checked;refresh()"></td>`,
    `<td>${act(i)}</td>`];
@@ -530,7 +586,9 @@ const DCOLS=['#','ผูกกับงาน','WP Code (ทะเบียน)'
 const DHIDE=[[1428,[12]],[1328,[4]],[1232,[9]],[1144,[11]]];
 let lastDHide='';
 function dHidden(){
-  const h=new Set(); if(showAll)return h;
+  const h=new Set();
+  if(viewMode==='full')return h;
+  if(viewMode==='easy'){[4,9,11,12].forEach(c=>h.add(c));return h}
   const box=document.getElementById('defbox'); const w=box?box.clientWidth:1500;
   DHIDE.forEach(([lim,cs])=>{if(w<lim)cs.forEach(c=>h.add(c))});
   return h;
@@ -562,9 +620,9 @@ function defRow(d,i,H){
    `<td><select onchange="${set('task','this.value')};syncWp(${i})">${tOpts}</select></td>`,
    `<td><select title="${esc(d.wp)}" onchange="${set('wp','this.value')}">${opt(D_WP.map(v=>[v,v.split(' ')[0]]),d.wp)}</select></td>`,
    `<td><input type="date" value="${esc(d.date)}" oninput="${set('date','this.value')}"></td>`,
-   `<td><input value="${esc(d.loc)}" title="${esc(d.loc)}" oninput="${set('loc','this.value')}"></td>`,
+   `<td><input list="dl-loc" value="${esc(d.loc)}" title="${esc(d.loc)}" oninput="${set('loc','this.value')}"></td>`,
    `<td><select title="${esc(d.cat)}" onchange="${set('cat','this.value')}">${opt(D_CAT.map(v=>[v,v.split(' / ')[0]]),d.cat)}</select></td>`,
-   `<td><input value="${esc(d.desc)}" title="${esc(d.desc)}" oninput="${set('desc','this.value')}"></td>`,
+   `<td><input data-need="text" placeholder="ปัญหาที่พบ" value="${esc(d.desc)}" title="${esc(d.desc)}" oninput="${set('desc','this.value')}"></td>`,
    `<td><select onchange="S.defects[${i}].sev=this.value;S.defects[${i}].due=autoDue(S.defects[${i}]);buildDefects();refreshDef()">${opt(D_SEV,d.sev)}</select></td>`,
    `<td><select onchange="${set('st','this.value')};stampFixed(${i})">${opt(D_ST,d.st)}</select></td>`,
    `<td><input value="${esc(d.by)}" title="${esc(d.by)}" oninput="${set('by','this.value')}"></td>`,
@@ -807,7 +865,7 @@ function refresh(){
     const a=document.getElementById('s'+i), b=document.getElementById('f'+i);
     if(a)a.textContent=t.s?fmt(t.s):'—'; if(b)b.textContent=t.f?fmt(t.f):'—';
   });
-  drawKpi(C); drawGantt(C); drawCurve(C);
+  drawKpi(C); drawGantt(C); drawCurve(C); markNeeds();
   save(); queueWrite();
   revbadge.textContent='Rev. '+(S.info.rev||'R0')+(S.info.revdate?' · ออกเมื่อ '+fmt(D(S.info.revdate)):'');
   const lb=document.querySelector(".tab.on .lbl"), cn=document.querySelector(".tab.on .cnt");
@@ -920,7 +978,10 @@ function useProj(i){
   WS.cur=Math.max(0,Math.min(i,WS.projects.length-1));
   S=WS.projects[WS.cur];
   seq=Math.max(0,...S.tasks.map(t=>+String(t.id).replace(/\D/g,'')||0))+1;
-  DEFBY=defByTask();defFilter='';buildTabs();buildInfo();buildDefects();rebuild();
+  DEFBY=defByTask();defFilter='';
+  viewMode=WS.mode||'normal'; showAll=(viewMode==='full');
+  const vm=document.getElementById('viewmode'); if(vm)vm.value=viewMode;
+  buildTabs();buildInfo();buildDefects();rebuild();
 }
 function buildTabs(){
   tabs.innerHTML=WS.projects.map((p,i)=>{
