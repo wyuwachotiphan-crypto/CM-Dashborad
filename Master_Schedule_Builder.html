@@ -179,14 +179,14 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
       <button class="ghost" onclick="openTpl()">เทมเพลตงาน</button>
       <button class="ghost" id="flink" onclick="linkFile()">เชื่อมไฟล์ถาวร</button>
       <button class="pri" id="fgrant" style="display:none" onclick="grantFile()">อนุญาตเขียนไฟล์</button>
-      <button class="ghost" onclick="loadTeam()">โหลดของทีม</button>
+      <button class="ghost" onclick="teamOpen()">โหมดทีม (M365)</button>
       <button class="ghost" onclick="saveFile()">บันทึกโครงการนี้</button>
       <button class="ghost" onclick="backupAll()">สำรองทุกโครงการ</button>
       <button class="ghost" onclick="fileIn.click()">เปิดไฟล์</button>
       <button class="ghost pri" onclick="window.print()">พิมพ์ / PDF</button>
     </div>
   </div>
-  <div class="wrap" style="padding-bottom:10px"><span class="fchip noprint" id="fstat"></span></div>
+  <div class="wrap" style="padding-bottom:10px;display:flex;gap:8px;flex-wrap:wrap"><span class="fchip noprint" id="fstat"></span><span class="fchip noprint" id="tstat" style="display:none"></span></div>
   <div class="wrap"><div class="tabbar noprint" id="tabs"></div></div>
 </header>
 <input type="file" id="fileIn" accept=".json" hidden onchange="loadFile(this)">
@@ -262,6 +262,34 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 
   <div class="foot">Coral Life · IAQ Construction Management — ไฟล์เดียว ทำงานออฟไลน์ได้ ไม่ต้องติดตั้งอะไร</div>
 </div>
+
+<dialog id="dlgTeam">
+  <div class="sec-h"><h2>โหมดทีม — เก็บแผนไว้ที่ OneDrive / SharePoint ของบริษัท</h2></div>
+  <div class="pad">
+    <p style="font-size:12.5px;color:var(--steel);margin-bottom:12px">
+      ทุกคนล็อกอินด้วยอีเมลบริษัทแล้วอ่าน-เขียนไฟล์แผนงานไฟล์เดียวกัน
+      ระบบตรวจเวอร์ชันก่อนบันทึกทุกครั้ง และล็อกไม่ให้สองคนแก้โครงการเดียวกันพร้อมกัน</p>
+    <div class="grid" style="grid-template-columns:1fr">
+      <div><label>ลิงก์แชร์ของไฟล์แผนงาน (.json บน OneDrive/SharePoint)</label>
+        <input id="tmLink" placeholder="https://coralesg-my.sharepoint.com/:u:/g/personal/.../Ee1xxxx"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label>Application (client) ID</label><input id="tmClient" placeholder="00000000-0000-0000-0000-000000000000"></div>
+        <div><label>Directory (tenant) ID</label><input id="tmTenant" placeholder="00000000-0000-0000-0000-000000000000"></div>
+      </div>
+    </div>
+    <div id="tmStatus" class="msg" style="margin-top:12px;background:#F4F3F0;color:var(--steel)"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">
+      <button onclick="dlgTeam.close()">ปิด</button>
+      <button onclick="teamLogout()">ออกจากระบบ</button>
+      <button class="pri" onclick="teamConnect()">เข้าสู่ระบบและเชื่อมไฟล์</button>
+    </div>
+    <p style="font-size:11.5px;color:var(--steel);margin-top:12px;line-height:1.6">
+      <b>สิ่งที่ต้องขอจากฝ่าย IT ครั้งเดียว:</b> ลงทะเบียนแอปใน Microsoft Entra ID (ชนิด SPA)
+      โดยตั้ง Redirect URI เป็นลิงก์ของเครื่องมือนี้ และให้สิทธิ์ Microsoft Graph แบบ delegated:
+      <span style="font-family:var(--f-mono)">Files.ReadWrite.All</span> +
+      <span style="font-family:var(--f-mono)">User.Read</span> แล้วส่ง Client ID กับ Tenant ID มากรอกด้านบน</p>
+  </div>
+</dialog>
 
 <dialog id="dlgTpl">
   <div class="sec-h"><h2>เลือกเทมเพลต</h2></div>
@@ -954,7 +982,7 @@ function refresh(){
     if(a)a.textContent=t.s?fmt(t.s):'—'; if(b)b.textContent=t.f?fmt(t.f):'—';
   });
   drawKpi(C); drawGantt(C); drawCurve(C); markNeeds();
-  save(); queueWrite();
+  save(); queueWrite(); queueTeamPush();
   revbadge.textContent='Rev. '+(S.info.rev||'R0')+(S.info.revdate?' · ออกเมื่อ '+fmt(D(S.info.revdate)):'');
   const lb=document.querySelector(".tab.on .lbl"), cn=document.querySelector(".tab.on .cnt");
   if(lb)lb.textContent=pname(S); if(cn)cn.textContent=S.tasks.filter(t=>!t.phase).length;
@@ -1126,9 +1154,7 @@ function dl(blob,name){
 
 /* ══════════════════ เก็บถาวรในไฟล์จริง (File System Access API) ══════════════════ */
 const FSA=!!window.showSaveFilePicker;
-const TEAM_FILE='Master_Schedule_Team.json';
-const TEAM_URL='https://wyuwachotiphan-crypto.github.io/CM-Dashborad/'+TEAM_FILE;
-let fh=null, fhName='', teamFh=null, lastWrite=0, wTimer=null;
+let fh=null, fhName='', lastWrite=0, wTimer=null;
 const JTYPE=[{description:'ข้อมูลแผนงาน (JSON)',accept:{'application/json':['.json']}}];
 
 /* IndexedDB จิ๋ว — ใช้จำ handle ของไฟล์ข้ามการเปิดเบราว์เซอร์ */
@@ -1186,7 +1212,7 @@ async function grantFile(){
 }
 async function restoreFile(){
   if(!FSA){fileStatus();return}
-  const h=await idbGet('file'); teamFh=await idbGet('team');
+  const h=await idbGet('file');
   if(!h){fileStatus();return}
   fh=h; fhName=h.name;
   try{
@@ -1195,16 +1221,144 @@ async function restoreFile(){
   }catch(e){fileStatus(e.message)}
 }
 
-/* ── สแนปชอตให้ทีมดูผ่าน GitHub ── */
-async function loadTeam(){
-  if(!confirm('โหลดแผนล่าสุดของทีมจาก GitHub มาแทนที่ทุกโครงการในหน้านี้?'))return;
+/* ══════════════════ โหมดทีม — ไฟล์กลางบน OneDrive/SharePoint + ล็อกอินอีเมลบริษัท ══════════════════
+   ทุกคนอ่าน-เขียนไฟล์ .json ไฟล์เดียวผ่าน Microsoft Graph
+   กันงานทับกันด้วย 2 ชั้น: ETag (ถ้าไฟล์ถูกแก้ไประหว่างนั้นจะไม่เขียนทับ) + ล็อกผู้แก้ไขพร้อม heartbeat */
+const MSAL_CDN='https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
+const LOCK_MS=120000;                       // ล็อกหมดอายุถ้าไม่ต่ออายุใน 2 นาที
+let TM={cfg:null,app:null,acct:null,item:null,etag:'',timer:null,beat:null,busy:false,applying:false};
+
+function teamCfg(){try{return JSON.parse(localStorage.getItem('msb-team'))||null}catch(e){return null}}
+function teamOpen(){
+  const c=teamCfg()||{};
+  tmLink.value=c.link||''; tmClient.value=c.clientId||''; tmTenant.value=c.tenantId||'';
+  teamMsg(TM.acct?`ล็อกอินอยู่: ${TM.acct.username}`+(TM.item?` · ไฟล์ ${TM.item.name}`:''):'ยังไม่ได้เข้าสู่ระบบ');
+  dlgTeam.showModal();
+}
+function teamMsg(t,bad){const el=document.getElementById('tmStatus');if(el){el.textContent=t;
+  el.style.background=bad?'#FDECEC':'#F4F3F0'; el.style.color=bad?'var(--red)':'var(--steel)'}}
+function teamChip(t,cls){const el=document.getElementById('tstat');if(!el)return;
+  el.textContent=t||''; el.className='fchip noprint '+(cls||''); el.style.display=t?'':'none'}
+
+function loadScript(src){return new Promise((ok,no)=>{
+  if(window.msal)return ok();
+  const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>no(new Error('โหลด MSAL ไม่ได้ — ตรวจอินเทอร์เน็ต'));
+  document.head.appendChild(s)})}
+
+async function teamConnect(){
+  const cfg={link:tmLink.value.trim(),clientId:tmClient.value.trim(),tenantId:tmTenant.value.trim()};
+  if(!cfg.link||!cfg.clientId||!cfg.tenantId)return teamMsg('กรอกให้ครบทั้ง 3 ช่องก่อน',1);
+  localStorage.setItem('msb-team',JSON.stringify(cfg));
   try{
-    const r=await fetch(TEAM_URL+'?t='+Date.now());
-    if(!r.ok)throw new Error('ยังไม่มีไฟล์ของทีมบนเว็บ (ต้องกดสแนปชอต + push ก่อน)');
-    const o=await r.json(); if(!o||!Array.isArray(o.projects))throw new Error('ไฟล์ไม่ถูกต้อง');
-    WS=o; normalize(); useProj(0);
-    alert('โหลดแผนของทีมแล้ว '+o.projects.length+' โครงการ'+(o.snapshotAt?'\nสแนปชอตเมื่อ '+new Date(o.snapshotAt).toLocaleString('th-TH'):''));
-  }catch(e){alert('โหลดไม่สำเร็จ: '+e.message)}
+    teamMsg('กำลังเข้าสู่ระบบ…');
+    await teamSignIn(cfg);
+    teamMsg('กำลังเปิดไฟล์แผนงาน…');
+    await teamResolveFile(cfg.link);
+    await teamPull(true);
+    teamStartWatch();
+    teamMsg(`พร้อมใช้งาน — ${TM.acct.username} · ไฟล์ ${TM.item.name}`);
+  }catch(e){teamMsg('ไม่สำเร็จ: '+e.message,1)}
+}
+async function teamSignIn(cfg){
+  await loadScript(MSAL_CDN);
+  TM.cfg=cfg;
+  TM.app=new msal.PublicClientApplication({auth:{clientId:cfg.clientId,
+    authority:'https://login.microsoftonline.com/'+cfg.tenantId,
+    redirectUri:location.href.split('#')[0]},cache:{cacheLocation:'localStorage'}});
+  if(TM.app.initialize)await TM.app.initialize();
+  const have=TM.app.getAllAccounts();
+  TM.acct=have[0]||(await TM.app.loginPopup({scopes:['Files.ReadWrite.All','User.Read']})).account;
+}
+async function teamToken(){
+  const req={scopes:['Files.ReadWrite.All'],account:TM.acct};
+  try{return (await TM.app.acquireTokenSilent(req)).accessToken}
+  catch(e){return (await TM.app.acquireTokenPopup(req)).accessToken}
+}
+async function graph(path,opt){
+  const tok=await teamToken();
+  const o=Object.assign({},opt); o.headers=Object.assign({Authorization:'Bearer '+tok},o.headers||{});
+  const r=await fetch('https://graph.microsoft.com/v1.0'+path,o);
+  if(r.status===412)throw Object.assign(new Error('conflict'),{conflict:true});
+  if(!r.ok)throw new Error('Graph '+r.status+' '+(await r.text()).slice(0,120));
+  return r;
+}
+async function teamResolveFile(link){
+  const enc='u!'+btoa(link).replace(/=+$/,'').replace(/\//g,'_').replace(/\+/g,'-');
+  const r=await graph(`/shares/${enc}/driveItem`);
+  const it=await r.json();
+  TM.item={id:it.id,driveId:it.parentReference.driveId,name:it.name};
+}
+async function teamPull(force){
+  if(!TM.item)return;
+  const meta=await(await graph(`/drives/${TM.item.driveId}/items/${TM.item.id}`)).json();
+  if(!force&&meta.eTag===TM.etag)return false;              // ไม่มีอะไรเปลี่ยน
+  const txt=await(await graph(`/drives/${TM.item.driveId}/items/${TM.item.id}/content`)).text();
+  TM.etag=meta.eTag;
+  if(txt.trim()){
+    const o=JSON.parse(txt);
+    if(o&&Array.isArray(o.projects)){
+      TM.applying=true; WS=o; normalize(); useProj(WS.cur||0); TM.applying=false;
+    }
+  }
+  teamShowLock(meta);
+  return true;
+}
+function lockHolder(){const l=WS.lock; return (l&&Date.now()-l.at<LOCK_MS)?l:null}
+function iHoldLock(){const l=lockHolder(); return !!(l&&TM.acct&&l.by===TM.acct.username)}
+function teamShowLock(meta){
+  const l=lockHolder(), who=meta&&meta.lastModifiedBy&&meta.lastModifiedBy.user?meta.lastModifiedBy.user.displayName:'';
+  if(l&&!iHoldLock())teamChip(`ทีม: ${l.by} กำลังแก้อยู่ — หน้านี้เป็นโหมดอ่าน`,'bad');
+  else teamChip(`ทีม: เชื่อมกับ ${TM.item.name}${who?' · แก้ล่าสุดโดย '+who:''}`,'on');
+}
+async function teamPush(){
+  if(!TM.item||TM.busy||TM.applying)return;
+  const l=lockHolder();
+  if(l&&!iHoldLock()){teamChip(`ทีม: ${l.by} กำลังแก้อยู่ — ยังไม่บันทึกของคุณ`,'bad');return}
+  TM.busy=true;
+  try{
+    WS.lock={by:TM.acct.username,at:Date.now()};
+    const body=JSON.stringify(WS,null,1);
+    const r=await graph(`/drives/${TM.item.driveId}/items/${TM.item.id}/content`,
+      {method:'PUT',headers:{'Content-Type':'application/json','if-match':TM.etag||'*'},body});
+    TM.etag=(await r.json()).eTag;
+    teamChip(`ทีม: บันทึกแล้ว ${new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}`,'on');
+  }catch(e){
+    if(e.conflict){
+      if(confirm('มีคนอื่นบันทึกไฟล์นี้ไปก่อนหน้า\n\nตกลง = โหลดของล่าสุดมาแทน (ของที่คุณเพิ่งแก้จะหาย)\nยกเลิก = เก็บของคุณไว้ก่อน แล้วค่อยกดบันทึกใหม่'))
+        await teamPull(true);
+      else teamChip('ทีม: ไฟล์บนคลาวด์ใหม่กว่า — ยังไม่ได้บันทึก','bad');
+    }else teamChip('ทีม: บันทึกไม่สำเร็จ — '+e.message,'bad');
+  }finally{TM.busy=false}
+}
+let tPush=null;
+function queueTeamPush(){
+  if(!TM.item||TM.applying)return;
+  clearTimeout(tPush); tPush=setTimeout(teamPush,2500);
+}
+function teamStartWatch(){
+  clearInterval(TM.timer); clearInterval(TM.beat);
+  TM.timer=setInterval(()=>{if(!TM.busy&&!iHoldLock())teamPull().catch(()=>{})},20000);   // ดึงของใหม่ทุก 20 วิ
+  TM.beat=setInterval(()=>{if(iHoldLock())queueTeamPush()},60000);                        // ต่ออายุล็อกระหว่างแก้
+}
+async function teamLogout(){
+  clearInterval(TM.timer); clearInterval(TM.beat);
+  if(TM.app&&TM.acct){try{await TM.app.logoutPopup({account:TM.acct})}catch(e){}}
+  TM={cfg:null,app:null,acct:null,item:null,etag:'',timer:null,beat:null,busy:false,applying:false};
+  teamChip(''); teamMsg('ออกจากระบบแล้ว');
+}
+async function teamAutoStart(){                 // เปิดหน้าใหม่แล้วต่อให้เองถ้าเคยล็อกอินไว้
+  const cfg=teamCfg(); if(!cfg||!cfg.clientId)return;
+  try{
+    await loadScript(MSAL_CDN);
+    TM.cfg=cfg;
+    TM.app=new msal.PublicClientApplication({auth:{clientId:cfg.clientId,
+      authority:'https://login.microsoftonline.com/'+cfg.tenantId,
+      redirectUri:location.href.split('#')[0]},cache:{cacheLocation:'localStorage'}});
+    if(TM.app.initialize)await TM.app.initialize();
+    const acc=TM.app.getAllAccounts(); if(!acc.length)return teamChip('ทีม: กดโหมดทีมเพื่อเข้าสู่ระบบ','');
+    TM.acct=acc[0];
+    await teamResolveFile(cfg.link); await teamPull(true); teamStartWatch();
+  }catch(e){teamChip('ทีม: เชื่อมต่อไม่ได้ — '+e.message,'bad')}
 }
 
 /* ══════════════════ พิมพ์ / PDF ══════════════════
@@ -1259,7 +1413,8 @@ function normalize(){
   useProj(WS.cur||0);
   if(!S.tasks.length)useTpl('A');
   watchWidth();
-  restoreFile();          // ไฟล์ถาวรคือแหล่งข้อมูลจริง — ถ้าเชื่อมไว้จะโหลดทับของในเบราว์เซอร์
+  restoreFile();            // ไฟล์ถาวรในเครื่อง (โหมดส่วนตัว)
+  teamAutoStart();          // ไฟล์กลางของทีมบน M365 — ถ้าเคยเชื่อมไว้จะดึงของล่าสุดมาให้
 })();
 </script>
 </body>
