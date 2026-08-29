@@ -372,7 +372,12 @@ function buildInfo(){
 function esc(v){return String(v??'').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
 
 /* ══════════════════ RENDER: ตารางงาน ══════════════════ */
-const COLS=['#','WBS','ชื่องาน','เฟส','เริ่มหลังจาก','ชนิด','Lag','วัน','เริ่ม','เสร็จ','น้ำหนัก%','%จริง','ผู้รับผิดชอบ','MS','รอผู้อื่น',''];
+const COLS=['#','WBS','ชื่องาน','เฟส','เริ่มหลังจาก','ชนิด','Lag','วัน','เริ่ม','เสร็จ','น้ำหนัก%','ทำแล้ว %','ผู้รับผิดชอบ','MS','รอผู้อื่น',''];
+const TIP={'น้ำหนัก%':'สัดส่วนของงานนี้ในโครงการ · รวมทุกงาน = 100%',
+  'ทำแล้ว %':'ความคืบหน้าของงานนี้เอง 0–100 (เสร็จแล้ว = 100) ไม่ใช่ % ของทั้งโครงการ',
+  'เริ่มหลังจาก':'งานที่ต้องเสร็จก่อน','ชนิด':'FS = เริ่มหลังงานก่อนเสร็จ · SS = เริ่มพร้อมกัน',
+  'Lag':'เว้นกี่วันทำงาน ใส่ติดลบได้ถ้าต้องการให้คาบเกี่ยว','วัน':'ระยะเวลา นับเฉพาะวันทำงาน',
+  'MS':'Milestone / Hold Point','รอผู้อื่น':'งานที่เราไม่ได้ทำ — กินเวลาแต่ไม่นับน้ำหนัก'};
 /* ความกว้างคอลัมน์ — ชื่องานเว้นว่างไว้ให้ยืดกินพื้นที่ที่เหลือ */
 const CW=[32,64,0,98,160,56,52,52,76,76,68,58,120,36,64,106];
 /* ซ่อนคอลัมน์รองตามความกว้างจอ เพื่อให้ตารางพอดีจอโดยไม่ต้องเลื่อนซ้าย-ขวา
@@ -392,7 +397,7 @@ function buildTable(){
   const H=hiddenCols(); lastHide=[...H].join(',');
   const keep=(v,i)=>!H.has(i);
   const cols='<colgroup>'+CW.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
-  const head='<thead><tr>'+COLS.filter(keep).map(c=>`<th>${c}</th>`).join('')+'</tr></thead>';
+  const head='<thead><tr>'+COLS.filter(keep).map(c=>`<th${TIP[c]?` title="${TIP[c]}"`:''}>${c}</th>`).join('')+'</tr></thead>';
   const body=S.tasks.map((t,i)=>t.phase?rowPhase(t,i,H):rowTask(t,i,H)).join('');
   tbl.innerHTML=cols+head+'<tbody>'+body+'</tbody>';
   const box=document.getElementById('tblbox'), avail=box?box.clientWidth:1500;
@@ -450,8 +455,10 @@ function rowTask(t,i,H){
    `<td><input type="number" min="0" value="${t.dur}" oninput="S.tasks[${i}].dur=+this.value;refresh()"></td>`,
    `<td class="derived" id="s${i}"></td>`,
    `<td class="derived" id="f${i}"></td>`,
-   `<td><input type="number" min="0" step="0.5" value="${t.w}" oninput="S.tasks[${i}].w=+this.value;refresh()"></td>`,
-   `<td><input type="number" min="0" max="100" value="${t.act||0}" oninput="S.tasks[${i}].act=+this.value;refresh()"></td>`,
+   t.ext?`<td class="derived" style="color:var(--gray);text-align:center" title="งานรอผู้อื่น — ไม่นับน้ำหนักและผลงาน">—</td>`
+        :`<td><input type="number" min="0" step="0.5" value="${t.w}" title="สัดส่วนของงานนี้ในโครงการ · รวมทุกงาน = 100%" oninput="S.tasks[${i}].w=+this.value;refresh()"></td>`,
+   t.ext?`<td class="derived" style="color:var(--gray);text-align:center" title="งานรอผู้อื่น — ไม่นับน้ำหนักและผลงาน">—</td>`
+        :`<td><input type="number" min="0" max="100" value="${t.act||0}" title="ความคืบหน้าของงานนี้เอง 0–100 (เสร็จแล้ว = 100) ไม่ใช่ % ของทั้งโครงการ" oninput="const v=Math.min(100,Math.max(0,+this.value||0));S.tasks[${i}].act=v;if(+this.value!==v)this.value=v;refresh()"></td>`,
    `<td><input value="${esc(t.own)}" title="${esc(t.own)}" oninput="S.tasks[${i}].own=this.value;this.title=this.value;refresh()"></td>`,
    `<td style="text-align:center"><input type="checkbox" ${t.ms?'checked':''} onchange="S.tasks[${i}].ms=this.checked;refresh()"></td>`,
    `<td style="text-align:center"><input type="checkbox" ${t.ext?'checked':''} onchange="S.tasks[${i}].ext=this.checked;refresh()"></td>`,
@@ -773,6 +780,9 @@ function drawKpi(C){
   if(days(C.cend,C.en)>0)es.push(`แผนสิ้นสุด ${fmt(C.en)} เกินกำหนดสัญญา ${fmt(C.cend)} อยู่ ${days(C.cend,C.en)} วัน`);
   const zero=C.real.filter(t=>!(+t.dur>0)&&!t.ms).length;
   if(zero)es.push(`มี ${zero} งานที่ยังไม่ได้ใส่ระยะเวลา (ถ้าตั้งใจให้เป็น Milestone ให้ติ๊กช่อง MS)`);
+  const mix=actLooksLikeWeight();
+  if(mix)es.push(`ช่อง <b>“ทำแล้ว %”</b> ของ ${mix} งานถูกกรอกเป็น<b>น้ำหนักงาน</b> — ช่องนี้ต้องเป็นความคืบหน้าของงานนั้นเอง 0–100 (เสร็จแล้ว = 100) แท่ง Gantt จึงเติมสีน้อยกว่าที่ควร
+     <button class="noprint" style="margin-left:8px;padding:3px 9px;font-size:12px" onclick="fixActFromWeight()">แปลงให้อัตโนมัติ</button>`);
   /* ── กฎ Defect ── */
   const hold=S.tasks.filter(t=>!t.phase&&/★/.test(t.name||'')&&DEFBY[t.id]);
   hold.forEach(t=>{const d=DEFBY[t.id];
@@ -813,6 +823,19 @@ function del(i){S.tasks.splice(i,1);rebuild()}
 function dup(i){const c=JSON.parse(JSON.stringify(S.tasks[i]));c.id='t'+(seq++);S.tasks.splice(i+1,0,c);rebuild()}
 function move(i,d){const j=i+d;if(j<0||j>=S.tasks.length)return;[S.tasks[i],S.tasks[j]]=[S.tasks[j],S.tasks[i]];rebuild()}
 function clearAll(){if(confirm('ลบรายการงานทั้งหมด?')){S.tasks=[];rebuild()}}
+/* กันความเข้าใจผิดที่พบบ่อย: กรอกช่อง "ทำแล้ว %" เป็นน้ำหนักงานที่ทำได้ แทนที่จะเป็น % ของงานนั้น */
+function actLooksLikeWeight(){
+  const r=S.tasks.filter(t=>!t.phase&&!t.ext&&(+t.act||0)>0&&(+t.w||0)>0);
+  if(r.length<3)return 0;
+  const near=r.filter(t=>{const k=(+t.act)/(+t.w);return k>0.8&&k<1.25&&(+t.act)<95}).length;
+  return near>=Math.max(3,Math.ceil(r.length*0.6))?near:0;
+}
+function fixActFromWeight(){
+  const r=S.tasks.filter(t=>!t.phase&&!t.ext&&(+t.w||0)>0&&(+t.act||0)>0);
+  if(!confirm(`แปลงช่อง "ทำแล้ว %" ของ ${r.length} งาน จากน้ำหนักที่ทำได้ → % ของงานนั้น\n\nตัวอย่าง: น้ำหนัก 7.6 กรอกไว้ 7.6 จะกลายเป็น 100%\nงานที่ทำได้บางส่วนจะคิดตามสัดส่วนให้`))return;
+  r.forEach(t=>{t.act=Math.min(100,Math.round((+t.act)/(+t.w)*100))});
+  buildTable();refresh();
+}
 function autoWeight(){
   const r=S.tasks.filter(t=>!t.phase&&!t.ext);
   const tot=r.reduce((a,t)=>a+Math.max(+t.dur||0,0.5),0);
