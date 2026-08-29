@@ -272,11 +272,18 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 
     <label class="req" for="tmMail">อีเมลบริษัท</label>
     <input id="tmMail" type="email" autocomplete="email" placeholder="ชื่อคุณ@coralesg.com"
-           style="font-size:15px;padding:10px 12px" onkeydown="if(event.key==='Enter')teamConnect()">
+           style="font-size:15px;padding:10px 12px" oninput="teamMailChanged()"
+           onkeydown="if(event.key==='Enter')teamConnect()">
+
+    <div id="tmCodeWrap" style="margin-top:12px">
+      <label for="tmCode">รหัสทีม <span style="font-weight:400">(ขอจากผู้ดูแลระบบ ใส่ครั้งเดียวจำไว้ให้)</span></label>
+      <input id="tmCode" placeholder="วางรหัสที่ได้จากผู้ดูแลที่นี่" style="font-family:var(--f-mono);font-size:12px"
+             onkeydown="if(event.key==='Enter')teamConnect()">
+    </div>
 
     <div id="tmStatus" class="msg" style="margin-top:12px;background:#F4F3F0;color:var(--steel)"></div>
     <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px;flex-wrap:wrap">
-      <button onclick="teamAdminToggle()" style="font-size:12px;color:var(--steel)">ตั้งค่าผู้ดูแลระบบ</button>
+      <span style="font-size:11.5px;color:var(--steel);align-self:center">ผู้ดูแลระบบ: warid.y@coralesg.com</span>
       <span style="display:flex;gap:8px">
         <button onclick="dlgTeam.close()">ปิด</button>
         <button onclick="teamLogout()">ออกจากระบบ</button>
@@ -286,7 +293,8 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 
     <div id="tmAdmin" style="display:none;border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <p style="font-size:12px;color:var(--steel);margin-bottom:10px">
-        ตั้งครั้งเดียวโดยผู้ดูแล แล้วคนอื่นในทีมไม่ต้องกรอกส่วนนี้อีก</p>
+        <b>เฉพาะผู้ดูแลระบบ</b> — ตั้งครั้งเดียว แล้วกด "สร้างรหัสทีม" ส่งรหัสให้ทีมงาน
+        คนอื่นใส่แค่อีเมล + รหัสทีม ไม่ต้องเห็นค่าพวกนี้เลย</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         <div><label>ลิงก์แชร์ของไฟล์แผนงาน (.json บน OneDrive/SharePoint)</label>
           <input id="tmLink" placeholder="https://coralesg-my.sharepoint.com/:u:/g/personal/.../Ee1xxxx"></div>
@@ -295,11 +303,17 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
           <div><label>Directory (tenant) ID</label><input id="tmTenant" placeholder="00000000-0000-0000-0000-000000000000"></div>
         </div>
       </div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button onclick="teamMakeCode()">สร้างรหัสทีมสำหรับแจกทีมงาน</button>
+        <button onclick="teamCopyCode()">คัดลอกรหัส</button>
+      </div>
+      <textarea id="tmCodeOut" rows="3" readonly placeholder="กด “สร้างรหัสทีม” แล้วรหัสจะขึ้นตรงนี้ ส่งให้ทีมงานทางไลน์/อีเมลได้เลย"
+        style="margin-top:8px;font-family:var(--f-mono);font-size:11.5px"></textarea>
       <p style="font-size:11.5px;color:var(--steel);margin-top:10px;line-height:1.6">
-        <b>ขอจากฝ่าย IT ครั้งเดียว:</b> ลงทะเบียนแอปใน Microsoft Entra ID (ชนิด SPA)
-        ตั้ง Redirect URI เป็นลิงก์ของเครื่องมือนี้ และให้สิทธิ์ Microsoft Graph แบบ delegated:
-        <span style="font-family:var(--f-mono)">Files.ReadWrite.All</span> +
-        <span style="font-family:var(--f-mono)">User.Read</span> แล้ว Grant admin consent</p>
+        <b>ค่าพวกนี้ได้จากไหน:</b> เข้า <span style="font-family:var(--f-mono)">entra.microsoft.com</span>
+        ด้วยอีเมลบริษัท → App registrations → New registration → เลือกชนิด SPA แล้วใส่ Redirect URI
+        เป็นลิงก์ของเครื่องมือนี้ → หน้า Overview จะมี Client ID กับ Tenant ID ให้คัดลอก
+        (ทำเองได้ ไม่ต้องผ่านฝ่าย IT ถ้าองค์กรไม่ได้ปิดสิทธิ์ลงทะเบียนแอป)</p>
     </div>
   </div>
 </dialog>
@@ -1243,24 +1257,60 @@ let TM={cfg:null,app:null,acct:null,item:null,etag:'',timer:null,beat:null,busy:
 
 /* ค่าที่ผู้ดูแลตั้งครั้งเดียว — ฝังไว้ในไฟล์ได้เลย ผู้ใช้ทั่วไปจะไม่เห็นและไม่ต้องกรอก */
 const M365={clientId:'',tenantId:'',link:'',domain:'coralesg.com'};
+const TEAM_ADMIN='warid.y@coralesg.com';        // ผู้ดูแลระบบ — คนเดียวที่เห็นส่วนตั้งค่าและสร้างรหัสทีมได้
+const isAdminMail=m=>String(m||'').trim().toLowerCase()===TEAM_ADMIN;
+
+/* รหัสทีม = ค่าตั้งค่าทั้งชุดที่เข้ารหัสเป็นข้อความเดียว ผู้ดูแลแจกให้ทีม ทีมวางแล้วใช้ได้เลย */
+function encodeCode(cfg){
+  const s=JSON.stringify({c:cfg.clientId,t:cfg.tenantId,l:cfg.link});
+  return 'MSB1-'+btoa(unescape(encodeURIComponent(s))).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
+}
+function decodeCode(code){
+  const raw=String(code||'').trim().replace(/^MSB1-/,'').replace(/-/g,'+').replace(/_/g,'/');
+  if(!raw)return null;
+  try{
+    const o=JSON.parse(decodeURIComponent(escape(atob(raw+'==='.slice((raw.length%4)||4)))));
+    return (o&&o.c&&o.t&&o.l)?{clientId:o.c,tenantId:o.t,link:o.l}:null;
+  }catch(e){return null}
+}
+function teamMakeCode(){
+  const cfg={clientId:tmClient.value.trim(),tenantId:tmTenant.value.trim(),link:tmLink.value.trim()};
+  if(!cfg.clientId||!cfg.tenantId||!cfg.link)return teamMsg('กรอกให้ครบ 3 ช่องก่อนสร้างรหัส',1);
+  saveCfg(cfg);
+  tmCodeOut.value=encodeCode(cfg);
+  teamMsg('สร้างรหัสทีมแล้ว — ส่งข้อความในกรอบให้ทีมงาน แล้วให้เขาวางในช่อง "รหัสทีม"');
+}
+function teamCopyCode(){
+  if(!tmCodeOut.value)return teamMsg('ยังไม่มีรหัส — กด "สร้างรหัสทีม" ก่อน',1);
+  tmCodeOut.select(); try{document.execCommand('copy')}catch(e){}
+  teamMsg('คัดลอกรหัสแล้ว');
+}
+function teamMailChanged(){                      // ส่วนตั้งค่าโผล่เฉพาะตอนที่ผู้ดูแลใส่อีเมลตัวเอง
+  const admin=isAdminMail(tmMail.value);
+  document.getElementById('tmAdmin').style.display=admin?'':'none';
+  document.getElementById('tmCodeWrap').style.display=(admin||teamReady())?'none':'';
+}
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+let MEMCFG=null;                    // สำรองไว้ในหน่วยความจำ เผื่อเบราว์เซอร์ปิดการเก็บข้อมูลเว็บไซต์
+function saveCfg(c){MEMCFG=c; lsSet('msb-team',JSON.stringify(c))}
 function teamCfg(){
   let c=null; try{c=JSON.parse(lsGet('msb-team'))}catch(e){}
+  c=c||MEMCFG;
   return {clientId:M365.clientId||(c&&c.clientId)||'',
           tenantId:M365.tenantId||(c&&c.tenantId)||'',
           link:M365.link||(c&&c.link)||''};
 }
 const teamReady=()=>{const c=teamCfg();return !!(c.clientId&&c.tenantId&&c.link)};
-function teamAdminToggle(){const a=document.getElementById('tmAdmin');
-  a.style.display=a.style.display==='none'?'':'none'}
 function teamOpen(){
   const c=teamCfg();
   tmLink.value=c.link; tmClient.value=c.clientId; tmTenant.value=c.tenantId;
   tmMail.value=lsGet('msb-mail')||(TM.acct?TM.acct.username:'');
-  document.getElementById('tmAdmin').style.display=teamReady()?'none':'';   // ยังไม่ตั้งค่า = เปิดให้ผู้ดูแลเห็น
+  tmCode.value=''; tmCodeOut.value=teamReady()?encodeCode(c):'';
+  teamMailChanged();
   teamMsg(TM.acct?`เข้าสู่ระบบอยู่: ${TM.acct.username}`+(TM.item?` · ไฟล์ ${TM.item.name}`:'')
-    :(teamReady()?'ใส่อีเมลบริษัทแล้วกดเข้าสู่ระบบ':'ยังไม่ได้ตั้งค่าไฟล์กลาง — กด "ตั้งค่าผู้ดูแลระบบ" ด้านล่าง'));
+    :(teamReady()?'ใส่อีเมลบริษัทแล้วกดเข้าสู่ระบบ'
+      :`ใส่อีเมลบริษัทและรหัสทีมที่ได้จากผู้ดูแล (${TEAM_ADMIN})`));
   dlgTeam.showModal(); setTimeout(()=>tmMail.focus(),50);
 }
 function teamMsg(t,bad){const el=document.getElementById('tmStatus');if(el){el.textContent=t;
@@ -1274,13 +1324,20 @@ function loadScript(src){return new Promise((ok,no)=>{
   document.head.appendChild(s)})}
 
 async function teamConnect(){
-  /* ผู้ดูแลกรอกช่องล่างไว้ก็บันทึกให้ ผู้ใช้ทั่วไปใส่แค่อีเมล */
+  /* ผู้ดูแลกรอก 3 ช่อง · ทีมงานวางรหัสทีมช่องเดียว */
   const typed={link:tmLink.value.trim(),clientId:tmClient.value.trim(),tenantId:tmTenant.value.trim()};
-  if(typed.link&&typed.clientId&&typed.tenantId)lsSet('msb-team',JSON.stringify(typed));
+  if(typed.link&&typed.clientId&&typed.tenantId)saveCfg(typed);
+  if(tmCode.value.trim()){
+    const fromCode=decodeCode(tmCode.value);
+    if(!fromCode)return teamMsg('รหัสทีมไม่ถูกต้อง — ขอรหัสใหม่จากผู้ดูแล ('+TEAM_ADMIN+')',1);
+    saveCfg(fromCode);
+  }
   const cfg=teamCfg();
   if(!cfg.link||!cfg.clientId||!cfg.tenantId){
-    document.getElementById('tmAdmin').style.display='';
-    return teamMsg('ยังไม่ได้ตั้งค่าไฟล์กลาง — ให้ผู้ดูแลกรอก 3 ช่องด้านล่างครั้งเดียว',1);
+    teamMailChanged();
+    return teamMsg(isAdminMail(tmMail.value)
+      ? 'กรอก 3 ช่องในส่วนผู้ดูแล แล้วกด "สร้างรหัสทีม" เพื่อแจกให้ทีมงาน'
+      : 'ยังไม่มีรหัสทีมในเครื่องนี้ — ขอรหัสจากผู้ดูแล ('+TEAM_ADMIN+') แล้ววางในช่องรหัสทีม',1);
   }
   const mail=tmMail.value.trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail))return teamMsg('ใส่อีเมลบริษัทให้ถูกต้องก่อน',1);
