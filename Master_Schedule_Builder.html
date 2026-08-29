@@ -71,7 +71,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .tbl{width:100%;border-collapse:collapse;table-layout:fixed}
 .tbl th{background:var(--ink-soft);color:#fff;font-size:10.5px;font-weight:600;padding:7px 4px;text-align:left;white-space:nowrap}
 .tbl td{border-bottom:1px solid var(--line);padding:2px 4px;vertical-align:middle;overflow:hidden}
-.tbl tr:hover td{background:#FBFAF7}
+.tbl tbody tr:hover td{background:rgba(0,48,73,.045)}
 .tbl td input,.tbl td select{width:100%;padding:4px 6px;font-size:12.5px;border-color:transparent;
   background:transparent;text-overflow:ellipsis}
 .tbl td input[type=checkbox]{width:auto}
@@ -426,7 +426,7 @@ function rowPhase(t,i,H){
   const gc=(GRP[i]||{}).c||PAL[0];
   const span=(a,b)=>{let n=0;for(let k=a;k<=b;k++)if(!H.has(k))n++;return n};
   const s1=span(1,7), s2=span(10,14);
-  return `<tr class="ph" style="background:${tint(gc,.13)};box-shadow:inset 4px 0 0 ${gc}"><td class="derived">${i+1}</td>`
+  return `<tr class="ph" style="background:${tint(gc,.18)};box-shadow:inset 4px 0 0 ${gc}"><td class="derived">${i+1}</td>`
    +(s1?`<td colspan="${s1}"><input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;refresh()" style="font-weight:700"></td>`:'')
    +`<td class="derived" id="s${i}"></td><td class="derived" id="f${i}"></td>`
    +(s2?`<td colspan="${s2}"></td>`:'')
@@ -464,7 +464,8 @@ function rowTask(t,i,H){
    `<td style="text-align:center"><input type="checkbox" ${t.ext?'checked':''} onchange="S.tasks[${i}].ext=this.checked;refresh()"></td>`,
    `<td>${act(i)}</td>`];
   const gc=(GRP[i]||{}).c||PAL[0];
-  return `<tr style="box-shadow:inset 3px 0 0 ${tint(gc,.55)}">`+c.filter((x,ix)=>!H.has(ix)).join('')+'</tr>';
+  return `<tr style="background:${tint(gc,.07)};box-shadow:inset 3px 0 0 ${tint(gc,.55)}">`
+    +c.filter((x,ix)=>!H.has(ix)).join('')+'</tr>';
 }
 function act(i){
   return `<span class="rowact noprint">
@@ -676,7 +677,9 @@ function drawGantt(C){
   S.tasks.forEach((t,idx)=>{
     const df=DEFBY[t.id];
     const badge=df?`<span class="defbadge ${df.crit?'crit':''}" title="Defect ค้าง ${df.n} รายการ${df.crit?' (Critical '+df.crit+')':''} — คลิกเพื่อดูเฉพาะงานนี้" onclick="filterDef('${t.id}')">▲${df.n}</span>`:'';
-    L.push(`<div class="grow"><div class="gname" title="${esc((t.wbs?t.wbs+' ':'')+t.name)}" style="${t.phase?'font-weight:700':''}">${t.phase?'':'&nbsp;&nbsp;'}${esc(t.wbs?t.wbs+' ':'')}${esc(t.name)||'<i style="color:#bbb">(ไม่มีชื่อ)</i>'}${badge}</div>
+    const gcol=(GRP[idx]||{}).c||PAL[0];
+    const rowBg=`background:${tint(gcol,t.phase?.18:.07)};box-shadow:inset ${t.phase?4:3}px 0 0 ${t.phase?gcol:tint(gcol,.55)}`;
+    L.push(`<div class="grow" style="${rowBg}"><div class="gname" title="${esc((t.wbs?t.wbs+' ':'')+t.name)}" style="${t.phase?'font-weight:700':''}">${t.phase?'':'&nbsp;&nbsp;'}${esc(t.wbs?t.wbs+' ':'')}${esc(t.name)||'<i style="color:#bbb">(ไม่มีชื่อ)</i>'}${badge}</div>
       <div class="gdate">${t.s?fmt(t.s)+' – '+fmt(t.f):''}</div></div>`);
     let bar='';
     if(t.s){
