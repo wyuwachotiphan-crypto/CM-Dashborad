@@ -1281,7 +1281,32 @@ async function writeFile(force){
     lastWrite=(await fh.getFile()).lastModified; fileStatus();
   }catch(e){fileStatus('เขียนไฟล์ไม่สำเร็จ — '+e.message)}
 }
-function queueWrite(){if(fh){clearTimeout(wTimer);wTimer=setTimeout(()=>writeFile(),800)}}
+function queueWrite(){if(fh){lastEdit=Date.now();clearTimeout(wTimer);wTimer=setTimeout(()=>writeFile(),800)}}
+/* ── ไฟล์ที่วางบนโฟลเดอร์ที่ซิงก์ร่วมกัน: ถ้าคนอื่นแก้แล้ว OneDrive ซิงก์ลงมา ให้ดึงมาแสดงเอง ── */
+let lastEdit=0;
+function watchSharedFile(){
+  setInterval(async()=>{
+    if(!fh||TM.item)return;                       // โหมดทีม M365 มีตัวซิงก์ของตัวเองอยู่แล้ว
+    if(Date.now()-lastEdit<15000)return;          // กำลังพิมพ์อยู่ ไม่ต้องไปกวน
+    if(document.querySelector('dialog[open]'))return;
+    try{
+      const f=await fh.getFile();
+      if(lastWrite&&f.lastModified>lastWrite+1500){
+        const txt=await f.text();
+        if(txt.trim()){
+          const o=JSON.parse(txt);
+          if(o&&Array.isArray(o.projects)&&o.projects.length){
+            WS=o;normalize();useProj(WS.cur||0);
+            lastWrite=f.lastModified;
+            fileStatus();
+            teamChip('มีคนอื่นแก้ไฟล์นี้ — ดึงของล่าสุดมาแสดงแล้ว '+
+              new Date(f.lastModified).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),'on');
+          }
+        }
+      }
+    }catch(e){}
+  },20000);
+}
 async function loadFromFile(){
   try{
     const f=await fh.getFile(), txt=await f.text();
@@ -1581,7 +1606,8 @@ function normalize(){
   useProj(WS.cur||0);
   if(!S.tasks.length)useTpl('A');
   watchWidth();
-  restoreFile();            // ไฟล์ถาวรในเครื่อง (โหมดส่วนตัว)
+  restoreFile();            // ไฟล์ถาวรในเครื่อง / โฟลเดอร์ที่ซิงก์ร่วมกับทีม
+  watchSharedFile();        // ถ้าคนอื่นแก้ไฟล์เดียวกัน ดึงของใหม่มาแสดงให้เอง
   USER=lsGet('msb-mail')||'';
   userChip(); teamAutoStart();          // ไฟล์กลางของทีมบน M365 — ถ้าเคยเชื่อมไว้จะดึงของล่าสุดมาให้
 })();
