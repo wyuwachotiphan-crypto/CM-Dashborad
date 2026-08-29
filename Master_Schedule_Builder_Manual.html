@@ -135,7 +135,7 @@ footer{border-top:1.4px solid var(--ink);padding-top:6px;display:flex;
 
   <div class="lead">
     <p>กรอกรายการงานกับจำนวนวัน แล้วเครื่องมือคำนวณวันเริ่ม–วันเสร็จเป็นวันทำงานจริงให้เอง
-      พร้อมวาด Gantt, S-Curve และส่งออกเป็น Excel หรือ PDF · เปิดใช้ได้ที่</p>
+      พร้อมวาด Gantt, S-Curve, ติดตาม Defect และพิมพ์เป็น PDF ขนาด A3 · เปิดใช้ได้ที่</p>
     <span class="url">wyuwachotiphan-crypto.github.io/CM-Dashborad/Master_Schedule_Builder.html</span>
   </div>
 
@@ -147,10 +147,10 @@ footer{border-top:1.4px solid var(--ink);padding-top:6px;display:flex;
         <ol class="steps">
           <li><b>1</b><div><strong>ตั้งค่าโครงการ</strong><span>กรอก <b style="color:inherit;font:inherit">วันเริ่มงาน</b> + <b style="color:inherit;font:inherit">ระยะเวลาสัญญา</b> เลือกวันทำงาน (จ.–ส. / จ.–ศ. / ทุกวัน) ใส่วันหยุดพิเศษเป็น <span style="font-family:'IBM Plex Mono',monospace">2026-04-13</span> คั่นด้วยลูกน้ำ</span></div></li>
           <li><b>2</b><div><strong>เลือกเทมเพลต</strong><span>กด <kbd>เทมเพลตงาน</kbd> → <b style="color:inherit;font:inherit">ฉบับ A</b> งานอาคาร (WP-01…13) หรือ <b style="color:inherit;font:inherit">ฉบับ B</b> บ้าน (B-1…8) มีช่วงรอปิดฝ้าคั่นให้แล้ว</span></div></li>
-          <li><b>3</b><div><strong>แก้รายการงาน</strong><span>พิมพ์ทับได้เลย วันที่คำนวณใหม่ทันที ปุ่มท้ายแถว <kbd>↑</kbd> <kbd>↓</kbd> เลื่อน · <kbd>⧉</kbd> ทำซ้ำ · <kbd>✕</kbd> ลบ · หรือกด <kbd>วางจาก Excel</kbd> เพื่อวางรายการยกชุด</span></div></li>
+          <li><b>3</b><div><strong>แก้รายการงาน</strong><span>พิมพ์ทับได้เลย วันที่คำนวณใหม่ทันที · ชื่องาน/รหัส WBS/ผู้รับผิดชอบ เลือกจากรายการที่มีให้ได้ · ปุ่มท้ายแถว <kbd>↑</kbd> <kbd>↓</kbd> เลื่อน · <kbd>⧉</kbd> ทำซ้ำ · <kbd>✕</kbd> ลบ</span></div></li>
           <li><b>4</b><div><strong>ตั้งน้ำหนักงาน</strong><span>กด <kbd>คิดน้ำหนักอัตโนมัติ</kbd> เกลี่ยตามจำนวนวันให้ครบ 100% แล้วปรับงานที่มีมูลค่าสูงเพิ่มเอง</span></div></li>
           <li><b>5</b><div><strong>อัปเดตทุกสัปดาห์</strong><span>ใส่ช่อง <b style="color:inherit;font:inherit">%จริง</b> ของแต่ละงาน แถบ KPI จะบอกทันทีว่าช้ากว่าแผนกี่ %</span></div></li>
-          <li><b>6</b><div><strong>ส่งออก</strong><span><kbd>ส่งออก Excel</kbd> ได้ 3 ชีต (ตารางแผน · ข้อมูลโครงการ · S-Curve) · <kbd>พิมพ์ / PDF</kbd> จัดหน้า A3 แนวนอนให้แล้ว</span></div></li>
+          <li><b>6</b><div><strong>พิมพ์ / PDF</strong><span>กด <kbd>พิมพ์ / PDF</kbd> แล้วเลือก A3 แนวนอน — ระบบย่อ Gantt ให้พอดีหน้ากระดาษเอง (โครงการยาวสลับเป็นรายเดือนให้) ตารางยาวขึ้นหน้าใหม่พร้อมหัวตารางซ้ำทุกหน้า</span></div></li>
         </ol>
       </section>
 
@@ -159,7 +159,7 @@ footer{border-top:1.4px solid var(--ink);padding-top:6px;display:flex;
         <table>
           <tr><td><kbd>เชื่อมไฟล์ถาวร</kbd></td><td><b>ทำครั้งเดียวจบ</b> — เลือกที่เก็บเป็น <span style="font-family:'IBM Plex Mono',monospace">OneDrive - Coral Life\Master_Schedule_Data.json</span> จากนั้นทุกการพิมพ์บันทึกลงไฟล์นั้นเอง ข้อมูลไม่หายแม้ล้างแคชหรือเปลี่ยนเครื่อง <small>(Chrome/Edge ผ่านลิงก์ https)</small></td></tr>
           <tr><td><kbd>อนุญาตเขียนไฟล์</kbd></td><td>เปิดเบราว์เซอร์ใหม่แต่ละครั้งจะขึ้นปุ่มนี้ — กด 1 ครั้ง ระบบโหลดข้อมูลจากไฟล์ให้เอง</td></tr>
-          <tr><td><kbd>สแนปชอตให้ทีม</kbd></td><td>บันทึก <span style="font-family:'IBM Plex Mono',monospace">Master_Schedule_Team.json</span> ไว้ในโฟลเดอร์ Dashboard แล้วดับเบิลคลิก <span style="font-family:'IBM Plex Mono',monospace">Update Dashboard to GitHub.bat</span> · ทีมกด <kbd>โหลดของทีม</kbd> ดูแผนล่าสุดได้</td></tr>
+          <tr><td><kbd>โหลดของทีม</kbd></td><td>ดึงแผนล่าสุดที่เผยแพร่ไว้บน GitHub มาแทนที่ทุกโครงการในหน้านี้ (ต้องมีผู้ดูแลอัปโหลดไฟล์ทีมไว้ก่อน)</td></tr>
         </table>
       </section>
 
@@ -208,7 +208,7 @@ footer{border-top:1.4px solid var(--ink);padding-top:6px;display:flex;
         <h2>ข้อควรระวัง <em>important</em></h2>
         <div class="warn">
           <p><b>ถ้ายังไม่กด "เชื่อมไฟล์ถาวร" ข้อมูลจะอยู่ในเบราว์เซอร์เครื่องนั้นเท่านั้น</b> ล้างประวัติแล้วหายได้ — ดูแถบสถานะใต้หัวเรื่อง ถ้าขึ้นสีเขียวว่าเก็บถาวรอยู่แปลว่าปลอดภัยแล้ว</p>
-          <p><b>สแนปชอตที่ส่งขึ้น GitHub เป็นพื้นที่สาธารณะ</b> ใครมีลิงก์ก็เปิดดูได้ — อย่าใส่ข้อมูลที่เป็นความลับของลูกค้าลงในแผนที่จะสแนปชอต (ไฟล์ใน OneDrive ไม่ถูกส่งขึ้นไปด้วย)</p>
+          <p><b>ส่งแผนให้คนอื่นด้วยไฟล์ <span style="font-family:'IBM Plex Mono',monospace">.json</span></b> — กด "บันทึกโครงการนี้" แล้วส่งไฟล์ให้ อีกฝ่ายกด "เปิดไฟล์" จะเข้าไปเป็นแท็บใหม่ ไม่ทับของเดิม</p>
           <p>เจอแถบเตือนสีแดง อ่านก่อนเสมอ: น้ำหนักไม่ครบ 100% · แผนเกินกำหนดสัญญา · หรือ<b>ลำดับแถวไม่ตรงกับงานจริง</b> (ให้กด ↑ ↓ ย้ายแถว)</p>
         </div>
       </section>

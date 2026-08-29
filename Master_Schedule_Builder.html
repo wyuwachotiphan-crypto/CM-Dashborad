@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --ink:#003049; --ink-soft:#0F4C6B; --grid:#669BBC; --paper:#fff; --canvas:#F7F7F5;
@@ -139,11 +138,32 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 .foot{text-align:center;font-size:11px;color:var(--steel);margin-top:20px}
 @media print{
   @page{size:A3 landscape;margin:8mm}
-  body{background:#fff;padding:0}
-  header{background:#fff;color:var(--ink);border-bottom:2px solid var(--ink)}
-  .sub{color:var(--steel)} .noprint{display:none!important}
-  section{break-inside:avoid;border:1px solid #ccc}
-  .gantt{overflow:visible} .gl{position:static}
+  body{background:#fff;padding:0;font-size:12px}
+  .wrap{max-width:none;padding:0}
+  .noprint{display:none!important}
+  header{background:#fff;color:var(--ink);border-bottom:2px solid var(--ink);padding:0 0 6px}
+  .head{padding-bottom:6px} h1{font-size:15px} .sub{color:var(--steel);font-size:10px}
+  /* หัวข้อกับเนื้อหาต้องไม่ถูกแยกคนละหน้า และตารางยาวให้ไหลไปหน้าใหม่ได้ */
+  section{border:1px solid #C9C6BF;border-radius:0;margin-top:8px;break-inside:auto}
+  .sec-h{break-after:avoid;padding:6px 10px}
+  .sec-h h2{font-size:12px}
+  .kpis,.legend,#curve,.msg{break-inside:avoid}
+  thead{display:table-header-group}                 /* พิมพ์หัวตารางซ้ำทุกหน้า */
+  tr,.grow,.lane{break-inside:avoid}
+  .scroll,.gantt{overflow:visible!important}
+  .gl{position:static}
+  #ganttsec{break-before:page}                       /* Gantt ขึ้นหน้าใหม่เสมอ */
+  /* ให้ช่องกรอกดูเหมือนเอกสาร ไม่ใช่ฟอร์ม */
+  .tbl td input,.tbl td select{border:0!important;background:transparent!important;
+    -webkit-appearance:none;appearance:none;padding:2px 3px;color:var(--text)}
+  .tbl td input[type=checkbox]{-webkit-appearance:auto;appearance:auto}
+  .tbl th,.tbl td{padding:3px 4px}
+  .tbl th{background:var(--ink-soft)!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .tbl th:last-child,.tbl td:last-child{display:none}   /* คอลัมน์ปุ่มจัดการแถว */
+  .need{background:transparent!important;box-shadow:none!important}
+  td.autocell{background:transparent}
+  .foot{margin-top:6px}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
 </head>
@@ -153,20 +173,17 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
   <div class="wrap head">
     <div>
       <h1>Master Schedule Builder</h1>
-      <div class="sub">เครื่องมือจัดทำแผนงานหลักงานก่อสร้าง — Gantt + S-Curve + ส่งออก Excel</div>
+      <div class="sub">เครื่องมือจัดทำแผนงานหลักงานก่อสร้าง — Gantt + S-Curve + Defect</div>
     </div>
     <div class="tools noprint">
       <button class="ghost" onclick="openTpl()">เทมเพลตงาน</button>
-      <button class="ghost" onclick="openPaste()">วางจาก Excel</button>
       <button class="ghost" id="flink" onclick="linkFile()">เชื่อมไฟล์ถาวร</button>
       <button class="pri" id="fgrant" style="display:none" onclick="grantFile()">อนุญาตเขียนไฟล์</button>
-      <button class="ghost" onclick="saveTeam()">สแนปชอตให้ทีม</button>
       <button class="ghost" onclick="loadTeam()">โหลดของทีม</button>
       <button class="ghost" onclick="saveFile()">บันทึกโครงการนี้</button>
       <button class="ghost" onclick="backupAll()">สำรองทุกโครงการ</button>
       <button class="ghost" onclick="fileIn.click()">เปิดไฟล์</button>
-      <button class="ghost" onclick="toXlsx()">ส่งออก Excel</button>
-      <button class="ghost" onclick="window.print()">พิมพ์ / PDF</button>
+      <button class="ghost pri" onclick="window.print()">พิมพ์ / PDF</button>
     </div>
   </div>
   <div class="wrap" style="padding-bottom:10px"><span class="fchip noprint" id="fstat"></span></div>
@@ -225,7 +242,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
     <div class="scroll" id="defbox"><table class="tbl def" id="deftbl"></table></div>
   </section>
 
-  <section>
+  <section id="ganttsec">
     <div class="sec-h">
       <h2>แผนภูมิ Gantt</h2>
       <div class="tools noprint">
@@ -234,7 +251,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
         </select></label>
       </div>
     </div>
-    <div class="gantt" id="gantt"></div>
+    <div id="ganttwrap"><div class="gantt" id="gantt"></div></div>
     <div class="legend" id="legend"></div>
   </section>
 
@@ -259,19 +276,6 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
   </div>
 </dialog>
 
-<dialog id="dlgPaste">
-  <div class="sec-h"><h2>วางรายการงานจาก Excel</h2></div>
-  <div class="pad">
-    <p style="font-size:12.5px;color:var(--steel);margin-bottom:8px">
-      คัดลอกจาก Excel แล้ววางที่นี่ — คอลัมน์: <b>ชื่องาน · ระยะเวลา(วัน) · น้ำหนัก% · ผู้รับผิดชอบ</b>
-      (ขั้นต่ำแค่ชื่องานกับระยะเวลา) แต่ละงานจะต่อท้ายงานก่อนหน้าให้อัตโนมัติ</p>
-    <textarea id="pasteBox" rows="10" placeholder="สำรวจหน้างาน&#9;3&#9;5&#10;เจาะผนัง&#9;5&#9;10"></textarea>
-    <div style="text-align:right;margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
-      <button onclick="dlgPaste.close()">ยกเลิก</button>
-      <button class="pri" onclick="doPaste()">เพิ่มเข้าตาราง</button>
-    </div>
-  </div>
-</dialog>
 
 <script>
 /* ══════════════════ STATE ══════════════════ */
@@ -736,7 +740,7 @@ function defChips(H){
     +(s.crit?` · <b style="color:var(--accent)">Critical ${s.crit}</b>`:'')
     +(s.late?` · <b style="color:var(--accent)">เกินกำหนดแก้ ${s.late}</b>`:'')
     +` · ปิดแล้ว ${s.closedPct}% (${s.n} รายการทั้งหมด)`
-    :'บันทึกปัญหาหน้างานที่นี่ แล้วส่งออกไปต่อท้าย Defect_Report.xlsx ได้')+hid;
+    :'บันทึกปัญหาหน้างานที่พบไว้ที่นี่ แล้วติดตามจนปิดงานได้')+hid;
   const t=S.tasks.find(x=>x.id===defFilter);
   deffilter.innerHTML=t?`<button onclick="filterDef('')" title="ล้างตัวกรอง">กรอง: ${esc(t.wbs||t.name.slice(0,16))} ✕</button>`:'';
 }
@@ -990,17 +994,6 @@ function autoWeight(){
   rebuild();
 }
 function openTpl(){dlgTpl.showModal()}
-function openPaste(){pasteBox.value='';dlgPaste.showModal()}
-function doPaste(){
-  const rows=pasteBox.value.split(/\r?\n/).map(r=>r.split('\t')).filter(r=>r[0]&&r[0].trim());
-  let last=[...S.tasks].reverse().find(t=>!t.phase);
-  rows.forEach(r=>{
-    const t=newT({name:r[0].trim(),dur:+String(r[1]||'').replace(/[^\d.]/g,'')||1,
-      w:+String(r[2]||'').replace(/[^\d.]/g,'')||0,own:(r[3]||'').trim(),dep:last?last.id:''});
-    S.tasks.push(t);last=t;
-  });
-  dlgPaste.close();rebuild();
-}
 
 /* ══════════════════ TEMPLATES ══════════════════ */
 const TPL_A=[
@@ -1130,47 +1123,6 @@ function dl(blob,name){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
-function toXlsx(){
-  const C=compute();
-  const rows=[['ลำดับ','WBS','ชื่องาน','เฟส','ระยะเวลา (วัน)','วันเริ่ม','วันเสร็จ','น้ำหนัก %','% จริง','ผู้รับผิดชอบ','หมายเหตุ']];
-  S.tasks.forEach((t,i)=>rows.push([i+1,t.wbs,(t.phase?'':'   ')+t.name,
-    t.phase?'':t.pf==='1'?'First Fix':t.pf==='2'?'Second Fix':'',
-    t.phase?'':t.dur, t.s?fmt(t.s):'', t.f?fmt(t.f):'',
-    t.phase||t.ext?'':t.w, t.phase||t.ext?'':(t.act||0), t.own||'',
-    t.ext?'งานที่รอผู้อื่น':t.ms?'Milestone':'']));
-  rows.push([],['รวมน้ำหนัก','','','','','','',C.wsum.toFixed(1)]);
-  const info=[['ชื่อโครงการ',S.info.name],['ผู้ว่าจ้าง',S.info.owner],['สถานที่',S.info.site],
-    ['เลขที่สัญญา/เอกสาร',S.info.doc],['Rev.',S.info.rev||'R0'],
-    ['วันที่ออก Rev.',S.info.revdate?fmt(D(S.info.revdate)):''],['ผู้จัดทำแผน',S.info.by||''],
-    ['วันเริ่มงาน',fmt(C.p0)],['ระยะเวลาสัญญา (วัน)',S.info.cdays],
-    ['ครบกำหนดตามสัญญา',fmt(C.cend)],['แผนสิ้นสุด',fmt(C.en)],
-    ['สถานะเทียบสัญญา',days(C.cend,C.en)>0?'ช้ากว่าสัญญา '+days(C.cend,C.en)+' วัน':'อยู่ในกำหนด'],
-    ['วันทำงาน',{'mon-sat':'จ.–ส.','mon-fri':'จ.–ศ.',all:'ทุกวัน'}[S.info.wmode]],
-    ['ออกรายงานเมื่อ',fmt(new Date())]];
-  const sc=[['สัปดาห์ที่','วันที่','แผนสะสม %']];
-  const n=Math.ceil(days(C.st,C.en)/7)+1;
-  for(let i=0;i<n;i++){const d=i===n-1?C.en:addD(C.st,i*7);sc.push([i+1,fmt(d),+(plannedAt(d,C)*100).toFixed(1)])}
-  if(typeof XLSX==='undefined'){
-    const csv='﻿'+rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n');
-    dl(new Blob([csv],{type:'text/csv'}),fname()+'.csv');return;
-  }
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:6},{wch:9},{wch:46},{wch:12},{wch:12},{wch:11},{wch:11},{wch:10},{wch:8},{wch:16},{wch:16}];
-  XLSX.utils.book_append_sheet(wb,ws,'Master Schedule');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(info),'ข้อมูลโครงการ');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sc),'S-Curve');
-  /* ชีต Defect — คอลัมน์เรียงตรงกับ Defect_Report.xlsx เพื่อ copy ไป paste ต่อท้ายได้ทันที */
-  const dh=[['วันที่ / Date','Project','จุด/พื้นที่ / Location','รหัสงาน / WP Code','หมวด Defect / Category',
-    'รายละเอียด / Description','ความรุนแรง / Severity','สถานะ / Status','Contractor','กำหนดแก้',
-    'วันที่แก้เสร็จ','หมายเหตุ / Remarks','รูป ก่อนแก้','รูป หลังแก้']];
-  defs().forEach(d=>dh.push([d.date?fmt(D(d.date)):'',S.info.name||'',d.loc||'',d.wp||'',d.cat||'',d.desc||'',
-    d.sev||'',d.st||'',d.by||'',d.due?fmt(D(d.due)):'',d.fixed?fmt(D(d.fixed)):'',d.note||'','','']));
-  const dws=XLSX.utils.aoa_to_sheet(dh);
-  dws['!cols']=[{wch:11},{wch:22},{wch:18},{wch:30},{wch:28},{wch:44},{wch:26},{wch:22},{wch:16},{wch:11},{wch:12},{wch:26},{wch:14},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,dws,'Defect Report');
-  XLSX.writeFile(wb,fname()+'.xlsx');
-}
 
 /* ══════════════════ เก็บถาวรในไฟล์จริง (File System Access API) ══════════════════ */
 const FSA=!!window.showSaveFilePicker;
@@ -1244,16 +1196,6 @@ async function restoreFile(){
 }
 
 /* ── สแนปชอตให้ทีมดูผ่าน GitHub ── */
-async function saveTeam(){
-  const data=JSON.stringify(Object.assign({},WS,{snapshotAt:new Date().toISOString()}),null,1);
-  if(!FSA){dl(new Blob([data],{type:'application/json'}),TEAM_FILE);
-    alert('ดาวน์โหลด '+TEAM_FILE+' แล้ว — ย้ายไปไว้ในโฟลเดอร์ Dashboard แล้วดับเบิลคลิก "Update Dashboard to GitHub.bat"');return}
-  try{
-    if(!teamFh){teamFh=await showSaveFilePicker({suggestedName:TEAM_FILE,types:JTYPE});await idbSet('team',teamFh)}
-    const w=await teamFh.createWritable(); await w.write(data); await w.close();
-    alert('บันทึกสแนปชอตแล้ว ('+WS.projects.length+' โครงการ)\n\nขั้นต่อไป: ดับเบิลคลิก "Update Dashboard to GitHub.bat" เพื่อส่งขึ้นเว็บให้ทีมเห็น');
-  }catch(e){if(e.name!=='AbortError')alert('บันทึกไม่สำเร็จ: '+e.message)}
-}
 async function loadTeam(){
   if(!confirm('โหลดแผนล่าสุดของทีมจาก GitHub มาแทนที่ทุกโครงการในหน้านี้?'))return;
   try{
@@ -1264,6 +1206,43 @@ async function loadTeam(){
     alert('โหลดแผนของทีมแล้ว '+o.projects.length+' โครงการ'+(o.snapshotAt?'\nสแนปชอตเมื่อ '+new Date(o.snapshotAt).toLocaleString('th-TH'):''));
   }catch(e){alert('โหลดไม่สำเร็จ: '+e.message)}
 }
+
+/* ══════════════════ พิมพ์ / PDF ══════════════════
+   ย่อเฉพาะบล็อกที่กว้างเกินหน้ากระดาษ A3 แนวนอน ให้พอดีความกว้าง ส่วนความยาวปล่อยขึ้นหน้าใหม่ */
+const A3W=1527;                       // 420mm - ขอบ 8mm สองข้าง ที่ 96dpi
+let printUndo=[];
+let printScale='';
+function ganttWidth(){
+  const gl=document.querySelector('#gantt .gl'), gr=document.querySelector('#gantt .gr');
+  return (gl&&gr)?gl.offsetWidth+gr.offsetWidth:0;
+}
+function beforePrint(){
+  afterPrint();
+  /* โครงการยาวมาก ถ้าย่อจนอ่านไม่ออก ให้สลับ Gantt เป็นรายเดือนก่อน */
+  const sel=document.getElementById('scale');
+  if(sel&&sel.value!=='month'&&ganttWidth()>A3W/0.45){
+    printScale=sel.value; sel.value='month'; refresh();
+  }
+  document.querySelectorAll('#tbl,#deftbl,#gantt').forEach(el=>{
+    const gl=el.querySelector('.gl'), gr=el.querySelector('.gr');   // Gantt วัดจากสองแผงจริง ไม่พึ่ง overflow
+    const w=(gl&&gr)?gl.offsetWidth+gr.offsetWidth:Math.max(el.scrollWidth,el.offsetWidth);
+    if(w<=A3W+2)return;
+    const s=A3W/w, box=el.parentElement;
+    printUndo.push({el,box,t:el.style.transform,o:el.style.transformOrigin,h:box.style.height,ov:box.style.overflow});
+    el.style.transformOrigin='top left';
+    el.style.transform=`scale(${s.toFixed(4)})`;
+    box.style.height=Math.ceil(Math.max(el.scrollHeight,el.offsetHeight)*s)+'px';
+    box.style.overflow='hidden';
+  });
+}
+function afterPrint(){
+  printUndo.forEach(u=>{u.el.style.transform=u.t;u.el.style.transformOrigin=u.o;
+    u.box.style.height=u.h;u.box.style.overflow=u.ov});
+  printUndo=[];
+  if(printScale){const sel=document.getElementById('scale');if(sel){sel.value=printScale;refresh()}printScale=''}
+}
+addEventListener('beforeprint',beforePrint);
+addEventListener('afterprint',afterPrint);
 
 /* ══════════════════ INIT ══════════════════ */
 function normalize(){
