@@ -1,0 +1,332 @@
+<meta charset="UTF-8">
+<title>คู่มือ Master Schedule Builder ฉบับเต็ม</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ink:#00293D; --steel:#4E7A93; --stamp:#B01019; --user:#0F4C6B; --admin:#8A4B10;
+  --sheet:#FFFFFF; --ground:#EDEAE3; --hair:#D6D3CA; --tint:#F4F1E9; --mute:#5C6A73;
+  --f-sans:'IBM Plex Sans Thai','Sarabun','Leelawadee UI',Tahoma,sans-serif;
+  --f-mono:'IBM Plex Mono',Consolas,monospace;
+  --badge-fg:#fff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#DCE7ED; --steel:#8CB4C9; --stamp:#E8636B; --user:#8CB4C9; --admin:#D9A05B;
+    --sheet:#132430; --ground:#0B1620; --hair:#2A3F4D; --tint:#182D3A; --mute:#8FA3AE;
+    --badge-fg:#0B1620;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#DCE7ED; --steel:#8CB4C9; --stamp:#E8636B; --user:#8CB4C9; --admin:#D9A05B;
+  --sheet:#132430; --ground:#0B1620; --hair:#2A3F4D; --tint:#182D3A; --mute:#8FA3AE;
+  --badge-fg:#0B1620;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-sans);
+  font-size:13.5px;line-height:1.62;padding:24px 14px;-webkit-font-smoothing:antialiased}
+.sheet{width:100%;max-width:840px;margin:0 auto;background:var(--sheet);
+  padding:26px 30px 22px;box-shadow:0 3px 24px rgba(0,25,40,.16);
+  display:flex;flex-direction:column;gap:20px}
+
+/* หัวเอกสารแบบ title block */
+.tb{border:1.5px solid var(--ink);display:grid;grid-template-columns:1fr 92px 104px 128px}
+.tb>div{padding:9px 12px;border-left:1px solid var(--hair)}
+.tb>div:first-child{border-left:0}
+.lab{font-family:var(--f-mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--mute);display:block;margin-bottom:3px}
+h1{font-size:21px;font-weight:700;line-height:1.25;letter-spacing:-.2px;text-wrap:balance}
+h1 small{display:block;font-size:12.5px;font-weight:500;color:var(--steel);margin-top:3px}
+.val{font-family:var(--f-mono);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.val.rev{color:var(--stamp)}
+
+.intro{border-left:3px solid var(--stamp);padding-left:12px;color:var(--mute);max-width:70ch}
+.url{display:inline-block;font-family:var(--f-mono);font-size:11px;background:var(--tint);
+  border:1px solid var(--hair);padding:3px 8px;color:var(--ink);word-break:break-all;margin-top:6px}
+
+/* แบ่งสองส่วน */
+.part{border-top:2px solid var(--c);padding-top:14px;display:flex;flex-direction:column;gap:16px}
+.part.user{--c:var(--user)} .part.admin{--c:var(--admin)}
+.part-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.part-h b{font-size:10px;font-family:var(--f-mono);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--badge-fg);background:var(--c);padding:3px 9px}
+.part-h h2{font-size:17px;font-weight:700}
+.part-h span{font-size:12px;color:var(--mute)}
+
+section{break-inside:avoid}
+h3{font-size:13.5px;font-weight:700;border-bottom:1.5px solid var(--hair);
+  padding-bottom:5px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:baseline}
+h3 em{font-style:normal;font-family:var(--f-mono);font-size:8.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--mute)}
+p+p{margin-top:7px}
+ol,ul{padding-left:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+ol.steps li{display:grid;grid-template-columns:22px 1fr;gap:9px;align-items:start}
+ol.steps b{font-family:var(--f-mono);font-size:14px;font-weight:600;color:var(--c,var(--stamp));line-height:1.2}
+ol.steps strong{display:block;font-weight:600}
+ol.steps span{color:var(--mute)}
+ul.dot li{padding-left:15px;text-indent:-15px;color:var(--mute)}
+ul.dot li::before{content:'—';color:var(--steel);margin-right:7px}
+ul.dot b{color:var(--ink)}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);
+  font-weight:600;padding:0 8px 5px 0;border-bottom:1.5px solid var(--hair)}
+td{padding:6px 8px 6px 0;border-bottom:1px solid var(--hair);vertical-align:top;color:var(--mute)}
+td:first-child{color:var(--ink);font-weight:600;width:170px}
+td b{color:var(--ink)}
+tr:last-child td{border-bottom:0}
+
+kbd{font-family:var(--f-sans);font-size:11.5px;font-weight:600;background:var(--tint);
+  border:1px solid var(--hair);border-bottom-width:2px;padding:1px 6px;white-space:nowrap;color:var(--ink)}
+code{font-family:var(--f-mono);font-size:11.5px;background:var(--tint);padding:1px 5px;
+  border:1px solid var(--hair);word-break:break-all}
+.note{background:var(--tint);border-left:3px solid var(--stamp);padding:10px 13px;
+  display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.note b{font-weight:600}
+.note .t{font-weight:700;color:var(--stamp)}
+
+footer{border-top:1.5px solid var(--ink);padding-top:8px;display:flex;justify-content:space-between;
+  gap:14px;flex-wrap:wrap;font-family:var(--f-mono);font-size:8.5px;letter-spacing:.05em;color:var(--mute)}
+
+@media (max-width:640px){ .tb{grid-template-columns:1fr 1fr} .tb>div:nth-child(3){border-left:0} td:first-child{width:auto} }
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  body{background:#fff;padding:0;font-size:9.6pt;line-height:1.5}
+  .sheet{max-width:none;box-shadow:none;padding:0;gap:14px}
+  .part{break-before:page}
+  .part.user{break-before:auto}
+  h3{break-after:avoid}
+  section,table,.note{break-inside:avoid}
+  :root{--sheet:#fff;--ink:#00293D;--ground:#fff;--tint:#F4F1E9;--hair:#CFCCC3;--mute:#5C6A72}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+
+<div class="sheet">
+
+  <div class="tb">
+    <div>
+      <span class="lab">คู่มือการใช้งานฉบับเต็ม · Full Manual</span>
+      <h1>Master Schedule Builder
+        <small>เครื่องมือจัดทำแผนงานหลัก · ติดตาม Defect · ทำงานร่วมกันทั้งทีม</small></h1>
+    </div>
+    <div><span class="lab">Rev.</span><span class="val rev">R1</span></div>
+    <div><span class="lab">วันที่</span><span class="val">29/08/26</span></div>
+    <div><span class="lab">ผู้ดูแลระบบ</span><span class="val" style="font-size:10px">warid.y@<br>coralesg.com</span></div>
+  </div>
+
+  <div class="intro">
+    <p>กรอกรายการงานกับจำนวนวัน แล้วเครื่องมือคำนวณวันเริ่ม–วันเสร็จเป็นวันทำงานจริง วาด Gantt และ S-Curve
+      ติดตาม Defect รายจุด และพิมพ์เป็น PDF ขนาด A3 ได้ — ทำงานในเบราว์เซอร์ล้วน ไม่ต้องติดตั้งโปรแกรม</p>
+    <span class="url">wyuwachotiphan-crypto.github.io/CM-Dashborad/Master_Schedule_Builder.html</span>
+  </div>
+
+  <!-- ═══════════ ส่วนที่ 1 : ผู้ใช้งาน ═══════════ -->
+  <div class="part user">
+    <div class="part-h"><b>ส่วนที่ 1</b><h2>สำหรับผู้ใช้งาน</h2>
+      <span>ทีมงานทุกคนที่ต้องกรอกแผน อัปเดตความคืบหน้า และบันทึก Defect</span></div>
+
+    <section>
+      <h3>1. เริ่มใช้งานครั้งแรก <em>getting started</em></h3>
+      <ol class="steps">
+        <li><b>1</b><div><strong>เปิดลิงก์ด้วย Chrome หรือ Microsoft Edge</strong>
+          <span>บันทึกลิงก์ไว้ในบุ๊กมาร์ก ใช้ได้ทั้งคอมพิวเตอร์และแท็บเล็ตหน้างาน</span></div></li>
+        <li><b>2</b><div><strong>กด <kbd>โหมดทีม (M365)</kbd> เพื่อเข้าใช้ข้อมูลกลาง</strong>
+          <span>ใส่ <b>อีเมลบริษัท</b> และ <b>รหัสทีม</b> ที่ได้จากผู้ดูแล (ขึ้นต้นด้วย <code>MSB1-</code>) — ใส่รหัสครั้งเดียว ครั้งต่อไปเหลือแค่อีเมล</span></div></li>
+        <li><b>3</b><div><strong>เครื่องที่ล็อกอิน Microsoft 365 อยู่แล้วจะเข้าเงียบ ๆ</strong>
+          <span>ถ้าไม่ใช่ จะมีหน้าต่างของ Microsoft เด้งมาให้ใส่รหัสผ่าน โดยเติมอีเมลไว้ให้แล้ว</span></div></li>
+        <li><b>4</b><div><strong>ดูแถบสถานะใต้หัวเรื่อง</strong>
+          <span>สีเขียว = เชื่อมข้อมูลกลางแล้ว · สีแดง = มีคนอื่นกำลังแก้อยู่ (หน้าคุณเป็นโหมดอ่าน) · ไม่มีแถบ = ยังไม่ได้เข้าโหมดทีม</span></div></li>
+      </ol>
+    </section>
+
+    <section>
+      <h3>2. กรอกแผนงาน 5 ขั้น <em>build the schedule</em></h3>
+      <ol class="steps">
+        <li><b>1</b><div><strong>ตั้งค่าโครงการ</strong><span>ชื่อโครงการ · <b>วันเริ่มงาน</b> · <b>ระยะเวลาสัญญา</b> · เลือกวันทำงาน (จ.–ส. / จ.–ศ. / ทุกวัน) · ใส่วันหยุดพิเศษเป็น <code>2026-04-13</code> คั่นด้วยลูกน้ำ</span></div></li>
+        <li><b>2</b><div><strong>เลือกเทมเพลต</strong><span><kbd>เทมเพลตงาน</kbd> → <b>ฉบับ A</b> งานอาคาร (WP-01…13) หรือ <b>ฉบับ B</b> บ้าน (B-1…8) มีช่วงรอ Main Contractor ปิดฝ้าคั่นให้แล้ว</span></div></li>
+        <li><b>3</b><div><strong>แก้รายการงาน</strong><span>พิมพ์ทับได้เลย · ชื่องาน/รหัส WBS/ผู้รับผิดชอบ เลือกจากรายการที่มีให้ · ปุ่มท้ายแถว <kbd>↑</kbd> <kbd>↓</kbd> เลื่อน · <kbd>⧉</kbd> ทำซ้ำ · <kbd>✕</kbd> ลบ</span></div></li>
+        <li><b>4</b><div><strong>กด <kbd>คิดน้ำหนักอัตโนมัติ</kbd></strong><span>เกลี่ยน้ำหนักตามจำนวนวันให้ครบ 100% แล้วปรับงานที่มีมูลค่าสูงเพิ่มเอง</span></div></li>
+        <li><b>5</b><div><strong>อัปเดตทุกสัปดาห์</strong><span>ใส่ช่อง <b>ทำแล้ว %</b> ของแต่ละงาน แถบ KPI จะบอกทันทีว่าแผน ณ วันนี้กี่ % ทำได้จริงกี่ % ช้ากว่าแผนเท่าไร</span></div></li>
+      </ol>
+    </section>
+
+    <section>
+      <h3>3. ช่องไหนต้องกรอก ช่องไหนไม่ต้อง <em>what to fill in</em></h3>
+      <ul class="dot">
+        <li><b>ช่องพื้นเหลืองขอบทอง</b> = ต้องกรอก ยังว่างอยู่ · พอกรอกแล้วสีหายเอง</li>
+        <li><b>ช่องพื้นเทา</b> = ระบบคำนวณให้ (วันเริ่ม / วันเสร็จ) ไม่ต้องไปยุ่ง</li>
+        <li><b>จุดแดงท้ายชื่อช่อง</b> ในข้อมูลโครงการ = ช่องบังคับ</li>
+        <li><b>ป้ายที่หัวตาราง</b> บอกว่ายังเหลือกี่ช่อง <b>กดแล้วกระโดดไปช่องนั้นให้เลย</b> · กรอกครบเปลี่ยนเป็นป้ายเขียว</li>
+        <li>บังคับกรอกจริง ๆ มีแค่: <b>ชื่อโครงการ · วันเริ่มงาน · ระยะเวลาสัญญา · ชื่องาน · จำนวนวัน</b></li>
+        <li>อยากให้ตารางเรียบง่ายขึ้น เลือก <b>มุมมอง → ง่าย</b> จะเหลือเฉพาะช่องที่ต้องกรอก</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>4. คอลัมน์ที่ต้องเข้าใจ <em>columns</em></h3>
+      <table>
+        <tr><td>เริ่มหลังจาก</td><td>งานที่ต้องเสร็จก่อน — ตัวที่ทำให้แผนทั้งสายเลื่อนตามกัน</td></tr>
+        <tr><td>ชนิด</td><td><b>FS</b> เริ่มหลังงานก่อนเสร็จ · <b>SS</b> เริ่มพร้อมกัน</td></tr>
+        <tr><td>Lag</td><td>เว้นกี่วันทำงาน · <b>ใส่ติดลบได้</b> ถ้าต้องการให้งานคาบเกี่ยวกัน</td></tr>
+        <tr><td>วัน</td><td>ระยะเวลา นับเฉพาะวันทำงาน ข้ามวันหยุดให้เอง</td></tr>
+        <tr><td>น้ำหนัก%</td><td>สัดส่วนของงานนั้นในโครงการ รวมทุกงาน = 100%</td></tr>
+        <tr><td>ทำแล้ว %</td><td><b>ความคืบหน้าของงานนั้นเอง 0–100</b> (เสร็จแล้ว = 100)</td></tr>
+        <tr><td>MS</td><td>ติ๊ก = Milestone / Hold Point ★ แสดงเป็นข้าวหลามตัดแดง</td></tr>
+        <tr><td>รอผู้อื่น</td><td>ช่วงที่เราไม่ได้ทำ เช่นรอปิดฝ้า — กินเวลาแต่ <b>ไม่นับน้ำหนักและผลงาน</b></td></tr>
+      </table>
+    </section>
+
+    <div class="note">
+      <span class="t">ข้อผิดพลาดที่พบบ่อยที่สุด — "ทำแล้ว %" ไม่ใช่ "น้ำหนัก%"</span>
+      <span>งานที่เสร็จแล้วให้กรอก <b>100</b> ไม่ใช่กรอกน้ำหนักของมัน (เช่น 7.6) ระบบจะคูณน้ำหนักให้เอง
+        ถ้ากรอกผิดแบบนี้ แท่ง Gantt จะเติมสีนิดเดียวและ KPI ผลงานจริงจะต่ำผิดปกติ
+        — เครื่องมือตรวจจับให้และขึ้นปุ่ม <b>“แปลงให้อัตโนมัติ”</b> กดครั้งเดียวแก้ทั้งตาราง</span>
+    </div>
+
+    <section>
+      <h3>5. บันทึกและติดตาม Defect <em>defects</em></h3>
+      <ul class="dot">
+        <li>กด <kbd>+ เพิ่ม Defect</kbd> — ระบบเติมให้อัตโนมัติ: วันที่วันนี้ · งานที่กำลังทำ · รหัส WP · ผู้แก้ไข</li>
+        <li><b>กำหนดแก้คิดให้ตามมาตรฐาน</b> — Critical = วันทำงานถัดไป · Major = วันเสร็จของ WP นั้น · Minor = วันส่งมอบ (แก้ทับได้)</li>
+        <li>แถวขีดแดงซ้าย = เกินกำหนดแก้ · ขีดเหลือง = Critical ที่ยังค้าง</li>
+        <li>งานที่มี Defect ค้างจะขึ้นตรา <b>▲ ตัวเลข</b> ใน Gantt · <b>คลิกที่ตราเพื่อกรองดูเฉพาะงานนั้น</b></li>
+        <li>เปลี่ยนสถานะเป็น Verified / Closed แล้วระบบลงวันที่แก้เสร็จให้เอง</li>
+        <li><b>กฎที่ระบบเตือนให้:</b> ห้ามผ่าน Hold Point ★ ถ้ายังมี Defect ค้าง · กรอกทำแล้ว 100% ทั้งที่ยังมี Critical ค้าง · Defect เกินกำหนดแก้</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>6. อ่าน Gantt ให้ถูก <em>reading the chart</em></h3>
+      <table>
+        <tr><td>สีทึบ</td><td>ส่วนที่ <b>เกิดขึ้นจริงแล้ว</b> — ยาวตามตัวเลขทำแล้ว %</td></tr>
+        <tr><td>สีจาง</td><td>ตามแผนแต่ <b>ยังไม่เกิดขึ้น</b></td></tr>
+        <tr><td>สีของแท่ง</td><td>สีประจำ <b>หมวดงาน</b> (First Fix / Second Fix / Hand Over …) แถวในตารางใช้สีเดียวกัน</td></tr>
+        <tr><td>แท่งสีแดง</td><td>งานที่ <b>เลยกำหนดแล้วเสร็จตามสัญญา</b></td></tr>
+        <tr><td>ลายทแยงเทา</td><td>ช่วงรอผู้อื่น เช่นรอ Main Contractor ปิดฝ้า</td></tr>
+        <tr><td>◆ ทึบ / ◇ โปร่ง</td><td>Milestone ที่ผ่านแล้ว / ที่ยังไม่ถึง</td></tr>
+        <tr><td>เส้นแดงแนวตั้ง</td><td>วันนี้</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h3>7. พิมพ์เป็น PDF <em>print</em></h3>
+      <ul class="dot">
+        <li>กด <kbd>พิมพ์ / PDF</kbd> → เลือกกระดาษ <b>A3 แนวนอน</b> → Save as PDF</li>
+        <li>ระบบ <b>ย่อ Gantt ให้พอดีหน้ากระดาษเอง</b> โครงการยาวจะสลับเป็นมุมมองรายเดือนให้ก่อน</li>
+        <li>ตารางยาวขึ้นหน้าใหม่พร้อม <b>หัวตารางซ้ำทุกหน้า</b> และไม่มีแถวถูกผ่าครึ่ง · Gantt ขึ้นหน้าใหม่เสมอ</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>8. ทำงานพร้อมกันหลายคน <em>working together</em></h3>
+      <ul class="dot">
+        <li>ระบบดึงของใหม่จากไฟล์กลาง <b>ทุก 20 วินาที</b> และบันทึกของคุณให้เองหลังหยุดพิมพ์ 2–3 วินาที</li>
+        <li>ใครเริ่มแก้ก่อนจะ <b>ถือล็อก</b> คนอื่นเห็นแถบแดงว่าใครกำลังแก้ และหน้าจอเป็นโหมดอ่าน · ล็อกหมดอายุเองใน 2 นาทีถ้าคนนั้นปิดหน้าไป</li>
+        <li>ถ้ามีคนบันทึกแทรกระหว่างที่คุณแก้ ระบบ <b>ไม่เขียนทับ</b> แต่ถามก่อนว่าจะโหลดของล่าสุดหรือเก็บของคุณไว้</li>
+        <li>ให้แต่ละคนแก้คนละโครงการ (คนละแท็บด้านบน) จะไม่ชนกันเลย</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>9. ปัญหาที่พบบ่อย <em>user FAQ</em></h3>
+      <table>
+        <tr><td>เปิดมาแล้วไม่เห็นข้อมูลของทีม</td><td>ยังไม่ได้เข้าโหมดทีม — กด <kbd>โหมดทีม (M365)</kbd> แล้วใส่อีเมล</td></tr>
+        <tr><td>แก้อะไรไม่ได้เลย</td><td>มีคนอื่นถือล็อกอยู่ ดูชื่อในแถบแดง · รอ 2 นาทีหลังเขาปิดหน้าจอ ล็อกจะหลุดเอง</td></tr>
+        <tr><td>ตัวเลขไม่ตรงกับเพื่อน</td><td>รอ 20 วินาทีให้ดึงของใหม่ หรือรีเฟรชหน้า (F5)</td></tr>
+        <tr><td>ขึ้นว่ารหัสทีมไม่ถูกต้อง</td><td>ขอรหัสใหม่จากผู้ดูแล — ต้องคัดลอกทั้งข้อความรวม <code>MSB1-</code></td></tr>
+        <tr><td>ตารางแสดงคอลัมน์ไม่ครบ</td><td>จอแคบระบบย่อคอลัมน์รองให้อัตโนมัติ — เลือก <b>มุมมอง → ครบทุกคอลัมน์</b> ถ้าต้องการดูทั้งหมด</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <!-- ═══════════ ส่วนที่ 2 : ผู้ดูแลระบบ ═══════════ -->
+  <div class="part admin">
+    <div class="part-h"><b>ส่วนที่ 2</b><h2>สำหรับผู้ดูแลระบบ</h2>
+      <span>warid.y@coralesg.com — ติดตั้งครั้งแรก แจกสิทธิ์ ดูแลข้อมูล และอัปเดตเครื่องมือ</span></div>
+
+    <section>
+      <h3>1. ข้อมูลถูกเก็บไว้ที่ไหน <em>architecture</em></h3>
+      <table>
+        <tr><td>เบราว์เซอร์ของแต่ละคน</td><td>ที่เก็บชั่วคราว ใช้ได้ทันทีโดยไม่ต้องตั้งอะไร — <b>ล้างประวัติแล้วหาย</b></td></tr>
+        <tr><td>ไฟล์ถาวรในเครื่อง</td><td>ปุ่ม <kbd>เชื่อมไฟล์ถาวร</kbd> ผูกกับไฟล์ <code>.json</code> จริง (แนะนำวางใน OneDrive) ทุกการพิมพ์เขียนลงไฟล์เอง — เหมาะกับคนที่ทำแผนของตัวเอง</td></tr>
+        <tr><td>ไฟล์กลางของทีม</td><td>โหมดทีม (M365) — ไฟล์ <code>.json</code> ไฟล์เดียวบน OneDrive/SharePoint ที่ทุกคนอ่าน-เขียนผ่าน Microsoft Graph <b>นี่คือแหล่งข้อมูลจริงของทีม</b></td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h3>2. ติดตั้งครั้งแรก <em>one-time setup</em></h3>
+      <ol class="steps">
+        <li><b>1</b><div><strong>ลงทะเบียนแอปใน Microsoft Entra</strong>
+          <span>เข้า <code>entra.microsoft.com</code> ด้วยอีเมลบริษัท → App registrations → New registration → ตั้งชื่อ <b>Master Schedule Builder</b></span></div></li>
+        <li><b>2</b><div><strong>ตั้ง Redirect URI ชนิด SPA</strong>
+          <span>เลือก Single-page application แล้ววาง <code>https://wyuwachotiphan-crypto.github.io/CM-Dashborad/Master_Schedule_Builder.html</code></span></div></li>
+        <li><b>3</b><div><strong>ให้สิทธิ์ Microsoft Graph</strong>
+          <span>API permissions → Add a permission → Microsoft Graph → <b>Delegated</b> → <code>Files.ReadWrite.All</code> และ <code>User.Read</code></span></div></li>
+        <li><b>4</b><div><strong>คัดลอกค่า 2 ตัวจากหน้า Overview</strong>
+          <span>Application (client) ID และ Directory (tenant) ID</span></div></li>
+        <li><b>5</b><div><strong>สร้างไฟล์กลาง</strong>
+          <span>สร้างไฟล์ <code>ERV_Master_Schedule.json</code> ในโฟลเดอร์ Teams/SharePoint ที่ทีมเข้าถึงได้ ใส่ข้อความ <code>{"projects":[]}</code> ไว้ข้างใน แล้ว Share → คัดลอกลิงก์ ตั้งสิทธิ์เป็น <b>People in Coral Life · แก้ไขได้</b></span></div></li>
+        <li><b>6</b><div><strong>กรอกในเครื่องมือแล้วสร้างรหัสทีม</strong>
+          <span>เปิดเครื่องมือ → <kbd>โหมดทีม (M365)</kbd> → ใส่อีเมลผู้ดูแล ส่วนตั้งค่าจะโผล่ → กรอก 3 ค่า → กด <b>สร้างรหัสทีม</b> → คัดลอกรหัสส่งให้ทีมทางไลน์</span></div></li>
+      </ol>
+    </section>
+
+    <section>
+      <h3>3. เพิ่ม–ถอนคนในทีม <em>access</em></h3>
+      <ul class="dot">
+        <li><b>เพิ่มคน:</b> ให้สิทธิ์เขาที่ไฟล์กลางใน SharePoint/OneDrive แล้วส่งรหัสทีมให้ — เขาใส่อีเมล + รหัสครั้งเดียว</li>
+        <li><b>ถอนคน:</b> <b>เอาสิทธิ์ที่ไฟล์ออก</b> คือสิ่งที่ได้ผลจริง เพราะ Microsoft ตรวจสิทธิ์ที่ฝั่งเซิร์ฟเวอร์ — ต่อให้เขายังมีรหัสทีมก็เปิดข้อมูลไม่ได้</li>
+        <li>รหัสทีมเป็นเพียงตัวช่วยตั้งค่า ไม่ใช่รหัสผ่าน — <b>สิทธิ์จริงอยู่ที่ไฟล์เสมอ</b></li>
+        <li>อยากให้ทีมไม่ต้องใส่รหัสเลย ให้ฝังค่าทั้ง 3 ลงในไฟล์เครื่องมือแล้ว push ขึ้น GitHub (ดูข้อ 5)</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>4. ดูแลข้อมูล <em>data care</em></h3>
+      <ul class="dot">
+        <li><b>สำรองข้อมูล:</b> กด <kbd>สำรองทุกโครงการ</kbd> ทุกสิ้นสัปดาห์ ได้ไฟล์ <code>.json</code> รวมทุกแท็บ เก็บไว้ในโฟลเดอร์โครงการ</li>
+        <li><b>กู้คืน:</b> <kbd>เปิดไฟล์</kbd> แล้วเลือกไฟล์สำรอง — ระบบถามก่อนแทนที่ทุกโครงการ</li>
+        <li><b>ส่งเฉพาะโครงการเดียว:</b> <kbd>บันทึกโครงการนี้</kbd> ได้ไฟล์เดียว ผู้รับกด <kbd>เปิดไฟล์</kbd> จะเข้าเป็นแท็บใหม่ ไม่ทับของเดิม</li>
+        <li><b>ล็อกค้าง:</b> ล็อกหมดอายุเองใน 2 นาที ถ้ายังค้างจริง ๆ ให้คนที่ถือล็อกเปิดหน้าแล้วปิด หรือแก้ค่า <code>lock</code> ในไฟล์กลางออก</li>
+        <li><b>ข้อมูลชนกัน:</b> ระบบตรวจเวอร์ชันไฟล์ก่อนเขียนทุกครั้ง ถ้าไฟล์ใหม่กว่าจะถามก่อน ไม่เขียนทับเงียบ ๆ</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>5. อัปเดตตัวเครื่องมือ <em>deployment</em></h3>
+      <ul class="dot">
+        <li>ไฟล์ต้นฉบับอยู่ที่ <code>Desktop\Dashboard\Master_Schedule_Builder.html</code> — แก้ไฟล์นี้ไฟล์เดียว</li>
+        <li>ดับเบิลคลิก <code>Update Dashboard to GitHub.bat</code> เพื่อส่งขึ้นเว็บ (พาคู่มือขึ้นไปด้วย) ขึ้นจริงภายใน 1–2 นาที</li>
+        <li>บอกทีมให้กด <b>Ctrl+F5</b> หลังอัปเดต เพื่อล้างแคชเบราว์เซอร์</li>
+        <li>ข้อมูลของทีมอยู่คนละที่กับตัวเครื่องมือ — <b>อัปเดตเครื่องมือไม่กระทบข้อมูล</b></li>
+      </ul>
+    </section>
+
+    <div class="note">
+      <span class="t">ข้อจำกัดและความปลอดภัยที่ต้องรู้</span>
+      <span><b>เว็บที่วางเครื่องมือเป็นพื้นที่สาธารณะ</b> ใครมีลิงก์เปิดหน้าเครื่องมือได้ แต่เปิด<b>ข้อมูล</b>ไม่ได้ถ้าไม่มีสิทธิ์ที่ไฟล์กลาง</span>
+      <span><b>โหมดทีมต้องใช้อินเทอร์เน็ต</b> — ถ้าเน็ตล่ม เครื่องมือยังทำแผนได้ตามปกติ เพียงแต่ไม่ซิงก์กับทีม</span>
+      <span><b>ต้องใช้ Chrome หรือ Edge</b> สำหรับปุ่มเชื่อมไฟล์ถาวรและโหมดทีม</span>
+    </div>
+
+    <section>
+      <h3>6. แก้ปัญหา <em>admin troubleshooting</em></h3>
+      <table>
+        <thead><tr><th>อาการ</th><th>สาเหตุและวิธีแก้</th></tr></thead>
+        <tr><td>ล็อกอินแล้วเด้งกลับ / ขึ้น redirect_uri mismatch</td><td>Redirect URI ใน Entra ไม่ตรงกับลิงก์ที่ใช้เปิด — ต้องตรงทุกตัวอักษรและเป็นชนิด SPA</td></tr>
+        <tr><td>ขึ้น consent / need admin approval</td><td>สิทธิ์ Graph ยังไม่ได้อนุมัติ — กด Grant admin consent ในหน้า API permissions</td></tr>
+        <tr><td>ขึ้น Graph 404</td><td>ลิงก์แชร์ไฟล์ผิด หรือไฟล์ถูกย้าย — คัดลอกลิงก์ใหม่แล้วสร้างรหัสทีมใหม่</td></tr>
+        <tr><td>ขึ้น Graph 403</td><td>คนนั้นไม่มีสิทธิ์ที่ไฟล์ — เพิ่มสิทธิ์ใน SharePoint/OneDrive</td></tr>
+        <tr><td>โหลด MSAL ไม่ได้</td><td>อินเทอร์เน็ตไม่ถึง หรือถูกไฟร์วอลล์บล็อก — ใช้งานแบบไฟล์ในเครื่องไปก่อน</td></tr>
+        <tr><td>องค์กรปิดสิทธิ์ลงทะเบียนแอป</td><td>ใช้ทางเลือกอื่นเป็นที่เก็บกลางแทน (ฐานข้อมูลฟรีที่สมัครเองได้) — แจ้งผู้พัฒนาเพื่อปรับให้</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <footer>
+    <span>MSB-GUIDE-R1 · CORAL LIFE — IAQ CONSTRUCTION MANAGEMENT</span>
+    <span>คู่มือฉบับย่อ 1 หน้าสำหรับติดหน้างาน · ดูไฟล์ Master_Schedule_Builder_Manual</span>
+  </footer>
+</div>
