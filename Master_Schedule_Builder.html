@@ -266,28 +266,41 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 <dialog id="dlgTeam">
   <div class="sec-h"><h2>โหมดทีม — เก็บแผนไว้ที่ OneDrive / SharePoint ของบริษัท</h2></div>
   <div class="pad">
-    <p style="font-size:12.5px;color:var(--steel);margin-bottom:12px">
-      ทุกคนล็อกอินด้วยอีเมลบริษัทแล้วอ่าน-เขียนไฟล์แผนงานไฟล์เดียวกัน
-      ระบบตรวจเวอร์ชันก่อนบันทึกทุกครั้ง และล็อกไม่ให้สองคนแก้โครงการเดียวกันพร้อมกัน</p>
-    <div class="grid" style="grid-template-columns:1fr">
-      <div><label>ลิงก์แชร์ของไฟล์แผนงาน (.json บน OneDrive/SharePoint)</label>
-        <input id="tmLink" placeholder="https://coralesg-my.sharepoint.com/:u:/g/personal/.../Ee1xxxx"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label>Application (client) ID</label><input id="tmClient" placeholder="00000000-0000-0000-0000-000000000000"></div>
-        <div><label>Directory (tenant) ID</label><input id="tmTenant" placeholder="00000000-0000-0000-0000-000000000000"></div>
-      </div>
-    </div>
+    <p style="font-size:12.5px;color:var(--steel);margin-bottom:14px">
+      ใส่อีเมลบริษัทแล้วกดเข้าสู่ระบบ — ทุกคนจะเห็นแผนงานชุดเดียวกันจากไฟล์กลางของบริษัท
+      ระบบตรวจเวอร์ชันก่อนบันทึกทุกครั้ง และกันไม่ให้สองคนแก้โครงการเดียวกันพร้อมกัน</p>
+
+    <label class="req" for="tmMail">อีเมลบริษัท</label>
+    <input id="tmMail" type="email" autocomplete="email" placeholder="ชื่อคุณ@coralesg.com"
+           style="font-size:15px;padding:10px 12px" onkeydown="if(event.key==='Enter')teamConnect()">
+
     <div id="tmStatus" class="msg" style="margin-top:12px;background:#F4F3F0;color:var(--steel)"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">
-      <button onclick="dlgTeam.close()">ปิด</button>
-      <button onclick="teamLogout()">ออกจากระบบ</button>
-      <button class="pri" onclick="teamConnect()">เข้าสู่ระบบและเชื่อมไฟล์</button>
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px;flex-wrap:wrap">
+      <button onclick="teamAdminToggle()" style="font-size:12px;color:var(--steel)">ตั้งค่าผู้ดูแลระบบ</button>
+      <span style="display:flex;gap:8px">
+        <button onclick="dlgTeam.close()">ปิด</button>
+        <button onclick="teamLogout()">ออกจากระบบ</button>
+        <button class="pri" onclick="teamConnect()">เข้าสู่ระบบ</button>
+      </span>
     </div>
-    <p style="font-size:11.5px;color:var(--steel);margin-top:12px;line-height:1.6">
-      <b>สิ่งที่ต้องขอจากฝ่าย IT ครั้งเดียว:</b> ลงทะเบียนแอปใน Microsoft Entra ID (ชนิด SPA)
-      โดยตั้ง Redirect URI เป็นลิงก์ของเครื่องมือนี้ และให้สิทธิ์ Microsoft Graph แบบ delegated:
-      <span style="font-family:var(--f-mono)">Files.ReadWrite.All</span> +
-      <span style="font-family:var(--f-mono)">User.Read</span> แล้วส่ง Client ID กับ Tenant ID มากรอกด้านบน</p>
+
+    <div id="tmAdmin" style="display:none;border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+      <p style="font-size:12px;color:var(--steel);margin-bottom:10px">
+        ตั้งครั้งเดียวโดยผู้ดูแล แล้วคนอื่นในทีมไม่ต้องกรอกส่วนนี้อีก</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><label>ลิงก์แชร์ของไฟล์แผนงาน (.json บน OneDrive/SharePoint)</label>
+          <input id="tmLink" placeholder="https://coralesg-my.sharepoint.com/:u:/g/personal/.../Ee1xxxx"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><label>Application (client) ID</label><input id="tmClient" placeholder="00000000-0000-0000-0000-000000000000"></div>
+          <div><label>Directory (tenant) ID</label><input id="tmTenant" placeholder="00000000-0000-0000-0000-000000000000"></div>
+        </div>
+      </div>
+      <p style="font-size:11.5px;color:var(--steel);margin-top:10px;line-height:1.6">
+        <b>ขอจากฝ่าย IT ครั้งเดียว:</b> ลงทะเบียนแอปใน Microsoft Entra ID (ชนิด SPA)
+        ตั้ง Redirect URI เป็นลิงก์ของเครื่องมือนี้ และให้สิทธิ์ Microsoft Graph แบบ delegated:
+        <span style="font-family:var(--f-mono)">Files.ReadWrite.All</span> +
+        <span style="font-family:var(--f-mono)">User.Read</span> แล้ว Grant admin consent</p>
+    </div>
   </div>
 </dialog>
 
@@ -1228,12 +1241,27 @@ const MSAL_CDN='https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
 const LOCK_MS=120000;                       // ล็อกหมดอายุถ้าไม่ต่ออายุใน 2 นาที
 let TM={cfg:null,app:null,acct:null,item:null,etag:'',timer:null,beat:null,busy:false,applying:false};
 
-function teamCfg(){try{return JSON.parse(localStorage.getItem('msb-team'))||null}catch(e){return null}}
+/* ค่าที่ผู้ดูแลตั้งครั้งเดียว — ฝังไว้ในไฟล์ได้เลย ผู้ใช้ทั่วไปจะไม่เห็นและไม่ต้องกรอก */
+const M365={clientId:'',tenantId:'',link:'',domain:'coralesg.com'};
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+function teamCfg(){
+  let c=null; try{c=JSON.parse(lsGet('msb-team'))}catch(e){}
+  return {clientId:M365.clientId||(c&&c.clientId)||'',
+          tenantId:M365.tenantId||(c&&c.tenantId)||'',
+          link:M365.link||(c&&c.link)||''};
+}
+const teamReady=()=>{const c=teamCfg();return !!(c.clientId&&c.tenantId&&c.link)};
+function teamAdminToggle(){const a=document.getElementById('tmAdmin');
+  a.style.display=a.style.display==='none'?'':'none'}
 function teamOpen(){
-  const c=teamCfg()||{};
-  tmLink.value=c.link||''; tmClient.value=c.clientId||''; tmTenant.value=c.tenantId||'';
-  teamMsg(TM.acct?`ล็อกอินอยู่: ${TM.acct.username}`+(TM.item?` · ไฟล์ ${TM.item.name}`:''):'ยังไม่ได้เข้าสู่ระบบ');
-  dlgTeam.showModal();
+  const c=teamCfg();
+  tmLink.value=c.link; tmClient.value=c.clientId; tmTenant.value=c.tenantId;
+  tmMail.value=lsGet('msb-mail')||(TM.acct?TM.acct.username:'');
+  document.getElementById('tmAdmin').style.display=teamReady()?'none':'';   // ยังไม่ตั้งค่า = เปิดให้ผู้ดูแลเห็น
+  teamMsg(TM.acct?`เข้าสู่ระบบอยู่: ${TM.acct.username}`+(TM.item?` · ไฟล์ ${TM.item.name}`:'')
+    :(teamReady()?'ใส่อีเมลบริษัทแล้วกดเข้าสู่ระบบ':'ยังไม่ได้ตั้งค่าไฟล์กลาง — กด "ตั้งค่าผู้ดูแลระบบ" ด้านล่าง'));
+  dlgTeam.showModal(); setTimeout(()=>tmMail.focus(),50);
 }
 function teamMsg(t,bad){const el=document.getElementById('tmStatus');if(el){el.textContent=t;
   el.style.background=bad?'#FDECEC':'#F4F3F0'; el.style.color=bad?'var(--red)':'var(--steel)'}}
@@ -1246,12 +1274,22 @@ function loadScript(src){return new Promise((ok,no)=>{
   document.head.appendChild(s)})}
 
 async function teamConnect(){
-  const cfg={link:tmLink.value.trim(),clientId:tmClient.value.trim(),tenantId:tmTenant.value.trim()};
-  if(!cfg.link||!cfg.clientId||!cfg.tenantId)return teamMsg('กรอกให้ครบทั้ง 3 ช่องก่อน',1);
-  localStorage.setItem('msb-team',JSON.stringify(cfg));
+  /* ผู้ดูแลกรอกช่องล่างไว้ก็บันทึกให้ ผู้ใช้ทั่วไปใส่แค่อีเมล */
+  const typed={link:tmLink.value.trim(),clientId:tmClient.value.trim(),tenantId:tmTenant.value.trim()};
+  if(typed.link&&typed.clientId&&typed.tenantId)lsSet('msb-team',JSON.stringify(typed));
+  const cfg=teamCfg();
+  if(!cfg.link||!cfg.clientId||!cfg.tenantId){
+    document.getElementById('tmAdmin').style.display='';
+    return teamMsg('ยังไม่ได้ตั้งค่าไฟล์กลาง — ให้ผู้ดูแลกรอก 3 ช่องด้านล่างครั้งเดียว',1);
+  }
+  const mail=tmMail.value.trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail))return teamMsg('ใส่อีเมลบริษัทให้ถูกต้องก่อน',1);
+  if(M365.domain&&!mail.toLowerCase().endsWith('@'+M365.domain))
+    return teamMsg(`ต้องเป็นอีเมล @${M365.domain} เท่านั้น`,1);
+  lsSet('msb-mail',mail);
   try{
     teamMsg('กำลังเข้าสู่ระบบ…');
-    await teamSignIn(cfg);
+    await teamSignIn(cfg,mail);
     teamMsg('กำลังเปิดไฟล์แผนงาน…');
     await teamResolveFile(cfg.link);
     await teamPull(true);
@@ -1259,15 +1297,21 @@ async function teamConnect(){
     teamMsg(`พร้อมใช้งาน — ${TM.acct.username} · ไฟล์ ${TM.item.name}`);
   }catch(e){teamMsg('ไม่สำเร็จ: '+e.message,1)}
 }
-async function teamSignIn(cfg){
+async function teamSignIn(cfg,mail){
   await loadScript(MSAL_CDN);
   TM.cfg=cfg;
   TM.app=new msal.PublicClientApplication({auth:{clientId:cfg.clientId,
     authority:'https://login.microsoftonline.com/'+cfg.tenantId,
     redirectUri:location.href.split('#')[0]},cache:{cacheLocation:'localStorage'}});
   if(TM.app.initialize)await TM.app.initialize();
-  const have=TM.app.getAllAccounts();
-  TM.acct=have[0]||(await TM.app.loginPopup({scopes:['Files.ReadWrite.All','User.Read']})).account;
+  const scopes=['Files.ReadWrite.All','User.Read'];
+  const known=TM.app.getAllAccounts().find(a=>!mail||a.username.toLowerCase()===mail.toLowerCase());
+  if(known){TM.acct=known;return}
+  try{                                   // เครื่องที่ล็อกอิน M365 อยู่แล้ว จะเข้าเงียบ ๆ ไม่มีป๊อปอัป
+    TM.acct=(await TM.app.ssoSilent({scopes,loginHint:mail})).account;
+  }catch(e){                             // ถ้าไม่ได้ ค่อยเปิดหน้าล็อกอินของ Microsoft พร้อมเติมอีเมลให้แล้ว
+    TM.acct=(await TM.app.loginPopup({scopes,loginHint:mail})).account;
+  }
 }
 async function teamToken(){
   const req={scopes:['Files.ReadWrite.All'],account:TM.acct};
@@ -1347,7 +1391,7 @@ async function teamLogout(){
   teamChip(''); teamMsg('ออกจากระบบแล้ว');
 }
 async function teamAutoStart(){                 // เปิดหน้าใหม่แล้วต่อให้เองถ้าเคยล็อกอินไว้
-  const cfg=teamCfg(); if(!cfg||!cfg.clientId)return;
+  const cfg=teamCfg(); if(!cfg.clientId||!cfg.link)return;
   try{
     await loadScript(MSAL_CDN);
     TM.cfg=cfg;
