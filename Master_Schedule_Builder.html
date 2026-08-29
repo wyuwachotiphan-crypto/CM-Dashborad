@@ -12,7 +12,9 @@
   --ink:#003049; --ink-soft:#0F4C6B; --grid:#669BBC; --paper:#fff; --canvas:#F7F7F5;
   --accent:#C1121F; --accent-soft:#FDF0D5; --text:#003049; --steel:#787774;
   --line:#E3E2DE; --green:#3E8F63; --red:#780000; --gray:#98A5AD; --amber:#B47B12;
-  font-family:'IBM Plex Sans Thai',sans-serif;
+  --f-sans:'IBM Plex Sans Thai','Sarabun','Noto Sans Thai','Leelawadee UI',Tahoma,sans-serif;
+  --f-mono:'IBM Plex Mono','Consolas','Courier New',monospace;
+  font-family:var(--f-sans);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--canvas);color:var(--text);padding-bottom:60px;font-size:14px}
@@ -64,7 +66,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line)}
 .kpi{background:var(--paper);padding:12px 16px}
 .kpi .k{font-size:11px;color:var(--steel)}
-.kpi .v{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.kpi .v{font-size:20px;font-weight:700;font-family:var(--f-mono);margin-top:2px}
 .kpi .n{font-size:11px;color:var(--steel);margin-top:1px}
 .ok{color:var(--green)} .bad{color:var(--accent)} .warn{color:var(--amber)}
 /* table */
@@ -89,7 +91,7 @@ label.req::after{content:' •';color:var(--accent);font-weight:700}
 .needchip{font-size:12px;font-weight:600;border-radius:20px;padding:3px 10px;border:1px solid;cursor:pointer}
 .needchip.on{color:#8A6412;border-color:#E0A93B;background:#FFF6E0}
 .needchip.off{color:var(--green);border-color:#BFE0CC;background:#EFF7F1;cursor:default}
-.derived{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--steel);white-space:nowrap}
+.derived{font-family:var(--f-mono);font-size:12px;color:var(--steel);white-space:nowrap}
 .ph{background:var(--accent-soft);font-weight:700;font-size:12px}
 .scroll{overflow-x:auto}
 .rowact{display:flex;gap:2px}
@@ -100,7 +102,7 @@ label.req::after{content:' •';color:var(--accent);font-weight:700}
 .grow{height:26px;display:flex;align-items:center;border-bottom:1px solid #F0EFEC;font-size:12px;white-space:nowrap}
 .gl .grow{padding:0 8px;gap:8px}
 .gl .gname{width:320px;overflow:hidden;text-overflow:ellipsis}
-.gl .gdate{width:150px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--steel);text-align:right}
+.gl .gdate{width:150px;font-family:var(--f-mono);font-size:11px;color:var(--steel);text-align:right}
 .ghead{height:22px;font-size:10px;color:var(--steel);border-bottom:1px solid var(--line);
   display:flex;align-items:center;font-weight:600;background:#FBFBFA}
 .tick{border-left:1px solid var(--line);height:100%;display:flex;align-items:center;padding-left:3px;overflow:hidden;flex:0 0 auto}
@@ -408,15 +410,81 @@ function hiddenCols(){
   const h=new Set();
   if(viewMode==='full')return h;
   if(viewMode==='easy'){EASY_HIDE.forEach(c=>h.add(c));return h}
-  const box=document.getElementById('tblbox');
-  const w=box?box.clientWidth:1500;
-  HIDE_STEPS.forEach(([lim,cols])=>{if(w<lim)cols.forEach(c=>h.add(c))});
+  /* ซ่อนทีละกลุ่มจนกว่าความกว้างที่วัดได้จริงจะพอดีจอ */
+  const box=document.getElementById('tblbox'), avail=box?box.clientWidth:1500;
+  const W=fitTaskCols(), nameMin=flexMin('#tbl tbody input',S.tasks,t=>t.name,420);
+  let total=W.reduce((a,w)=>a+w,0)+nameMin;
+  for(const grp of [[5,6],[3],[12],[13,14]]){
+    if(total<=avail)break;
+    grp.forEach(c=>{h.add(c);total-=W[c]});
+  }
   return h;
 }
 function setMode(v){
   viewMode=v; WS.mode=v; showAll=(v==='full');
   buildTable(); buildDefects(); refresh();
 }
+/* ══════ วัดความกว้างข้อความจริง แล้วตั้งความกว้างคอลัมน์ให้พอดี ══════
+   วัดด้วยฟอนต์และขนาดที่เครื่องนั้นเรนเดอร์จริง จึงไม่ตัดคำไม่ว่าจะโหลดฟอนต์ติดหรือซูมเท่าไร */
+const PAD={text:32,sel:44,num:38,date:66,plain:20};
+function measurer(sel,size,fam){
+  const el=document.querySelector(sel), cs=el?getComputedStyle(el):null;
+  const cv=(measurer._c=measurer._c||document.createElement('canvas')).getContext('2d');
+  cv.font=cs?`${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+            :`${size}px ${getComputedStyle(document.documentElement).getPropertyValue(fam||'--f-sans')}`;
+  return s=>cv.measureText(String(s==null?'':s)).width;
+}
+const wMax=(arr,f)=>arr.reduce((a,x,i)=>Math.max(a,f(x,i)),0);
+/* คืนค่าความกว้างที่พอดีของแต่ละคอลัมน์ในตารางงาน (index 2 = ชื่องาน ปล่อยยืด) */
+function fitTaskCols(){
+  const m=measurer('#tbl tbody input:not([type=checkbox])',12.5),
+        mh=measurer('#tbl thead th',10.5),
+        md=measurer('#tbl .derived',12,'--f-mono');
+  const T=S.tasks, hd=i=>mh(COLS[i]);
+  const need=[];
+  need[0]=Math.max(hd(0),m(T.length))+PAD.plain;
+  need[1]=Math.max(hd(1),wMax(T,t=>m(t.wbs)))+PAD.text;
+  need[2]=0;
+  need[3]=Math.max(hd(3),m('Second Fix'))+PAD.sel;
+  need[4]=Math.max(hd(4),m('— เริ่มพร้อมโครงการ —'),wMax(T,(t,i)=>m(t.wbs||('แถว '+(i+1)))))+PAD.sel;
+  need[5]=Math.max(hd(5),m('FS'))+PAD.sel;
+  need[6]=Math.max(hd(6),wMax(T,t=>m(t.lag||0)))+PAD.num;
+  need[7]=Math.max(hd(7),wMax(T,t=>m(t.dur)))+PAD.num;
+  need[8]=need[9]=Math.max(hd(8),hd(9),md('99/99/99'))+PAD.plain;
+  need[10]=Math.max(hd(10),wMax(T,t=>m(t.w)))+PAD.num;
+  need[11]=Math.max(hd(11),wMax(T,t=>m(t.act||0)),m('100'))+PAD.num;
+  need[12]=Math.max(hd(12),wMax(T,t=>m(t.own)))+PAD.text;
+  need[13]=Math.max(hd(13),18)+PAD.plain;
+  need[14]=Math.max(hd(14),18)+PAD.plain;
+  need[15]=106;
+  return need.map(v=>Math.min(240,Math.ceil(v)));
+}
+function fitDefCols(){
+  const m=measurer('#deftbl tbody input:not([type=date])',12),
+        mh=measurer('#deftbl thead th',10.5);
+  const L=defs(), hd=i=>mh(DCOLS[i]);
+  const n=[];
+  n[0]=Math.max(hd(0),m(L.length))+PAD.plain;
+  n[1]=Math.max(hd(1),wMax(S.tasks,t=>m(t.wbs||t.name.slice(0,14))))+PAD.sel;
+  n[2]=Math.max(hd(2),m('อื่นๆ'),m('WP-01'))+PAD.sel;
+  n[3]=Math.max(hd(3),m('99/99/9999'))+PAD.date;
+  n[4]=Math.max(hd(4),wMax(L,d=>m(d.loc)))+PAD.text;
+  n[5]=Math.max(hd(5),wMax(D_CAT,c=>m(c.split(' / ')[0])))+PAD.sel;
+  n[6]=0;
+  n[7]=Math.max(hd(7),wMax(D_SEV,s=>m(s[1])))+PAD.sel;
+  n[8]=Math.max(hd(8),wMax(D_ST,s=>m(s[1])))+PAD.sel;
+  n[9]=Math.max(hd(9),wMax(L,d=>m(d.by)))+PAD.text;
+  n[10]=n[11]=Math.max(hd(10),hd(11),m('99/99/9999'))+PAD.date;
+  n[12]=Math.max(hd(12),wMax(L,d=>m(d.note)))+PAD.text;
+  n[13]=44;
+  return n.map(v=>Math.min(260,Math.ceil(v)));
+}
+/* ความกว้างขั้นต่ำของคอลัมน์ชื่องาน/รายละเอียด — ยาวพอสำหรับข้อความที่ยาวที่สุด แต่ไม่เกินเพดาน */
+function flexMin(sel,arr,f,cap){
+  const m=measurer(sel,12.5);
+  return Math.min(cap,Math.max(180,Math.ceil(wMax(arr,x=>m(f(x)))+PAD.text)));
+}
+
 /* รายการให้เลือกในช่องพิมพ์ — เลือกได้ พิมพ์เองก็ได้ */
 const OWNERS=['Coral Life','Main Contractor','เจ้าของโครงการ','ผู้ควบคุมงาน (Consultant)','ผู้รับเหมาไฟฟ้า','ผู้รับเหมาฝ้า'];
 function fillLists(){
@@ -449,13 +517,15 @@ function buildTable(){
   GRP=groupMap(); fillLists();
   const H=hiddenCols(); lastHide=[...H].join(',');
   const keep=(v,i)=>!H.has(i);
-  const cols='<colgroup>'+CW.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
+  const W=fitTaskCols();                                   // ความกว้างที่วัดจากข้อความจริง
+  const cols='<colgroup>'+W.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
   const head='<thead><tr>'+COLS.filter(keep).map(c=>`<th${TIP[c]?` title="${TIP[c]}"`:''}>${c}</th>`).join('')+'</tr></thead>';
   const body=S.tasks.map((t,i)=>t.phase?rowPhase(t,i,H):rowTask(t,i,H)).join('');
   tbl.innerHTML=cols+head+'<tbody>'+body+'</tbody>';
   const box=document.getElementById('tblbox'), avail=box?box.clientWidth:1500;
-  const fixed=CW.filter(keep).reduce((a,w)=>a+w,0);        // 330 = ที่ว่างสำหรับชื่องานที่ยาวที่สุด
-  tbl.style.minWidth=Math.min(fixed+330,Math.max(avail,fixed+120))+'px';
+  const fixed=W.filter(keep).reduce((a,w)=>a+w,0);
+  const nameMin=flexMin('#tbl tbody input',S.tasks,t=>t.name,420);
+  tbl.style.minWidth=Math.max(fixed+nameMin,avail)+'px';   // ไม่ต่ำกว่าความกว้างที่ข้อความต้องการจริง
   colhint.textContent=viewMode==='easy'
     ? 'โหมดง่าย — ช่องที่ซ่อนไว้ใช้ค่าตั้งต้นให้แล้ว (งานต่อกันเป็นลำดับ) · ช่องเหลือง = ต้องกรอก · ช่องเทา = ระบบคำนวณให้'
     : (H.size?`ย่อให้พอดีจอ — ซ่อน ${[...H].map(i=>COLS[i]).join(' / ')} ไว้ชั่วคราว`
@@ -474,7 +544,14 @@ function watchWidth(){
   addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(recheck,120)});
   addEventListener('load',recheck);
   requestAnimationFrame(recheck);
-  [120,500,1200].forEach(d=>setTimeout(recheck,d));   // เผื่อหน้าจัดวางเสร็จช้า (ฟอนต์/สกรอลล์บาร์)
+  [120,500,1200].forEach(d=>setTimeout(recheck,d));
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{buildTable();buildDefects();refresh()});   // เผื่อหน้าจัดวางเสร็จช้า (ฟอนต์/สกรอลล์บาร์)
+  /* พิมพ์ข้อความยาวจนล้นช่อง → ขยายคอลัมน์ให้ทันทีที่ออกจากช่อง */
+  document.addEventListener('change',e=>{
+    const el=e.target;
+    if(!el.matches||!el.matches('#tbl input,#tbl select,#deftbl input,#deftbl select'))return;
+    if(el.scrollWidth>el.clientWidth+2){buildTable();buildDefects();refresh()}
+  },true);
   setInterval(recheck,1000);                          // กันเหนียว: ถ้าเบราว์เซอร์ไม่ส่ง event ก็ยังปรับเองได้
 }
 function rowPhase(t,i,H){
@@ -589,22 +666,29 @@ function dHidden(){
   const h=new Set();
   if(viewMode==='full')return h;
   if(viewMode==='easy'){[4,9,11,12].forEach(c=>h.add(c));return h}
-  const box=document.getElementById('defbox'); const w=box?box.clientWidth:1500;
-  DHIDE.forEach(([lim,cs])=>{if(w<lim)cs.forEach(c=>h.add(c))});
+  const box=document.getElementById('defbox'), avail=box?box.clientWidth:1500;
+  const W=fitDefCols(), descMin=flexMin('#deftbl tbody input',defs(),d=>d.desc,360);
+  let total=W.reduce((a,w)=>a+w,0)+descMin;
+  for(const grp of [[12],[4],[9],[11]]){
+    if(total<=avail)break;
+    grp.forEach(c=>{h.add(c);total-=W[c]});
+  }
   return h;
 }
 function buildDefects(){
   const H=dHidden(); lastDHide=[...H].join(',');
   const keep=(v,i)=>!H.has(i);
   const rows=defs().map((d,i)=>[d,i]).filter(([d])=>!defFilter||d.task===defFilter);
-  const cols='<colgroup>'+DCW.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
+  const DW=fitDefCols();
+  const cols='<colgroup>'+DW.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
   const head='<thead><tr>'+DCOLS.filter(keep).map(c=>`<th>${c}</th>`).join('')+'</tr></thead>';
   const body=rows.length?rows.map(([d,i])=>defRow(d,i,H)).join('')
     :`<tr><td colspan="${DCOLS.filter(keep).length}" style="padding:14px;color:var(--steel)">ยังไม่มี Defect${defFilter?' ของงานที่กรอง':''} — กด “+ เพิ่ม Defect” เมื่อพบปัญหาหน้างาน</td></tr>`;
   deftbl.innerHTML=cols+head+'<tbody>'+body+'</tbody>';
   const box=document.getElementById('defbox'), avail=box?box.clientWidth:1500;
-  const fixed=DCW.filter(keep).reduce((a,w)=>a+w,0);
-  deftbl.style.minWidth=Math.min(fixed+200,Math.max(avail,fixed+90))+'px';
+  const fixed=DW.filter(keep).reduce((a,w)=>a+w,0);
+  const descMin=flexMin('#deftbl tbody input',defs(),d=>d.desc,360);
+  deftbl.style.minWidth=Math.max(fixed+descMin,avail)+'px';
   defChips(H);
 }
 function opt(list,cur){return list.map(v=>{const[val,lb]=Array.isArray(v)?v:[v,v];
