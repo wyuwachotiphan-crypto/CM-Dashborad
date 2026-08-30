@@ -1438,7 +1438,11 @@ async function teamConnect(){
     await teamResolveFile(cfg.link);
     await teamPull(true);
     teamStartWatch();
-  }catch(e){teamChip('ต่อไฟล์กลางไม่ได้ — '+e.message+' (ยังทำงานแบบในเครื่องได้)','bad')}
+    lsSet('msb-m365','1');                       // เชื่อมสำเร็จแล้ว ครั้งหน้าค่อยต่อให้อัตโนมัติ
+  }catch(e){
+    lsSet('msb-m365','0');
+    teamChip('ต่อไฟล์กลางไม่ได้ — '+e.message+' (ยังทำงานแบบในเครื่องได้)','bad');
+  }
 }
 async function teamSignIn(cfg,mail){
   await loadScript(MSAL_CDN);
@@ -1533,13 +1537,17 @@ function teamStartWatch(){
   TM.timer=setInterval(()=>{if(!TM.busy)teamPull().catch(()=>{})},20000);   // ดึงของใหม่ทุก 20 วิ
 }
 async function teamLogout(){
-  clearInterval(TM.timer);
+  clearInterval(TM.timer); lsSet('msb-m365','0');
   if(TM.app&&TM.acct){try{await TM.app.logoutPopup({account:TM.acct})}catch(e){}}
   TM={cfg:null,app:null,acct:null,item:null,etag:'',timer:null,beat:null,busy:false,applying:false};
   teamChip(''); teamMsg('ออกจากระบบแล้ว');
 }
-async function teamAutoStart(){                 // เปิดหน้าใหม่แล้วต่อให้เองถ้าเคยล็อกอินไว้
-  const cfg=teamCfg(); if(!cfg.clientId||!cfg.link)return;
+/* ต่อไฟล์กลางแบบ M365 อัตโนมัติ เฉพาะเครื่องที่ "เคยเชื่อมสำเร็จ" มาก่อนเท่านั้น
+   เครื่องที่ใช้วิธีโฟลเดอร์ซิงก์จะไม่ถูกรบกวนด้วยข้อความผิดพลาดของโหมดที่ไม่ได้ใช้ */
+const m365On=()=>lsGet('msb-m365')==='1';
+function m365Off(){lsSet('msb-m365','0');teamChip('')}
+async function teamAutoStart(){
+  const cfg=teamCfg(); if(!m365On()||!cfg.clientId||!cfg.link)return;
   try{
     await loadScript(MSAL_CDN);
     TM.cfg=cfg;
@@ -1547,10 +1555,15 @@ async function teamAutoStart(){                 // เปิดหน้าใ�
       authority:'https://login.microsoftonline.com/'+cfg.tenantId,
       redirectUri:location.href.split('#')[0]},cache:{cacheLocation:'localStorage'}});
     if(TM.app.initialize)await TM.app.initialize();
-    const acc=TM.app.getAllAccounts(); if(!acc.length)return teamChip('ทีม: กดโหมดทีมเพื่อเข้าสู่ระบบ','');
+    const acc=TM.app.getAllAccounts();
+    if(!acc.length)return teamChip('โหมดทีม M365: กดเข้าสู่ระบบเพื่อเชื่อมต่อ','');
     TM.acct=acc[0];
     await teamResolveFile(cfg.link); await teamPull(true); teamStartWatch();
-  }catch(e){teamChip('ทีม: เชื่อมต่อไม่ได้ — '+e.message,'bad')}
+  }catch(e){
+    teamChip('โหมดทีม M365 ต่อไม่ได้ — ยังใช้งานแบบไฟล์ในเครื่องได้ตามปกติ ✕','bad');
+    const el=document.getElementById('tstat');
+    if(el)el.onclick=()=>{m365Off()};                 // คลิกที่แถบเพื่อปิดข้อความและเลิกต่ออัตโนมัติ
+  }
 }
 
 /* ══════════════════ พิมพ์ / PDF ══════════════════
