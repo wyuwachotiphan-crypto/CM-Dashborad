@@ -1334,7 +1334,9 @@ async function restoreFile(){
 /* ══════════════════ โหมดทีม — ไฟล์กลางบน OneDrive/SharePoint + ล็อกอินอีเมลบริษัท ══════════════════
    ทุกคนอ่าน-เขียนไฟล์ .json ไฟล์เดียวผ่าน Microsoft Graph
    กันงานทับกันด้วย 2 ชั้น: ETag (ถ้าไฟล์ถูกแก้ไประหว่างนั้นจะไม่เขียนทับ) + ล็อกผู้แก้ไขพร้อม heartbeat */
-const MSAL_CDN='https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
+/* แหล่งโหลด MSAL — ไล่ลองทีละที่ ถ้าที่แรกถูกบล็อกหรือล่มก็ยังใช้ที่สำรองได้ */
+const MSAL_CDN=['https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js',
+                'https://unpkg.com/@azure/msal-browser@3.28.1/lib/msal-browser.min.js'];
 let TM={cfg:null,app:null,acct:null,item:null,etag:'',timer:null,beat:null,busy:false,applying:false};
 
 /* ค่าที่ผู้ดูแลตั้งครั้งเดียว — ฝังไว้ในไฟล์ได้เลย ผู้ใช้ทั่วไปจะไม่เห็นและไม่ต้องกรอก */
@@ -1405,10 +1407,18 @@ function teamMsg(t,bad){const el=document.getElementById('tmStatus');if(el){el.t
 function teamChip(t,cls){const el=document.getElementById('tstat');if(!el)return;
   el.textContent=t||''; el.className='fchip noprint '+(cls||''); el.style.display=t?'':'none'}
 
-function loadScript(src){return new Promise((ok,no)=>{
-  if(window.msal)return ok();
-  const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>no(new Error('โหลด MSAL ไม่ได้ — ตรวจอินเทอร์เน็ต'));
+function loadOne(src){return new Promise((ok,no)=>{
+  const s=document.createElement('script'); s.src=src;
+  s.onload=()=>window.msal?ok():no(new Error('bad script'));
+  s.onerror=()=>no(new Error('load failed'));
   document.head.appendChild(s)})}
+async function loadScript(list){
+  if(window.msal)return;
+  for(const src of [].concat(list)){
+    try{await loadOne(src); if(window.msal)return}catch(e){}
+  }
+  throw new Error('โหลดไลบรารีล็อกอินไม่ได้ — เน็ตอาจถูกบล็อก ลองใหม่อีกครั้ง');
+}
 
 async function teamConnect(){
   const mail=tmMail.value.trim();
@@ -1445,6 +1455,8 @@ async function teamConnect(){
   }
 }
 async function teamSignIn(cfg,mail){
+  if(!(window.crypto&&window.crypto.subtle))          // ต้องเปิดผ่าน https ถึงจะล็อกอินได้
+    throw new Error('ต้องเปิดเครื่องมือผ่านลิงก์ https (ไม่ใช่ไฟล์ในเครื่อง) จึงจะเข้าสู่ระบบได้');
   await loadScript(MSAL_CDN);
   TM.cfg=cfg;
   TM.app=new msal.PublicClientApplication({auth:{clientId:cfg.clientId,
@@ -1506,8 +1518,9 @@ async function teamPull(force){
       TM.applying=true; WS=o; normalize(); useProj(WS.cur||0); TM.applying=false;
     }
   }
-  teamChip(`ทีม: เชื่อมกับ ${TM.item.name}`+
-    (meta.lastModifiedBy&&meta.lastModifiedBy.user?' · แก้ล่าสุดโดย '+meta.lastModifiedBy.user.displayName:''),'on');
+  teamChip(`ทีม: บันทึกลงไฟล์กลาง ${TM.item.name}`+(TM.item.folder?` (โฟลเดอร์ ${TM.item.folder})`:'')+
+    (meta.lastModifiedBy&&meta.lastModifiedBy.user?' · แก้ล่าสุดโดย '+meta.lastModifiedBy.user.displayName:'')+
+    (fh?' ⚠ กำลังเขียนไฟล์ในเครื่องด้วย — ถ้าเป็นไฟล์เดียวกันให้เลือกใช้ทางเดียว':''),'on');
   return true;
 }
 async function teamPush(){
