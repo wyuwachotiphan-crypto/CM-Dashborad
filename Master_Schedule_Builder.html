@@ -177,9 +177,9 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
     </div>
     <div class="tools noprint">
       <button class="ghost" onclick="openTpl()">เทมเพลตงาน</button>
-      <button class="ghost" id="flink" onclick="linkFile()">เชื่อมไฟล์ถาวร</button>
+      <button class="pri" id="flink" onclick="linkFile()">เชื่อมไฟล์กลางของทีม</button>
       <button class="pri" id="fgrant" style="display:none" onclick="grantFile()">อนุญาตเขียนไฟล์</button>
-      <button class="ghost" onclick="teamOpen()">เข้าสู่ระบบ / ทีม</button>
+      <button class="ghost" onclick="teamOpen()">เข้าสู่ระบบ</button>
       <button class="ghost" onclick="saveFile()">บันทึกโครงการนี้</button>
       <button class="ghost" onclick="backupAll()">สำรองทุกโครงการ</button>
       <button class="ghost" onclick="fileIn.click()">เปิดไฟล์</button>
@@ -293,7 +293,10 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
   <div class="sec-h"><h2>เข้าสู่ระบบ</h2></div>
   <div class="pad">
     <p style="font-size:12.5px;color:var(--steel);margin-bottom:14px">
-      ใส่อีเมลบริษัทกับรหัสเข้าใช้งานที่ได้จากผู้ดูแล — ทุกคนจะเห็นแผนงานชุดเดียวกัน</p>
+      <b>ขั้นที่ 1</b> ใส่อีเมลบริษัทกับรหัสเข้าใช้งานที่ได้จากผู้ดูแล — ชื่อคุณจะถูกใช้ตอนบันทึกแผน<br>
+      <b>ขั้นที่ 2</b> ปิดหน้านี้แล้วกดปุ่มแดง <b>“เชื่อมไฟล์กลางของทีม”</b> เลือกไฟล์
+      <span style="font-family:var(--f-mono)">Master_Schedule_Data.json</span> ในโฟลเดอร์ SharePoint ที่ซิงก์ไว้
+      — เท่านี้ทุกคนก็เห็นข้อมูลชุดเดียวกัน</p>
 
     <label class="req" for="tmMail">อีเมลบริษัท (ต้องเป็น @coralesg.com)</label>
     <input id="tmMail" type="email" autocomplete="email" placeholder="ชื่อคุณ@coralesg.com"
@@ -319,8 +322,9 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 
     <div id="tmAdmin" style="display:none;border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <p style="font-size:12px;color:var(--steel);margin-bottom:10px">
-        <b>เฉพาะผู้ดูแลระบบ</b> — ตั้งครั้งเดียว แล้วกด "สร้างรหัสทีม" ส่งรหัสให้ทีมงาน
-        คนอื่นใส่แค่อีเมล + รหัสทีม ไม่ต้องเห็นค่าพวกนี้เลย</p>
+        <b>เฉพาะผู้ดูแลระบบ</b> — ตั้ง <b>รหัสเข้าใช้งานของทีม</b> ที่นี่ แล้วแจ้งทีมงาน<br>
+        ส่วนช่อง Client ID / Tenant ID / ลิงก์ ด้านล่างเป็น <b>ทางเลือกขั้นสูง (โหมดทีม M365)</b>
+        — <b>ระบบที่ใช้อยู่ตอนนี้ไม่ต้องกรอกส่วนนี้</b> เว้นแต่ผู้ดูแล M365 อนุมัติสิทธิ์ให้แล้ว</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         <div><label>ลิงก์แชร์ของโฟลเดอร์ หรือไฟล์ .json บน OneDrive/SharePoint</label>
           <input id="tmLink" placeholder="วางลิงก์โฟลเดอร์ได้เลย ระบบจะสร้างไฟล์ Master_Schedule_Data.json ให้เอง"></div>
@@ -1253,12 +1257,19 @@ const idbSet=(k,v)=>idb('readwrite',s=>s.put(v,k)).catch(()=>null);
 
 function fileStatus(err){
   const el=document.getElementById('fstat'); if(!el)return;
+  const btn=document.getElementById('flink');
   if(err){el.textContent='⚠ '+err; el.className='fchip bad'; return}
-  if(fh){const t=lastWrite?new Date(lastWrite).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
-    el.textContent='● เก็บถาวรใน '+fhName+(t?' · บันทึก '+t:''); el.className='fchip on';
-    flink.textContent='เปลี่ยนไฟล์';
-  }else{el.textContent=FSA?'○ ยังไม่เชื่อมไฟล์ — เก็บในเบราว์เซอร์เท่านั้น'
-    :'เบราว์เซอร์นี้เชื่อมไฟล์ไม่ได้ — ใช้ปุ่มสำรองทั้งหมดแทน'; el.className='fchip';}
+  if(fh){
+    const t=lastWrite?new Date(lastWrite).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
+    el.textContent='● ไฟล์กลาง: '+fhName+(t?' · บันทึกล่าสุด '+t:'')+' · อัปเดตอัตโนมัติทุก 20 วิ';
+    el.className='fchip on';
+    if(btn){btn.textContent='เปลี่ยนไฟล์กลาง'; btn.className='ghost'}
+  }else{
+    el.textContent=FSA?'○ ยังไม่ได้เชื่อมไฟล์กลาง — ข้อมูลเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น'
+      :'เบราว์เซอร์นี้เชื่อมไฟล์ไม่ได้ — ใช้ Chrome หรือ Edge';
+    el.className='fchip';
+    if(btn){btn.textContent='เชื่อมไฟล์กลางของทีม'; btn.className=FSA?'pri':'ghost'}
+  }
 }
 async function linkFile(){
   if(!FSA){alert('เบราว์เซอร์นี้ไม่รองรับ — เปิดด้วย Chrome หรือ Edge ผ่านลิงก์ https จะใช้ได้');return}
@@ -1378,7 +1389,9 @@ function teamCopyCode(){
   teamMsg('คัดลอกรหัสแล้ว');
 }
 function teamMailChanged(){                      // ส่วนตั้งค่าโผล่เฉพาะตอนที่ผู้ดูแลใส่อีเมลตัวเอง
-  document.getElementById('tmAdmin').style.display=isAdminMail(tmMail.value)?'':'none';
+  const admin=isAdminMail(tmMail.value);
+  document.getElementById('tmAdmin').style.display=admin?'':'none';
+  document.getElementById('tmCodeWrap').style.display=admin?'none':'';   // ผู้ดูแลไม่ต้องใส่รหัส
 }
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -1438,8 +1451,9 @@ async function teamConnect(){
   dlgTeam.close();
   /* 4) ถ้าตั้งค่าไฟล์กลางไว้แล้วก็ซิงก์ให้เลย ถ้ายังไม่ได้ตั้ง ใช้งานแบบไฟล์ในเครื่องได้ตามปกติ */
   const cfg=teamCfg();
-  if(!cfg.link||!cfg.clientId||!cfg.tenantId){
-    teamChip(admin?'ยังไม่ได้ตั้งค่าไฟล์กลาง — ตั้งได้ในหน้าเข้าสู่ระบบ':'ใช้งานแบบเก็บในเครื่อง (ยังไม่ได้ต่อไฟล์กลาง)','');
+  if(!cfg.link||!cfg.clientId||!cfg.tenantId||!m365On()){
+    teamChip('');                                  // ระบบหลัก = ไฟล์กลางในโฟลเดอร์ที่ซิงก์
+    if(!fh&&FSA)fileStatus();                      // ยังไม่ได้เชื่อมไฟล์ → ปุ่มแดงจะเด่นให้กดต่อ
     return;
   }
   try{
