@@ -1271,11 +1271,27 @@ function fileStatus(err){
     if(btn){btn.textContent='เชื่อมไฟล์กลางของทีม'; btn.className=FSA?'pri':'ghost'}
   }
 }
+/* ผูกกับไฟล์ที่เลือก — ถ้าไฟล์นั้นมีแผนของทีมอยู่แล้ว ต้องโหลดมาใช้ ไม่ใช่เขียนทับ */
+async function adoptFile(h){
+  let existing=null;
+  try{
+    const txt=await(await h.getFile()).text();
+    if(txt.trim()){const o=JSON.parse(txt); if(o&&Array.isArray(o.projects)&&o.projects.length)existing=o}
+  }catch(e){}
+  fh=h; fhName=h.name; await idbSet('file',fh);
+  if(!existing){await writeFile(true); return 'created'}
+  const mine=(WS.projects||[]).reduce((a,p)=>a+((p.tasks||[]).length),0);
+  const take=confirm(`ไฟล์นี้มีแผนของทีมอยู่แล้ว ${existing.projects.length} โครงการ\n\n`+
+    `ตกลง = โหลดแผนของทีมมาใช้ (แนะนำ)\n`+
+    `ยกเลิก = เขียนทับด้วยข้อมูลในหน้านี้ (${mine} งาน) — แผนของทีมจะหาย`);
+  if(take){await loadFromFile(); return 'loaded'}
+  await writeFile(true); return 'overwritten';
+}
 async function linkFile(){
   if(!FSA){alert('เบราว์เซอร์นี้ไม่รองรับ — เปิดด้วย Chrome หรือ Edge ผ่านลิงก์ https จะใช้ได้');return}
   try{
-    fh=await showSaveFilePicker({suggestedName:'Master_Schedule_Data.json',types:JTYPE});
-    fhName=fh.name; await idbSet('file',fh); await writeFile(true);
+    const h=await showSaveFilePicker({suggestedName:'Master_Schedule_Data.json',types:JTYPE});
+    await adoptFile(h);
   }catch(e){if(e.name!=='AbortError')fileStatus('เชื่อมไฟล์ไม่สำเร็จ — '+e.message)}
 }
 async function writeFile(force){
