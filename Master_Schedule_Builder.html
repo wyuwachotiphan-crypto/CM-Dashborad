@@ -1451,8 +1451,26 @@ async function teamConnect(){
     lsSet('msb-m365','1');                       // เชื่อมสำเร็จแล้ว ครั้งหน้าค่อยต่อให้อัตโนมัติ
   }catch(e){
     lsSet('msb-m365','0');
-    teamChip('ต่อไฟล์กลางไม่ได้ — '+e.message+' (ยังทำงานแบบในเครื่องได้)','bad');
+    teamChip('ต่อไฟล์กลางไม่ได้ — '+teamErr(e)+' (ยังทำงานแบบในเครื่องได้)','bad');
+    teamMsg(teamErr(e),1);
   }
+}
+/* แปลข้อความผิดพลาดของ Microsoft ให้เป็นภาษาที่ทำต่อได้ */
+function teamErr(e){
+  const m=String((e&&e.message)||e);
+  if(/65001|consent_required|admin approval|AADSTS90094/i.test(m))
+    return 'องค์กรกำหนดให้ผู้ดูแล M365 อนุมัติสิทธิ์ก่อน — ให้ผู้มีสิทธิ์ Global Admin กด “Grant admin consent” ในหน้า API permissions ครั้งเดียว';
+  if(/AADSTS50011|redirect_uri/i.test(m))
+    return 'Redirect URI ใน Entra ไม่ตรงกับลิงก์ที่เปิดอยู่ — ต้องตรงทุกตัวอักษรและเป็นชนิด SPA';
+  if(/AADSTS700016|unauthorized_client|invalid_client/i.test(m))
+    return 'Client ID ไม่ถูกต้อง หรือแอปไม่ได้อยู่ใน tenant นี้';
+  if(/itemNotFound|404/i.test(m))
+    return 'เปิดโฟลเดอร์/ไฟล์ตามลิงก์ไม่ได้ — ตรวจว่าลิงก์ยังใช้ได้และคุณมีสิทธิ์แก้ไข';
+  if(/403|accessDenied/i.test(m))
+    return 'ไม่มีสิทธิ์แก้ไขที่โฟลเดอร์นี้ — ขอสิทธิ์แก้ไขก่อน';
+  if(/popup_window_error|popup/i.test(m))
+    return 'เบราว์เซอร์บล็อกหน้าต่างล็อกอิน — อนุญาต pop-up ของเว็บนี้แล้วลองใหม่';
+  return m;
 }
 async function teamSignIn(cfg,mail){
   if(!(window.crypto&&window.crypto.subtle))          // ต้องเปิดผ่าน https ถึงจะล็อกอินได้
@@ -1573,7 +1591,7 @@ async function teamAutoStart(){
     TM.acct=acc[0];
     await teamResolveFile(cfg.link); await teamPull(true); teamStartWatch();
   }catch(e){
-    teamChip('โหมดทีม M365 ต่อไม่ได้ — ยังใช้งานแบบไฟล์ในเครื่องได้ตามปกติ ✕','bad');
+    teamChip('โหมดทีม M365: '+teamErr(e)+' ✕','bad');
     const el=document.getElementById('tstat');
     if(el)el.onclick=()=>{m365Off()};                 // คลิกที่แถบเพื่อปิดข้อความและเลิกต่ออัตโนมัติ
   }
