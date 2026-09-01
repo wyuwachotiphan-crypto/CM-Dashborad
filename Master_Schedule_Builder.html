@@ -177,7 +177,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
     </div>
     <div class="tools noprint">
       <button class="ghost" onclick="openTpl()">เทมเพลตงาน</button>
-      <button class="pri" id="flink" onclick="linkFile()">เชื่อมไฟล์กลางของทีม</button>
+      <button class="pri" id="flink" onclick="linkFolder()">เชื่อมโฟลเดอร์ของทีม</button>
       <button class="pri" id="fgrant" style="display:none" onclick="grantFile()">อนุญาตเขียนไฟล์</button>
       <button class="ghost" onclick="teamOpen()">เข้าสู่ระบบ</button>
       <button class="ghost" onclick="saveFile()">บันทึกโครงการนี้</button>
@@ -1041,7 +1041,7 @@ function refresh(){
     if(a)a.textContent=t.s?fmt(t.s):'—'; if(b)b.textContent=t.f?fmt(t.f):'—';
   });
   drawKpi(C); drawGantt(C); drawCurve(C); markNeeds();
-  save(); queueWrite(); queueTeamPush();
+  save(); queueWrite(); queueFolderWrite(); queueTeamPush();
   revbadge.textContent='Rev. '+(S.info.rev||'R0')+(S.info.revdate?' · ออกเมื่อ '+fmt(D(S.info.revdate)):'');
   const lb=document.querySelector(".tab.on .lbl"), cn=document.querySelector(".tab.on .cnt");
   if(lb)lb.textContent=pname(S); if(cn)cn.textContent=S.tasks.filter(t=>!t.phase).length;
@@ -1197,11 +1197,14 @@ function newProj(){WS.projects.push(blankProj());useProj(WS.projects.length-1);d
 function dupProj(){
   const c=JSON.parse(JSON.stringify(S));
   c.info.name=pname(S)+' (สำเนา)';
+  delete c.info.pid;                       // สำเนาต้องเป็นคนละไฟล์กับต้นฉบับ
   c.tasks.forEach(t=>{t.act=0});
   WS.projects.push(c);useProj(WS.projects.length-1);
 }
 function delProj(i){
-  if(!confirm('ลบโครงการ "'+pname(WS.projects[i])+'" พร้อมแผนงานทั้งหมด?'))return;
+  const p=WS.projects[i];
+  if(!confirm('ลบโครงการ "'+pname(p)+'" พร้อมแผนงานทั้งหมด?'+(dh?'\n(ไฟล์ของโครงการนี้ในโฟลเดอร์ทีมจะถูกลบด้วย)':'')))return;
+  folderRemove(p);
   WS.projects.splice(i,1);
   if(!WS.projects.length)WS.projects.push(blankProj());
   useProj(Math.min(i,WS.projects.length-1));
@@ -1243,7 +1246,138 @@ function dl(blob,name){
 
 /* ══════════════════ เก็บถาวรในไฟล์จริง (File System Access API) ══════════════════ */
 const FSA=!!window.showSaveFilePicker;
+const FSD=!!window.showDirectoryPicker;
 let fh=null, fhName='', lastWrite=0, wTimer=null;
+
+/* ══════════════ โฟลเดอร์ของทีม — 1 โครงการ = 1 ไฟล์ ══════════════
+   ทุกคนชี้ไปที่โฟลเดอร์เดียวกัน แต่ละคนเขียนเฉพาะไฟล์ของโครงการที่ตัวเองแก้
+   จึงไม่ชนกันเหมือนตอนใช้ไฟล์รวมไฟล์เดียว */
+let dh=null, dhName='', fileOf={}, seenAt={}, fTimer={}, lastFolderScan=0;
+const PFX='MS_';
+function pid(p){ if(!p.info.pid)p.info.pid=Math.random().toString(36).slice(2,8); return p.info.pid }
+function safeName(s){ return String(s||'โครงการ').replace(/[\\/:*?"<>|.]+/g,'-').replace(/\s+/g,' ').trim().slice(0,48) }
+function fileNameFor(p){ return PFX+safeName(p.info.name)+'__'+pid(p)+'.json' }
+
+async function linkFolder(){
+  if(!FSD){alert('เบราว์เซอร์นี้เลือกโฟลเดอร์ไม่ได้ — ใช้ Chrome หรือ Edge ผ่านลิงก์ https');return}
+  try{
+    await setFolder(await showDirectoryPicker({mode:'readwrite'}));
+  }catch(e){ if(e.name!=='AbortError')fileStatus('เชื่อมโฟลเดอร์ไม่สำเร็จ — '+e.message) }
+}
+async function setFolder(h){
+  dh=h; dhName=h.name; await idbSet('dir',h);
+  fh=null; fhName='';                          // เลิกใช้โหมดไฟล์รวม กันเขียนซ้อน
+  await folderScan(true);
+  fileStatus();
+}
+/* อ่านทุกไฟล์ในโฟลเดอร์ → รวมเป็นแท็บโครงการให้ทุกคนเห็นเหมือนกัน */
+async function folderScan(first){
+  if(!dh)return;
+  const found={}, now=Date.now();
+  let legacy=null, changed=false;
+  for await(const [name,h] of dh.entries()){
+    if(h.kind!=='file'||!/\.json$/i.test(name))continue;
+    let f,txt;
+    try{ f=await h.getFile(); txt=await f.text(); }catch(e){ continue }
+    if(!txt.trim())continue;
+    let o; try{ o=JSON.parse(txt) }catch(e){ continue }
+    if(o&&Array.isArray(o.projects)){ legacy={name,data:o}; continue }   // ไฟล์รวมแบบเก่า
+    if(!o||!o.info||!Array.isArray(o.tasks))continue;
+    const id=o.info.pid||name;
+    found[id]=true;
+    const cur=WS.projects.findIndex(p=>p.info.pid===id);
+    if(cur<0){ o.info.pid=id; WS.projects.push(o); fileOf[id]=name; seenAt[id]=f.lastModified; changed=true; }
+    else{
+      fileOf[id]=name;
+      const mine=WS.projects[cur]===S && Date.now()-lastEdit<15000;
+      if(!mine && f.lastModified>(seenAt[id]||0)+1500){
+        WS.projects[cur]=o; seenAt[id]=f.lastModified; changed=true;
+      }
+    }
+  }
+  /* ไฟล์ที่ถูกลบออกจากโฟลเดอร์ → เอาแท็บออกด้วย */
+  WS.projects.slice().forEach(p=>{
+    const id=p.info.pid;
+    if(id&&fileOf[id]&&!found[id]){ delete fileOf[id]; delete seenAt[id];
+      WS.projects.splice(WS.projects.indexOf(p),1); changed=true; }
+  });
+  if(legacy&&first&&confirm(`พบไฟล์รวมแบบเก่า "${legacy.name}" (${legacy.data.projects.length} โครงการ)\n\n`+
+      `ตกลง = แยกเป็นไฟล์รายโครงการให้อัตโนมัติ (แนะนำ)\nยกเลิก = ข้ามไปก่อน`)){
+    for(const p of legacy.data.projects){
+      p.info=p.info||{}; if(!p.info.pid)p.info.pid=Math.random().toString(36).slice(2,8);
+      if(!WS.projects.some(x=>x.info.pid===p.info.pid))WS.projects.push(p);
+      await folderWrite(p,true);
+    }
+    changed=true;
+  }
+  /* ครั้งแรกที่เชื่อมโฟลเดอร์: ถามว่าจะเอาโครงการที่ค้างอยู่ในเครื่องเข้าไปรวมด้วยไหม */
+  if(first&&Object.keys(found).length){
+    const local=WS.projects.filter(p=>!fileOf[p.info.pid]);
+    if(local.length){
+      const keep=confirm(`โฟลเดอร์ทีมมี ${Object.keys(found).length} โครงการ\n\n`+
+        `ในเครื่องนี้มีอีก ${local.length} โครงการที่ยังไม่อยู่ในโฟลเดอร์\n`+
+        `ตกลง = เพิ่มเข้าโฟลเดอร์ให้ทีมเห็นด้วย\nยกเลิก = ใช้เฉพาะโครงการของทีม (ทิ้งของในเครื่อง)`);
+      if(keep){ for(const p of local)await folderWrite(p,true) }
+      else{ local.forEach(p=>WS.projects.splice(WS.projects.indexOf(p),1)) }
+      changed=true;
+    }
+  }
+  if(!WS.projects.length)WS.projects.push(blankProj());
+  if(changed||first){
+    normalize();
+    const keep=S&&S.info?S.info.pid:null;
+    const i=WS.projects.findIndex(p=>p.info.pid===keep);
+    useProj(i>=0?i:0);
+  }
+  lastFolderScan=now;
+}
+async function folderWrite(p,force){
+  if(!dh||!p)return;
+  const id=pid(p), want=fileNameFor(p), old=fileOf[id];
+  try{
+    const h=await dh.getFileHandle(want,{create:true});
+    const w=await h.createWritable(); await w.write(JSON.stringify(p,null,1)); await w.close();
+    seenAt[id]=(await h.getFile()).lastModified; fileOf[id]=want;
+    if(old&&old!==want){ try{ await dh.removeEntry(old) }catch(e){} }   // เปลี่ยนชื่อโครงการ = เปลี่ยนชื่อไฟล์
+    if(!force)fileStatus();
+  }catch(e){ fileStatus('เขียนไฟล์โครงการไม่สำเร็จ — '+e.message) }
+}
+function queueFolderWrite(){
+  if(!dh||!S)return;
+  const id=pid(S); lastEdit=Date.now();
+  clearTimeout(fTimer[id]);
+  fTimer[id]=setTimeout(()=>folderWrite(S),800);
+}
+async function folderRemove(p){
+  if(!dh||!p||!p.info.pid)return;
+  const f=fileOf[p.info.pid];
+  if(f){ try{ await dh.removeEntry(f) }catch(e){} delete fileOf[p.info.pid]; delete seenAt[p.info.pid] }
+}
+async function restoreFolder(){
+  if(!FSD)return;
+  const h=await idbGet('dir'); if(!h)return;
+  dh=h; dhName=h.name;
+  try{
+    if(await h.queryPermission({mode:'readwrite'})==='granted'){ await folderScan(true) }
+    else{ fgrant.style.display=''; fgrant.onclick=grantFolder; fileStatus(); }
+  }catch(e){ fileStatus(e.message) }
+}
+async function grantFolder(){
+  if(!dh)return;
+  try{
+    if(await dh.requestPermission({mode:'readwrite'})==='granted'){
+      fgrant.style.display='none'; await folderScan(true);
+    }
+  }catch(e){ fileStatus(e.message) }
+}
+function watchFolder(){
+  setInterval(()=>{
+    if(!dh)return;
+    if(Date.now()-lastEdit<15000)return;
+    if(document.querySelector('dialog[open]'))return;
+    folderScan().catch(()=>{});
+  },20000);
+}
 const JTYPE=[{description:'ข้อมูลแผนงาน (JSON)',accept:{'application/json':['.json']}}];
 
 /* IndexedDB จิ๋ว — ใช้จำ handle ของไฟล์ข้ามการเปิดเบราว์เซอร์ */
@@ -1259,16 +1393,23 @@ function fileStatus(err){
   const el=document.getElementById('fstat'); if(!el)return;
   const btn=document.getElementById('flink');
   if(err){el.textContent='⚠ '+err; el.className='fchip bad'; return}
+  if(dh){
+    const t=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+    el.textContent=`● โฟลเดอร์ทีม: ${dhName} · ${WS.projects.length} โครงการ (ไฟล์ละโครงการ) · บันทึกล่าสุด ${t}`;
+    el.className='fchip on';
+    if(btn){btn.textContent='เปลี่ยนโฟลเดอร์'; btn.className='ghost'}
+    return;
+  }
   if(fh){
     const t=lastWrite?new Date(lastWrite).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
     el.textContent='● ไฟล์กลาง: '+fhName+(t?' · บันทึกล่าสุด '+t:'')+' · อัปเดตอัตโนมัติทุก 20 วิ';
     el.className='fchip on';
     if(btn){btn.textContent='เปลี่ยนไฟล์กลาง'; btn.className='ghost'}
   }else{
-    el.textContent=FSA?'○ ยังไม่ได้เชื่อมไฟล์กลาง — ข้อมูลเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น'
-      :'เบราว์เซอร์นี้เชื่อมไฟล์ไม่ได้ — ใช้ Chrome หรือ Edge';
+    el.textContent=FSD?'○ ยังไม่ได้เชื่อมโฟลเดอร์ของทีม — ข้อมูลเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น'
+      :'เบราว์เซอร์นี้เชื่อมโฟลเดอร์ไม่ได้ — ใช้ Chrome หรือ Edge';
     el.className='fchip';
-    if(btn){btn.textContent='เชื่อมไฟล์กลางของทีม'; btn.className=FSA?'pri':'ghost'}
+    if(btn){btn.textContent='เชื่อมโฟลเดอร์ของทีม'; btn.className=FSA?'pri':'ghost'}
   }
 }
 /* ผูกกับไฟล์ที่เลือก — ถ้าไฟล์นั้นมีแผนของทีมอยู่แล้ว ต้องโหลดมาใช้ ไม่ใช่เขียนทับ */
@@ -1308,7 +1449,7 @@ async function writeFile(force){
     lastWrite=(await fh.getFile()).lastModified; fileStatus();
   }catch(e){fileStatus('เขียนไฟล์ไม่สำเร็จ — '+e.message)}
 }
-function queueWrite(){if(fh){lastEdit=Date.now();clearTimeout(wTimer);wTimer=setTimeout(()=>writeFile(),800)}}
+function queueWrite(){if(fh&&!dh){lastEdit=Date.now();clearTimeout(wTimer);wTimer=setTimeout(()=>writeFile(),800)}}
 /* ── ไฟล์ที่วางบนโฟลเดอร์ที่ซิงก์ร่วมกัน: ถ้าคนอื่นแก้แล้ว OneDrive ซิงก์ลงมา ให้ดึงมาแสดงเอง ── */
 let lastEdit=0;
 function watchSharedFile(){
@@ -1669,7 +1810,8 @@ function normalize(){
   if(!WS.projects||!WS.projects.length)WS.projects=[blankProj()];
   WS.projects.forEach(p=>{p.tasks=p.tasks||[];p.defects=p.defects||[];p.tasks.forEach((t,i)=>{if(!t.id)t.id='t'+(i+1)});
     p.info=Object.assign({rev:'R0',revdate:(p.info&&p.info.start)||today0(),by:''},p.info||{});
-    p.history=p.history||[];});
+    p.history=p.history||[];
+    if(!p.info.pid)p.info.pid=Math.random().toString(36).slice(2,8);});   // รหัสประจำโครงการ = ชื่อไฟล์ของมัน
 }
 (function(){
   const rd=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
@@ -1680,7 +1822,9 @@ function normalize(){
   useProj(WS.cur||0);
   if(!S.tasks.length)useTpl('A');
   watchWidth();
-  restoreFile();            // ไฟล์ถาวรในเครื่อง / โฟลเดอร์ที่ซิงก์ร่วมกับทีม
+  restoreFile();            // โหมดไฟล์เดี่ยว (ของเดิม)
+  restoreFolder();          // โฟลเดอร์ของทีม — 1 โครงการ = 1 ไฟล์
+  watchFolder();            // ดึงไฟล์ที่คนอื่นแก้มาแสดงทุก 20 วินาที
   watchSharedFile();        // ถ้าคนอื่นแก้ไฟล์เดียวกัน ดึงของใหม่มาแสดงให้เอง
   USER=lsGet('msb-mail')||'';
   userChip(); teamAutoStart();          // ไฟล์กลางของทีมบน M365 — ถ้าเคยเชื่อมไว้จะดึงของล่าสุดมาให้
