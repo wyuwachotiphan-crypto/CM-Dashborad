@@ -1266,7 +1266,7 @@ async function linkFolder(){
 }
 async function setFolder(h){
   dh=h; dhName=h.name; await idbSet('dir',h);
-  fh=null; fhName='';                          // เลิกใช้โหมดไฟล์รวม กันเขียนซ้อน
+  fh=null; fhName=''; await idbSet('file',null);   // เลิกใช้ไฟล์รวมถาวร กันเขียนซ้อน
   await folderScan(true);
   fileStatus();
 }
@@ -1400,11 +1400,11 @@ function fileStatus(err){
     if(btn){btn.textContent='เปลี่ยนโฟลเดอร์'; btn.className='ghost'}
     return;
   }
-  if(fh){
-    const t=lastWrite?new Date(lastWrite).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
-    el.textContent='● ไฟล์กลาง: '+fhName+(t?' · บันทึกล่าสุด '+t:'')+' · อัปเดตอัตโนมัติทุก 20 วิ';
-    el.className='fchip on';
-    if(btn){btn.textContent='เปลี่ยนไฟล์กลาง'; btn.className='ghost'}
+  if(fh){                                   // โหมดเก่า: ไฟล์รวมไฟล์เดียว — ทีมจะเขียนทับกัน
+    el.textContent='⚠ โหมดไฟล์เดียว (แบบเก่า): '+fhName+
+      ' — คนอื่นจะไม่เห็นโครงการของคุณ กดปุ่มแดง “เชื่อมโฟลเดอร์ของทีม”';
+    el.className='fchip bad';
+    if(btn){btn.textContent='เชื่อมโฟลเดอร์ของทีม'; btn.className='pri'}
   }else{
     el.textContent=FSD?'○ ยังไม่ได้เชื่อมโฟลเดอร์ของทีม — ข้อมูลเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น'
       :'เบราว์เซอร์นี้เชื่อมโฟลเดอร์ไม่ได้ — ใช้ Chrome หรือ Edge';
@@ -1454,7 +1454,7 @@ function queueWrite(){if(fh&&!dh){lastEdit=Date.now();clearTimeout(wTimer);wTime
 let lastEdit=0;
 function watchSharedFile(){
   setInterval(async()=>{
-    if(!fh||TM.item)return;                       // โหมดทีม M365 มีตัวซิงก์ของตัวเองอยู่แล้ว
+    if(!fh||dh||TM.item)return;                   // โฟลเดอร์ทีม / M365 มีตัวซิงก์ของตัวเองแล้ว
     if(Date.now()-lastEdit<15000)return;          // กำลังพิมพ์อยู่ ไม่ต้องไปกวน
     if(document.querySelector('dialog[open]'))return;
     try{
