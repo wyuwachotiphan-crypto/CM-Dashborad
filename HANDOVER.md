@@ -184,4 +184,3 @@ Semantic status colors (Construction=orange `#E2691F`, Completed=green, On Hold=
 - The user is comfortable with direct, technical explanations — no need to oversimplify.
 - This project has grown organically across many short, focused requests over several weeks (not one big spec) — expect the same pattern going forward, and expect other sessions/tools (the Cost/ pipeline, the unrelated daily-report tool) to have touched the shared repo between your sessions. Re-verify current state (`git log --oneline`, actual file listings) rather than trusting an older handover's specifics before making changes.
 
-<!-- probe -->
