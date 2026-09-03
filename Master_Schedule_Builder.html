@@ -179,6 +179,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
       <button class="ghost" onclick="openTpl()">เทมเพลตงาน</button>
       <button class="pri" id="flink" onclick="linkFolder()">เชื่อมโฟลเดอร์ของทีม</button>
       <button class="pri" id="fgrant" style="display:none" onclick="grantFile()">อนุญาตเขียนไฟล์</button>
+      <button class="ghost" onclick="syncNow()" title="ดึงงานล่าสุดของทีมจากโฟลเดอร์เดี๋ยวนี้">ซิงก์ทีม</button>
       <button class="ghost" onclick="teamOpen()">เข้าสู่ระบบ</button>
       <button class="ghost" onclick="saveFile()">บันทึกโครงการนี้</button>
       <button class="ghost" onclick="backupAll()">สำรองทุกโครงการ</button>
@@ -1139,6 +1140,7 @@ function useTpl(k){
 function save(){try{localStorage.setItem(KEY,JSON.stringify(WS))}catch(e){}}
 function pname(p){return p.info.name||'โครงการใหม่'}
 function useProj(i){
+  flushFolder();                                  // บันทึกงานที่ค้างก่อนสลับแท็บ
   WS.cur=Math.max(0,Math.min(i,WS.projects.length-1));
   S=WS.projects[WS.cur];
   seq=Math.max(0,...S.tasks.map(t=>+String(t.id).replace(/\D/g,'')||0))+1;
@@ -1252,7 +1254,7 @@ let fh=null, fhName='', lastWrite=0, wTimer=null;
 /* ══════════════ โฟลเดอร์ของทีม — 1 โครงการ = 1 ไฟล์ ══════════════
    ทุกคนชี้ไปที่โฟลเดอร์เดียวกัน แต่ละคนเขียนเฉพาะไฟล์ของโครงการที่ตัวเองแก้
    จึงไม่ชนกันเหมือนตอนใช้ไฟล์รวมไฟล์เดียว */
-let dh=null, dhName='', fileOf={}, seenAt={}, fTimer={}, lastFolderScan=0;
+let dh=null, dhName='', fileOf={}, seenAt={}, savedTxt={}, fTimer={}, lastFolderScan=0;
 const PFX='MS_';
 function pid(p){ if(!p.info.pid)p.info.pid=Math.random().toString(36).slice(2,8); return p.info.pid }
 function safeName(s){ return String(s||'โครงการ').replace(/[\\/:*?"<>|.]+/g,'-').replace(/\s+/g,' ').trim().slice(0,48) }
@@ -1286,12 +1288,14 @@ async function folderScan(first){
     const id=o.info.pid||name;
     found[id]=true;
     const cur=WS.projects.findIndex(p=>p.info.pid===id);
-    if(cur<0){ o.info.pid=id; WS.projects.push(o); fileOf[id]=name; seenAt[id]=f.lastModified; changed=true; }
+    if(cur<0){ o.info.pid=id; WS.projects.push(o); fileOf[id]=name; seenAt[id]=f.lastModified;
+      savedTxt[id]=JSON.stringify(o,null,1); changed=true; }
     else{
       fileOf[id]=name;
       const mine=WS.projects[cur]===S && Date.now()-lastEdit<15000;
       if(!mine && f.lastModified>(seenAt[id]||0)+1500){
-        WS.projects[cur]=o; seenAt[id]=f.lastModified; changed=true;
+        WS.projects[cur]=o; seenAt[id]=f.lastModified;
+        savedTxt[id]=JSON.stringify(o,null,1); changed=true;
       }
     }
   }
@@ -1334,9 +1338,13 @@ async function folderScan(first){
 async function folderWrite(p,force){
   if(!dh||!p)return;
   const id=pid(p), want=fileNameFor(p), old=fileOf[id];
+  const txt=JSON.stringify(p,null,1);
+  /* ไม่มีอะไรเปลี่ยนก็ไม่ต้องเขียน — กันเขียนทับงานของเพื่อนด้วยสำเนาเดิมของเราเอง */
+  if(!force&&savedTxt[id]===txt&&fileOf[id]===want)return;
   try{
     const h=await dh.getFileHandle(want,{create:true});
-    const w=await h.createWritable(); await w.write(JSON.stringify(p,null,1)); await w.close();
+    const w=await h.createWritable(); await w.write(txt); await w.close();
+    savedTxt[id]=txt;
     seenAt[id]=(await h.getFile()).lastModified; fileOf[id]=want;
     if(old&&old!==want){ try{ await dh.removeEntry(old) }catch(e){} }   // เปลี่ยนชื่อโครงการ = เปลี่ยนชื่อไฟล์
     if(!force)fileStatus();
@@ -1344,9 +1352,30 @@ async function folderWrite(p,force){
 }
 function queueFolderWrite(){
   if(!dh||!S)return;
-  const id=pid(S); lastEdit=Date.now();
+  const p=S, id=pid(p);                       // จำโครงการที่กำลังแก้ไว้ เผื่อสลับแท็บก่อนถึงเวลาบันทึก
   clearTimeout(fTimer[id]);
-  fTimer[id]=setTimeout(()=>folderWrite(S),800);
+  fTimer[id]=setTimeout(()=>folderWrite(p),800);
+}
+/* บันทึกงานที่ค้างอยู่ทั้งหมดทันที — ใช้ตอนสลับแท็บ/ก่อนดึงของทีม */
+function flushFolder(){
+  if(!dh)return Promise.resolve();
+  const jobs=[];
+  Object.keys(fTimer).forEach(id=>{
+    clearTimeout(fTimer[id]); delete fTimer[id];
+    const p=WS.projects.find(x=>x.info.pid===id);
+    if(p)jobs.push(folderWrite(p));
+  });
+  return Promise.all(jobs);
+}
+/* ดึงของทีมเดี๋ยวนี้ (ปุ่ม “ซิงก์ทีม”) */
+async function syncNow(){
+  if(!dh)return fileStatus('ยังไม่ได้เชื่อมโฟลเดอร์ของทีม');
+  const before=WS.projects.length;
+  await flushFolder();
+  await folderScan();
+  fileStatus();
+  teamChip(`ซิงก์แล้ว ${new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} · `+
+    (WS.projects.length!==before?`มีโครงการเปลี่ยนแปลง (${before} → ${WS.projects.length})`:`ข้อมูลตรงกับโฟลเดอร์แล้ว`),'on');
 }
 async function folderRemove(p){
   if(!dh||!p||!p.info.pid)return;
@@ -1373,7 +1402,7 @@ async function grantFolder(){
 function watchFolder(){
   setInterval(()=>{
     if(!dh)return;
-    if(Date.now()-lastEdit<15000)return;
+    if(Date.now()-lastEdit<8000)return;              // เว้นเฉพาะตอนกำลังพิมพ์จริง
     if(document.querySelector('dialog[open]'))return;
     folderScan().catch(()=>{});
   },20000);
@@ -1449,9 +1478,14 @@ async function writeFile(force){
     lastWrite=(await fh.getFile()).lastModified; fileStatus();
   }catch(e){fileStatus('เขียนไฟล์ไม่สำเร็จ — '+e.message)}
 }
-function queueWrite(){if(fh&&!dh){lastEdit=Date.now();clearTimeout(wTimer);wTimer=setTimeout(()=>writeFile(),800)}}
+function queueWrite(){if(fh&&!dh){clearTimeout(wTimer);wTimer=setTimeout(()=>writeFile(),800)}}
 /* ── ไฟล์ที่วางบนโฟลเดอร์ที่ซิงก์ร่วมกัน: ถ้าคนอื่นแก้แล้ว OneDrive ซิงก์ลงมา ให้ดึงมาแสดงเอง ── */
+/* นับว่า "กำลังพิมพ์" เฉพาะตอนที่ผู้ใช้แตะช่องกรอกจริง ๆ ไม่ใช่ทุกครั้งที่หน้าจอวาดใหม่
+   เดิมนับจากการวาดใหม่ ทำให้บางเครื่องไม่เคยว่างพอจะไปดึงงานของเพื่อนมาแสดงเลย */
 let lastEdit=0;
+addEventListener('input',e=>{
+  if(e.target&&e.target.matches&&e.target.matches('input,select,textarea'))lastEdit=Date.now();
+},true);
 function watchSharedFile(){
   setInterval(async()=>{
     if(!fh||dh||TM.item)return;                   // โฟลเดอร์ทีม / M365 มีตัวซิงก์ของตัวเองแล้ว
