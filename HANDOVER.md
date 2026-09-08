@@ -1,186 +1,179 @@
-# ERV Construction Dashboard — Project Handover
+# Coral Life IAQ — Dashboard Folder Handover
 
-**Purpose:** This document lets anyone (or you, on a new account/machine) pick up this project from zero and keep working on it — no prior context required. Last refreshed 2026-08-19. Everything below was re-verified against the live files/repo on that date, not carried forward blindly from an older version of this doc.
+**Purpose:** This document lets anyone (or you, on a new machine/GitHub/Claude account) pick up any tool in this folder from zero — no prior context required.
+
+This folder now hosts **two independent tools**. Part A below is the original ERV Construction Dashboard. **Part B — Master Schedule Builder — is the actively developed tool as of this handover** and has its own team-collaboration architecture; read it in full before touching that file.
 
 ---
 
+# PART A — ERV Construction Dashboard (`index (1).html`)
+
 ## 1. What this project is
 
-A small ecosystem of **client-side, no-backend dashboards** for Coral Life's ERV Construction team, all reading data out of Excel workbooks and all hosted as static pages on one shared GitHub repo:
+A single-page **construction project management dashboard** for Coral Life's ERV Construction team. It reads project data out of an Excel workbook and renders it as an interactive web dashboard: project status overview, financial breakdowns, a zoomable Gantt-style Master Schedule, site-visit logs, internal work tracking, and a monthly change report — all client-side, no backend/database.
 
-1. **The main ERV Construction Dashboard** (`index.html`) — project status overview, financial breakdowns, a zoomable Gantt-style Master Schedule, site-visit logs, internal work tracking, and a project-problems/defect list. This is "the dashboard" everyone means by default and is the focus of most of this document.
-2. **Master Schedule Monthly** (`Master_Schedule_Monthly.html`) — a separate, standalone page showing monthly job-count and revenue-recognition charts. **Not linked from the main dashboard's nav** — only reachable via its own direct URL. See §4b.
-
-Both are single HTML files (vanilla JS + CSS), no build step, no npm, no server-side code.
-
-- **Live site (main dashboard):** https://wyuwachotiphan-crypto.github.io/CM-Dashborad/
-- **Live site (monthly workload):** https://wyuwachotiphan-crypto.github.io/CM-Dashborad/Master_Schedule_Monthly.html
+- **Live site:** https://wyuwachotiphan-crypto.github.io/CM-Dashborad/
 - **GitHub repo:** https://github.com/wyuwachotiphan-crypto/CM-Dashborad (public)
-- **Tech:** [Chart.js 4.4.1](https://www.chartjs.org/) + [chartjs-plugin-datalabels](https://chartjs-datalabels.netlify.app/) + [SheetJS/xlsx](https://sheetjs.com/), all loaded from CDN in the `<head>`.
+- **Tech:** one HTML file (vanilla JS + CSS), [Chart.js 4.4.1](https://www.chartjs.org/) + [chartjs-plugin-datalabels](https://chartjs-datalabels.netlify.app/) + [SheetJS/xlsx](https://sheetjs.com/) — all loaded from CDN in the `<head>`. No build step, no npm, no server-side code.
 
-**This GitHub repo is not exclusive to this project.** It also hosts `daily-report.html` (a Thai-language "รายงานประจำวัน" / daily site-report form) and `Financial_Forecast.xlsx` — unrelated tools from a different task that happen to use this repo as free static hosting. Don't be surprised to see them in the repo root; they have their own independent commit history and aren't touched by anything documented here.
-
-## 2. File inventory — canonical local folders
-
-**Two sibling folders matter, not just one.** The dashboard's own folder moved off Desktop back in July 2026; more recently a second, independent pipeline appeared in the neighbouring `Cost` folder. Both push to the same GitHub repo, which is the main source of confusion if you're new to this — see the callout in §2b before editing any Excel file here.
-
-```
-C:\Users\HPVICTUS\OneDrive - Coral Life\Coral Life - BA - Solution Design 1\1_Non-Project\7_Engineer\IAQ Solution\0_ERV Management\2_Construction Management\
-├── Dashboard\   <- the main dashboard (this file lives here)
-├── Cost\        <- the Master Schedule Monthly / Financial Forecast pipeline
-└── Report\      <- canonical Defect_Report.xlsx (large file, see §4a)
-```
-
-(A stale duplicate of the Dashboard folder may still exist at `C:\Users\HPVICTUS\Desktop\Dashboard` — left behind when the folder moved in July and **not** kept in sync. Don't edit it. One quirk worth knowing: this machine's Claude Code preview tool has its working directory locked to that stale folder, so its `.claude\launch.json` was deliberately edited to point at the *real* OneDrive `serve.ps1` by absolute path — that's not a mistake if you find it, it's how local preview reaches the right folder despite the fixed cwd.)
-
-### 2a. `Dashboard\` — the main dashboard
+## 2. File inventory (local machine: `C:\Users\HPVICTUS\Desktop\Dashboard\`)
 
 | File | Purpose |
 |---|---|
-| `index (1).html` | **The entire main dashboard** — HTML + CSS + JS in one file. This is the file you edit. |
-| `Construction_Portfolio_Template.xlsx` | The live data file for the **main dashboard** (4 sheets — see §4). Auto-fetched from GitHub raw on every page load. **Not the same file as `Cost\Construction_Portfolio_Template - Data base.xlsx`** — see §2b. |
-| `Update Dashboard to GitHub.bat` | **Double-click this** to push local edits (HTML + xlsx + Defect_Report.xlsx + defect change-log) to GitHub. See §6. |
-| `update_dashboard.ps1` | The PowerShell script the `.bat` calls. Also maintains the shared Defect Report change-log — see §4a. |
-| `serve.ps1` | Local static file server for previewing before pushing (`powershell -File serve.ps1 -Port 8080`). |
-| `.dashboard-repo\` | Persistent local git clone of the GitHub repo, maintained automatically by both update scripts (this one and `Cost\sync_dashboard.ps1`) — don't hand-edit files here, they get overwritten. |
-| `Master_Schedule_Monthly.html` | The **second, standalone** dashboard page — see §4b. Lives here because it's served from the same repo root, but it is edited/regenerated from `Cost\`, not from here. |
-| `defect_changelog.json`, `.defect-snapshot.json` | Shared change-log for the Defect Report tab — auto-generated by `update_dashboard.ps1`, don't hand-edit. See §4a. |
-| `HANDOVER.md` | This file. **Not pushed automatically** — `update_dashboard.ps1`'s `git add` list doesn't include it. After editing this file, commit + push it yourself (`git -C .dashboard-repo add HANDOVER.md`, commit, push), or it'll sit un-pushed indefinitely. |
-| `Construction_Manager_Playbook.xlsx` | Reference document, not consumed by the dashboard. |
-| `reports\` | Unrelated leftover clutter (an old iPad purchase-request form) — not part of this project, safe to ignore. |
+| `index (1).html` | **The entire dashboard** — HTML + CSS + JS in one file. This is the file you edit. |
+| `Construction_Portfolio_Template.xlsx` | The live data file (4 sheets — see §4). The dashboard auto-fetches this from GitHub raw on every page load. |
+| `Update Dashboard to GitHub.bat` | **Double-click this** to push your local edits (both the HTML and the xlsx) to GitHub. See §6. |
+| `update_dashboard.ps1` | The PowerShell script the `.bat` calls. |
+| `serve.ps1` | A tiny local static file server (`powershell -File serve.ps1 -Port 8080`) for previewing the dashboard locally before pushing. |
+| `.dashboard-repo/` | A persistent local git clone of the GitHub repo, maintained automatically by the update script — don't edit files here directly, they get overwritten. |
+| `Construction Manager Playbook.xlsx` | Reference document, not consumed by the dashboard. |
 
-**On GitHub**, the repo root has `index.html` (no `(1)` — this is what GitHub Pages actually serves). The local `index (1).html` is copied to `index.html` on every push — deliberate, so Pages serves it at the site root.
-
-### 2b. `Cost\` — Master Schedule Monthly / Financial Forecast pipeline
-
-| File | Purpose |
-|---|---|
-| `Sync Dashboard.bat` | Double-click to regenerate and push `Master_Schedule_Monthly.html` (and re-export `Financial_Forecast.xlsx`). |
-| `sync_dashboard.ps1` | The script behind it. Reads `Master Schedule` + `Summary Report` from the xlsx below, rebuilds the data block embedded in `Master_Schedule_Monthly.html`, and pushes straight to the same GitHub repo via the same `Dashboard\.dashboard-repo` clone. Commit messages read `Sync monthly workload dashboard (...)`. |
-| `Construction_Portfolio_Template - Data base.xlsx` | **The data source for this pipeline only.** |
-| `ERV_Construction Project Management 2026.xlsx` | Present in this folder as of Aug 2026; purpose not confirmed against either sync script — investigate before assuming it's live-connected to anything. |
-| `BACKUP_before_datefix_2026-08-10_0905.xlsx`, `DAMAGED_before_restore_2026-08-07_1025.xlsx` | Evidence a data-corruption incident happened around 2026-08-07→08-10 and was manually recovered. No first-hand record of what broke or how it was fixed — if data looks wrong here, these are your rollback/comparison reference. Don't delete without checking with the user. |
-
-> ⚠️ **The single biggest gotcha in this whole project:** `Dashboard\Construction_Portfolio_Template.xlsx` and `Cost\Construction_Portfolio_Template - Data base.xlsx` are **two different files with confusingly similar names**. Editing one does **not** update the other — they are not synced or mirrored by anything. The main dashboard (`index.html`) reads *only* the Dashboard-folder copy; `Master_Schedule_Monthly.html` reads *only* the Cost-folder copy. Before editing Master Schedule or Summary Report data, confirm which file — and which folder — you actually have open. Their relationship (whether they're meant to hold the same data, entered twice, or are genuinely independent) was not established during this session; don't assume either way.
-
-### 2c. `Report\` — Defect Report source
-
-Just `Defect_Report.xlsx` — canonical/edited copy for the Report Project (defect) tab. Currently **~8 MB** (grew substantially since July, likely from embedded photo cells) — worth keeping an eye on, since `update_dashboard.ps1` commits and pushes this file's full contents to git on every run; a workbook that keeps growing will eventually make every push slower and bloat the repo's history.
+**On GitHub**, the repo root has `index.html` (note: no `(1)` — this is the file GitHub Pages actually serves) and `Construction_Portfolio_Template.xlsx`. The local `index (1).html` is copied to `index.html` on every push — this rename is deliberate so GitHub Pages serves it at the site root.
 
 ## 3. How to keep developing this
 
-**Main dashboard:**
-1. Edit `Dashboard\index (1).html` directly.
-2. Preview locally: `powershell -File serve.ps1 -Port 8080` → `http://localhost:8080`. (Some features need a real HTTP server, not `file://`.)
-3. Double-click **`Update Dashboard to GitHub.bat`** — pushes `index (1).html` → `index.html`, the xlsx, `Defect_Report.xlsx`, and the defect change-log together. GitHub Pages rebuilds in ~1-2 minutes.
+1. Edit `index (1).html` directly (any text editor, or an AI coding assistant like Claude Code).
+2. Preview locally: run `serve.ps1` (e.g. `powershell -File serve.ps1 -Port 8080`) and open `http://localhost:8080` in a browser. Or just open the HTML file directly in a browser (some features like the GitHub-hosted-file refresh need a real HTTP server, not `file://`).
+3. When happy, double-click **`Update Dashboard to GitHub.bat`** — it commits and pushes both the HTML and the Excel file to the `main` branch of the GitHub repo. GitHub Pages rebuilds automatically within ~1-2 minutes.
 
-**Master Schedule Monthly:**
-1. Edit `Cost\Construction_Portfolio_Template - Data base.xlsx` (Master Schedule / Summary Report sheets), or edit `Cost\sync_dashboard.ps1` itself if the *layout/logic* needs to change.
-2. Double-click **`Cost\Sync Dashboard.bat`** — rebuilds `Master_Schedule_Monthly.html`'s data block and pushes it (and re-exports `Financial_Forecast.xlsx`).
+No manual `git` commands needed for day-to-day use — the `.bat` handles everything (see §6 for what it actually does, in case you need to debug it or set it up on a different machine).
 
-No manual `git` commands needed for either, day-to-day.
+## 4. Data model — the Excel workbook
 
-**Known gotchas:**
-- **GitHub Pages can silently stop auto-deploying on push** (happened once, 2026-07-17 → 2026-07-20). If the live site seems stuck on old content after a successful push, compare the latest commit SHA against `https://api.github.com/repos/wyuwachotiphan-crypto/CM-Dashborad/deployments`. If out of sync: github.com → repo Settings → Pages → Source `main` → `None` → Save → back to `main`/`(root)` → Save. Pushing empty/trivial commits does **not** fix it.
-- **Git background maintenance can hang the push indefinitely** (hit this twice, 2026-08-07). Both `update_dashboard.ps1` and `sync_dashboard.ps1` run `git commit`, which by default kicks off Git's background auto-maintenance (`git repack`/gc). Because `.dashboard-repo` sits inside a OneDrive-synced folder, OneDrive can transiently lock a file mid-repack, and git falls back to an interactive `Should I try again? (y/n)` prompt on stdin — which nothing is there to answer, so the `.bat` window just sits there forever. **Fixed** by disabling auto-maintenance on this specific clone: `git -C Dashboard\.dashboard-repo config maintenance.auto false` and `git config gc.auto 0`. This setting lives in `.dashboard-repo\.git\config`, so **if that folder is ever deleted and re-cloned, reapply both config lines** or the hang can come back. If you ever see a stuck `cmd.exe`/`git.exe` window again: check whether the underlying commit/push already succeeded (`git -C .dashboard-repo log --oneline -3` vs `git log origin/main --oneline -3`) before killing anything — in both incidents so far, the actual push had already gone through and only the harmless post-commit cleanup was stuck.
+The dashboard reads `Construction_Portfolio_Template.xlsx`, which has up to 4 sheets. **Only `Master Schedule` and `Summary Report` are required**; `Site Visit Log` and `Internal Work` are optional (the corresponding chart/page just shows empty state if missing).
 
-## 4. Data model — the main dashboard's Excel workbook
-
-`Construction_Portfolio_Template.xlsx` (Dashboard folder), 4 sheets. **Only `Master Schedule` and `Summary Report` are required**; `Site Visit Log` and `Internal Work` are optional. Column-by-column reference lives inside the app itself: dashboard → click the **upload icon** (top-right of the header, not a tab anymore — see §7) → **"Required File Structure"**.
+Full column-by-column reference (with example rows) is built into the app itself: open the dashboard → **Upload Excel Data** tab → scroll to **"Required File Structure"**. That section is the source of truth for exact header names — don't guess from this doc, read it there since it may have evolved.
 
 Summary of the model:
 
-- **Master Schedule** (1 row = 1 work phase; normally 2 rows per project — "Frist Fix" / "Second Fix"): Project Name, Phase, Start/End Date (planned), Actual Start/End Date, % Complete, Status, Delivery Date, Actual Delivery Date, Remarks.
+- **Master Schedule** (1 row = 1 work phase; normally 2 rows per project — "Frist Fix" / "Second Fix" phases, sheet has a header row then data starting a few rows down): Project Name, Phase, Start/End Date (planned), Actual Start/End Date, % Complete, Status, Delivery Date, Actual Delivery Date, Remarks.
 - **Summary Report** (1 row = 1 project): Project Name, Status, Project Type (Internal/External/**Non-Project**), Overall Progress, Budget/Spent/Collected/Cash Advance/Preliminary/VO/VE (all THB), Man Power Hours, Site Visit Days, Site Inspector, Contractor Name, Contract Value, Start/End Date, Project Manager, Remarks, Master Schedule PDF link, BD Data Received Date.
-  - **Critical:** `Project Name` in Master Schedule must match **exactly** (case-insensitive, trimmed) with `Project Name` in Summary Report, or that project's phases silently fail to link — the app creates a second, financially-empty "phantom" project instead. **When told "data isn't showing up," check for this class of typo first** — compare the full project-name list from both sheets for near-duplicates. This is a recurring failure mode, not a one-off:
-    - Fixed 2026-07-24: "บ้านคุณทวีชัย สมุทปราการ" (Master Schedule) vs "คุณทวีชัย สมุทรปราการ" (Summary Report) — an extra "บ้าน" + a dropped ร. Verified fixed live on GitHub after the fix.
-  - A row with `Project Type = Non-Project` is excluded from every project-level total; only its Cash Advance value folds into the portfolio-wide Cash Advance total on the Contract Variations chart.
-- **Site Visit Log** (optional): Visit Date, Project Name, Inspector Name, Purpose, Site Visit Hours.
-- **Internal Work** (optional): Topic, Details, Start Date, End Date, Status.
+  - **Critical:** `Project Name` in Master Schedule must match **exactly** (case-insensitive, trimmed) with `Project Name` in Summary Report, or that project's schedule/phase data won't link up.
+  - A row with `Project Type = Non-Project` is a special row used only to add a lump Cash Advance figure not tied to any specific project (e.g. petty cash pool) — it's excluded from every project-level total but its Cash Advance value is folded into the portfolio-wide Cash Advance total shown on the Contract Variations chart.
+- **Site Visit Log** (optional, 1 row = 1 site visit): Visit Date, Project Name, Inspector Name, Purpose, Site Visit Hours.
+- **Internal Work** (optional, 1 row = 1 internal task): Topic, Details, Start Date, End Date, Status (In Progress/Completed/Planning/On Hold).
 
-**Standing diagnostic** for "data isn't showing up": load the workbook, run `parseWorkbook()` (in the browser console, or ask the AI assistant to do it), and diff the resulting `projects` array's names against the raw Summary Report project-name list. Any mismatch is a Master Schedule typo — confirmed root cause every time so far, including a second incident (4 Summary Report rows with Start Date swapped after End Date, fixed the same day — see git history around 2026-07-24 in `Dashboard\.dashboard-repo` for the exact rows if this recurs).
+**Header matching is fuzzy** (see `normKey()`/`field()` in the JS): it lowercases, strips parenthetical notes like "(THB)", and does substring matching, so minor header wording differences usually still work. When adding a new field, always use `field(row, 'Exact Header', 'Fallback Header')` rather than a raw object key lookup.
 
-**Header matching is fuzzy** (`normKey()`/`field()` in the JS): lowercases, strips parenthetical notes like "(THB)", substring-matches. New fields: use `field(row, 'Exact Header', 'Fallback Header')`, never a raw object key lookup.
+**Date parsing gotcha (already fixed, keep in mind for future date fields):** `XLSX.read(..., {cellDates:true})` can hand back `Date` objects with a few seconds of floating-point drift instead of exact midnight, which — combined with a non-UTC timezone (this data uses Asia/Bangkok, UTC+7) — can flip the calendar day. `excelDateToISO()` guards against this by rounding to the nearest minute before reading local Y/M/D. Any new code that converts a `Date` object to an ISO date string should go through `excelDateToISO()`, not do it inline.
 
-**Date parsing gotcha (already fixed):** `XLSX.read(..., {cellDates:true})` can return `Date` objects with a few seconds of floating-point drift — combined with UTC+7, this can flip the calendar day. `excelDateToISO()` guards against this by rounding to the nearest minute first. Route any new `Date → ISO string` conversion through it.
+## 5. Known open data-quality issues (as of last audit, 2026-07-14)
 
-**Excel file lock:** if `~$<filename>.xlsx` exists alongside the real file, Excel has it open — check with `Get-Process -Name EXCEL | Select MainWindowTitle` before running any COM automation against it (a stale `~$` file with no matching Excel process is harmless and common — this has been true for `Dashboard\~$Construction_Portfolio_Template.xlsx` since July and is not currently a live lock).
+These are **data problems in the Excel file itself**, not dashboard bugs — the dashboard renders them correctly given the (wrong) input:
 
-## 4a. Report Project (defect) tab
+- Several Summary Report rows had **Start Date later than End Date** (looked swapped/mistyped): สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2, Ventier courtyard ชั้น 3, บ้านบางบอน5ซอย7, Granpix, บ้านคุณอู BUGAAN พัฒนาการ.
+- **Khun Sarut's House** and **25-17_Ekamai 28 (K'Phong)** had identical Start/End dates (2025-03-01 → 2025-03-21) — looked like copy-paste residue from templating one row off the other.
+- **คุณทวีชัย สมุทรปราการ** and **The Grand Pinkao** had no Master Schedule rows at all (Summary Report entry exists, but no phase/schedule data) — shows as "No Schedule" risk, which is correct given the gap.
 
-An independent module in `index (1).html` (search `DEFECT REPORT` / `defectState`) — its own fetch, state, and render functions, unrelated to the Master Schedule/Summary Report model above. Labeled "Report Project" in the nav (not "Defects" or "Report" — those names are already used elsewhere/were removed, see §7).
+Status of these as of the last conversation: the user said they'd correct the dates themselves and were "waiting on confirmation of start/end dates" from elsewhere — **verify with the user whether this has been resolved** before assuming the underlying data is now clean.
 
-- **Source file:** `Report\Defect_Report.xlsx` (sibling of Dashboard, ~8 MB — see §2c), single sheet. Title row 1, blank row 2, headers row 3, data from row 4.
-- `update_dashboard.ps1` copies it into the repo clone on every push, **and** also diffs it against a local-only snapshot (`.defect-snapshot.json`, not pushed) to maintain a *shared, server-side* change-log (`defect_changelog.json`, pushed with everything else). This is why "what changed recently" looks the same on every device/browser instead of depending on that browser's local storage — the diffing happens once, at push time, via Excel COM reading fixed column positions (A..J), not header-name matching (so it survives header renames like "Contractor" → "Responsible Person").
-- **Columns** (Thai/English, matched fuzzily): วันที่/Date, Project, จุด/พื้นที่/Location, รายละเอียด/Description, ความรุนแรง/Severity, สถานะ/Status, Contractor/Responsible, กำหนดแก้ (due), วันที่แก้เสร็จ (completed), หมายเหตุ/Remarks, รูป ก่อนแก้/หลังแก้ (photo URLs).
-- **Severity/Status are free text**, normalized by `normSeverity()`/`normDefectStatus()` (regex over Thai/English keywords) rather than a fixed enum, falling back to "Other" for anything unrecognized.
-- **Auto-loads** from GitHub raw on every page load, plus a manual "Refresh Now" button.
-- **Filters (as of 2026-08-19):** Project, Status, Severity, Responsible, Changed (last 7/30 days), and a **Period filter** (All / Weekly / Monthly) with prev/next navigation and a live "start date → end date" label — always resolved against the real current date (not cached), defaults to the week/month containing today. Filters by the report's `date` field (วันที่/Date), Monday–Sunday weeks.
+## 6. Deployment mechanics (for reference / porting to a new machine or account)
 
-## 5. Deployment mechanics (for reference / porting to a new account)
+- GitHub Pages is enabled on the repo: **Settings → Pages → Source: Deploy from a branch → Branch: `main` / `(root)`**. Any push to `main` auto-publishes.
+- The commit identity used is `wyuwachotiphan-crypto <w.yuwachotiphan@gmail.com>` (set locally in `.dashboard-repo`'s git config, not global).
+- Git push authentication rides on **Git Credential Manager** (Windows' built-in `manager` credential helper) — it already had a cached token on this machine so pushes work non-interactively. On a fresh machine you'd need to `git push` once manually and complete the browser sign-in prompt GCM shows.
+- **PowerShell 5.1 gotchas hit while building `update_dashboard.ps1`** (useful if you touch that script again):
+  - Don't set `$ErrorActionPreference = "Stop"` in a script that shells out to `git` — git's normal progress output goes to stderr, and PS 5.1 wraps every stderr line from a native command into a terminating `NativeCommandError`, which kills the script even though git succeeded. Check `$LASTEXITCODE` after `git clone`/`git push` instead.
+  - Avoid non-ASCII characters (em dashes, curly quotes, Thai text mixed with certain punctuation) in `.ps1` files saved as UTF-8-without-BOM — it can cause a **cascading "missing terminator" parse error** far below the actual offending line, which is very confusing to debug. Stick to plain ASCII in `.ps1` files on this setup.
 
-- GitHub Pages: **Settings → Pages → Source: Deploy from a branch → `main` / `(root)`**. Push to `main` auto-publishes (see the Pages-stuck gotcha in §3).
-- Commit identity: `wyuwachotiphan-crypto <w.yuwachotiphan@gmail.com>` (set locally in `.dashboard-repo`'s git config, not global).
-- Push auth rides on **Git Credential Manager**, already cached on this machine — pushes work non-interactively.
-- `.dashboard-repo` has `maintenance.auto=false` and `gc.auto=0` set locally — see the hang gotcha in §3. Reapply if the clone is ever recreated.
-- **PowerShell 5.1 gotchas** (both `.ps1` scripts here rely on these):
-  - Don't set `$ErrorActionPreference = "Stop"` around `git` calls — its normal stderr progress output becomes a terminating `NativeCommandError` under PS 5.1 even on success. Check `$LASTEXITCODE` instead.
-  - Avoid non-ASCII characters (em dashes etc.) in `.ps1` files saved without a BOM — can cause a cascading "missing terminator" parse error far below the real offending line. `sync_dashboard.ps1` documents this itself and stays ASCII-only on purpose (Thai text read *from* Excel at runtime is unaffected, since that's data, not source).
+### If moving to a brand new GitHub account
 
-### If moving to a new GitHub account
-1. Create the new repo, push this repo's contents to it, re-enable Pages.
-2. Update the hardcoded refresh URLs: search `raw.githubusercontent.com/wyuwachotiphan-crypto/CM-Dashborad` in `index (1).html` (the Upload panel's URL field and `DEFECT_SOURCE_URL`/`DEFECT_CHANGELOG_URL` constants) — update to the new repo's raw URL.
-3. Update `update_dashboard.ps1`'s and `sync_dashboard.ps1`'s `$repoUrl`/git identity; delete `.dashboard-repo` so it re-clones (and reapply the `maintenance.auto`/`gc.auto` config from §3 on the fresh clone).
-4. Update the live-site links here and anywhere else shared.
-
-### If moving to a new Windows/local-machine account
-- Git Credential Manager's cached token is per-profile — the new account needs one manual `git push` + browser sign-in.
-- Everything else can be copied to the new profile's OneDrive path, or re-cloned fresh.
+1. Create the new repo, push this repo's contents to it (`git remote set-url origin <new-url>` then `git push`), and re-enable GitHub Pages on the new repo (Settings → Pages, same as above).
+2. Update the hardcoded refresh URL inside `index (1).html`'s Upload tab (search for `raw.githubusercontent.com/wyuwachotiphan-crypto/CM-Dashborad` — there's one occurrence, the default value of the "Refresh from a Hosted File Link" input) to point at the new repo's raw URL.
+3. Update `update_dashboard.ps1`'s `$repoUrl` and the git identity lines to match the new account, and delete the old `.dashboard-repo` folder so it re-clones fresh from the new remote.
+4. Update the live-site links quoted in this document and anywhere else you've shared them.
 
 ### If moving to a new Claude / Claude Code account
-No special migration step — this folder (or a copy) plus this `HANDOVER.md` is everything needed. Point a new session here first. Remember to push `HANDOVER.md` itself manually after any edit (§2a) — it's the one file the automated scripts don't carry.
 
-## 6. Feature map (main dashboard, as of 2026-08-19)
+There's no special migration step — this repo (or a copy of this folder) plus this `HANDOVER.md` is everything needed. A fresh Claude session reading this file, `index (1).html`, and the Excel file has full context to continue. Point a new session at this handover doc first.
 
-- **Tabs:** Overview | Projects & Schedule | Internal Work | Report Project | Customer Survey. (**"Reports" tab — the old Weekly/Monthly change-report page — was removed** in Aug 2026; don't reference it, it no longer exists in code.)
-- **Upload Excel Data is no longer a tab** — it's a small upload-arrow **icon button** in the top-right of the header, next to the clock (`#uploadIconBtn`). Click it to open the same upload/refresh page as before.
-- **Header & tab bar are white/light** (`var(--paper)` background, `var(--ink)` text) — changed from an earlier dark-navy header. See §8 for the exact rule.
-- **Overview page:** KPI cards (Total/Construction/Completed/On Hold, clickable → project list popup), status donut chart, **Financial Chart** (Revenue → Amount Collected → Pending Drawdown → Total Contractor Value → Paid to Contractor — click a bar for a per-project breakdown), Contract Variations & Preliminary chart, Monthly Site Visit Overview, Contractor Assignments.
-  - The KPI-card popup (click "Completed" etc.) shows **Project / Status / Prog. / Delivery** — the old **Risk** column was replaced with the project's **Delivery Date** on request.
-  - The three horizontal bar charts (Financial, Variations, Contractor Assignments) use `layout.padding.right: 90` (bumped from 60) so large Baht-formatted value labels (e.g. `฿11,891,264`) don't get clipped by the canvas edge — if a future chart shows the same money-formatted-datalabel pattern, give it the same padding up front.
-  - Year filter (2025/2026/2027/All), synced with Projects & Schedule.
-- **Projects & Schedule page:** Status/Type/Year filters + search, project list, and the Master Schedule Gantt (drag-to-scroll, zoom slider, Fit/Today buttons, sticky name column, click a bar for phase dates).
-- **Report Project tab:** see §4a for the full filter set including the new Period (Weekly/Monthly) filter.
-- **Internal Work**, **Customer Survey** (mostly static/placeholder), **Upload Excel Data page** (now reached via the header icon — drag-drop/URL refresh, column reference docs, Change History log).
-- **Project detail popup:** click any project name → Budget/Collected %/Paid-to-Contractor %/Pending Drawdown, Delivery Date, Contractor, phase list, link to a Planned-vs-Actual S-curve chart popup.
+## 7. Feature map (what's been built, for quick orientation)
 
-## 7. Current color theme (CSS variables, `:root` in `index (1).html`)
+- **Overview page:** KPI cards (Total/Construction/Completed/On Hold, clickable → project list popup), status donut chart, Financial Chart (Revenue/Amount Collected/Pending Drawdown/Total Contractor Value/Paid to Contractor — click a bar for per-project breakdown with % where applicable), Contract Variations & Preliminary chart, Monthly Site Visit Overview (click a bar for the day-by-day visit log), Contractor Assignments.
+- **Year filter** ("Year" dropdown, 2025-2027 + All) on both Overview and Projects & Schedule — narrows everything on the page to projects finishing in that year (End Date, falling back to Delivery Date). The two dropdowns stay in sync.
+- **Projects & Schedule page:** Status/Type/Year filter dropdowns + search, project list, and the **Master Schedule** Gantt chart:
+  - Year dropdown (2025-2027) + From/To month range filter.
+  - Drag-to-scroll horizontally + a zoom slider (pixels-per-day) + "Fit" and "Today" buttons.
+  - Month header row + a "Week 1..Week N" sub-header that resets every month.
+  - Sticky project-name column while scrolling.
+  - Click a bar → popup with First Fix / Second Fix (as date ranges) / Delivery Date for that project.
+  - **Monthly Report** section at the bottom: the existing Upload-tab change-log, grouped by month, shown as a collapsible list (latest month expanded by default).
+- **Internal Work page**, **Customer Survey page** (mostly static/placeholder), **Upload Excel Data page** (drag-drop or URL-based refresh, plus the full column reference docs and Change History log).
+- **Project detail popup:** click any project name anywhere → Budget/Collected %/Paid-to-Contractor %/Pending Drawdown, Delivery Date, Contractor, phase list, link to a Planned-vs-Actual S-curve schedule chart popup.
+- Color theme is CSS custom properties in `:root` (see current values in §8) — this has been recolored twice this project's history (once to match an external portal, once to a coolors.co palette) so it's easy to swap again if asked.
 
-The variable *values* below are unchanged since July — what changed (Aug 2026) is **which surfaces use which variable**: the header and tab bar switched from the dark `--ink` background to the light `--paper` background, with text flipped from white to `--ink`. If asked to recolor again, these are the two rules to check first (`header{...}` and `.tabs{...}` near the top of the `<style>` block).
+## 8. Current color theme (CSS variables, `:root` in `index (1).html`)
 
 ```css
---ink:#003049;          /* deep navy — headings / body text / now also header+tab text */
---ink-soft:#0F4C6B;      /* mid navy — no longer used for the tab bar background (was, before Aug 2026) */
---grid:#669BBC;          /* steel blue — gridlines / dashed accents */
---paper:#FFFFFF;         /* card surface — now also the header + tab bar background */
---canvas:#F7F7F5;        /* page background */
---accent:#C1121F;        /* vivid red — active-tab underline, eyebrows, etc. */
---accent-soft:#FDF0D5;   /* cream — tint of accent */
---pulse:#669BBC;         /* steel blue — "live" indicator, today-marker */
---steel:#787774;         /* muted secondary text */
---line:#E3E2DE;          /* hairline borders */
---green:#3E8F63; --red:#780000; --gray:#98A5AD;  /* semantic status colors, kept distinct from --accent */
+--ink:#003049;          /* deep navy — primary dark surface / headings / body text */
+--ink-soft:#0F4C6B;     /* mid navy — tab bar background */
+--grid:#669BBC;         /* steel blue — gridlines / dashed accents */
+--paper:#FFFFFF;        /* card surface */
+--canvas:#F7F7F5;       /* page background */
+--accent:#C1121F;       /* vivid red — primary accent (active tab underline, eyebrows, etc.) */
+--accent-soft:#FDF0D5;  /* cream — tint of accent */
+--pulse:#669BBC;        /* steel blue — "live" indicator, today-marker, zoom "Today" button */
+--steel:#787774;        /* muted secondary text (unchanged neutral) */
+--line:#E3E2DE;         /* hairline borders (unchanged neutral) */
+--green:#3E8F63; --red:#780000; --gray:#98A5AD;  /* semantic status colors — kept distinct from --accent on purpose */
 ```
 
-Semantic status colors (Construction=orange `#E2691F`, Completed=green, On Hold=red/maroon, Planning=gray) are intentionally **not** tied to the theme variables, so status badges stay distinguishable from whatever the header/accent colors are. Flag the readability tradeoff before changing them too.
+Note: semantic status colors (Construction=orange `#E2691F` hardcoded in a few JS/CSS spots, Completed=green, On Hold=red/maroon, Planning=gray) are intentionally **not** tied to the theme variables above and were left alone during both recolors, so status badges stay distinguishable from the brand accent color. If a future recolor request seems to also want status colors changed, flag the readability tradeoff before doing it.
 
-## 8. Session conventions worth carrying forward
+## 9. Session conventions worth carrying forward
 
-- User communicates in Thai; respond in Thai. Keep responses concise, confirm what was tested before claiming something works.
-- **Always test via a local preview before pushing** — check console errors, verify computed DOM state, not just "it looks right."
-- **Always push to GitHub after any dashboard edit** — standing instruction, don't ask each time.
-- When told data "isn't showing up," cross-reference project names between Master Schedule and Summary Report for near-duplicate typos first (§4) — this has been the actual cause every time so far.
-- **When testing count-up/animated numbers (`countUp()`) in a browser preview, make sure the tab is actually fronted/visible before judging the result.** A backgrounded or non-composited preview tab can pause `requestAnimationFrame` indefinitely, making a KPI look permanently stuck at 0 when it's actually fine for a real, visible user tab — confirmed this the hard way in Aug 2026 by reproducing the same page load on a properly-fronted tab and watching it render correctly from the first frame. Don't "fix" `countUp()`'s code based on a backgrounded-tab observation alone.
-- The user is comfortable with direct, technical explanations — no need to oversimplify.
-- This project has grown organically across many short, focused requests over several weeks (not one big spec) — expect the same pattern going forward, and expect other sessions/tools (the Cost/ pipeline, the unrelated daily-report tool) to have touched the shared repo between your sessions. Re-verify current state (`git log --oneline`, actual file listings) rather than trusting an older handover's specifics before making changes.
+- User communicates in Thai; respond in Thai. Keep responses concise and confirm what was tested before claiming something works.
+- Always test changes via a local preview (browser tools) before pushing — check for console errors, verify computed values/DOM state, not just "it looks like it should work."
+- **Always push to GitHub after any dashboard edit** — this was an explicit standing instruction from the user (not something to ask about each time). Both `index (1).html` → `index.html` and the xlsx get pushed together via the `.bat`/git flow.
+- The user is comfortable with direct, technical explanations of what was found/fixed — no need to oversimplify.
+- **This standing instruction applies to Part B too, and to every tool in this folder going forward:** after any edit or new file, actually exercise the changed code path (simulate the real multi-step/multi-user scenario, not just confirm it loads) before telling the user it's fixed. Several serious Master Schedule Builder bugs (folder-sync overwriting teammates' files, a dead CDN link, a default-to-overwrite confirm dialog) were only caught this way, not by reading the diff.
 
+---
+
+# PART B — Master Schedule Builder (`Master_Schedule_Builder.html`)
+
+## B1. What this tool is
+
+A **standalone, single-file construction master-schedule planner** — separate app, separate data, unrelated to Part A above. Built from scratch across this project's history per the user's requests. Core features:
+
+- Working-day-aware Gantt scheduling with FS/SS dependencies + lag (incl. negative lag for overlap), auto-computed start/end dates, a configurable work-week and holiday list.
+- Two built-in templates matching the company's construction standard: **ฉบับ A** (WP-01…13, commercial) and **ฉบับ B** (B-1…8, residential) — see `[[project-construction-standard]]` memory for the WP numbering this mirrors.
+- Per-work-group colour coding, an S-curve (planned vs actual), and Gantt bars where **solid fill = % actually done, faded = planned-but-not-yet** (this distinction was a specific, deliberate fix — don't regress it).
+- **Defect tracking** tied to each task/WP, with due-date rules derived from severity (Critical/Major/Minor) matching `Construction_Standard.xlsx`'s rules, and warnings that block Hold Points (★) while defects are open.
+- Multi-project tabs within one file, a required-field/auto-fit column system, and an A3-print layout that scales the Gantt to fit and repeats table headers across pages.
+- **Revision discipline instead of an editing lock:** no per-user lock — anyone can edit anytime. Accountability comes from the "บันทึกแผนงาน (ออก Rev.)" button, which requires a preparer name + date, bumps R0→R1→R2…, and appends to a permanent "ประวัติการออก Rev." table. This was a deliberate simplification after an earlier lock-based design was rejected as too complex.
+
+**Live URL:** `https://wyuwachotiphan-crypto.github.io/CM-Dashborad/Master_Schedule_Builder.html` (same repo/Pages site as Part A, different path). Companion docs at the same path: `Master_Schedule_Builder_Guide.html` (full manual, split into user/admin halves) and `Master_Schedule_Builder_Manual.html` (1-page quick-reference card).
+
+## B2. How the team actually shares data — read this before changing storage code
+
+This is the part most likely to be touched next, and the part with the most history of subtle bugs. **Current architecture, as of the last commit (`560c2db`):**
+
+- Everyone points at **one shared folder** synced locally via OneDrive/SharePoint (a Coral Life SharePoint site the user already had — no Entra/Azure AD app registration needed for this path).
+- **Each project is its own file**, named `MS_<safe project name>__<6-char random id>.json`, inside that folder. This was a deliberate redesign — an earlier single-combined-file design (`Master_Schedule_Data.json` holding all projects) caused teammates to silently overwrite each other's entire workspace, because every machine wrote the same file. Per-project files mean two people editing *different* projects never touch the same file.
+- The browser talks to the folder via the **File System Access API** (`showDirectoryPicker`, Chrome/Edge only — this is why the tool requires those browsers). The directory handle is persisted in IndexedDB so re-linking is a one-time action per machine; the browser's own security model still requires a one-click "อนุญาตเขียนไฟล์" re-grant after every full browser restart — that's a browser-enforced limit, not a bug, and the UI already explains it.
+- A 20-second poll (`folderScan()`/`watchFolder()`) re-reads the folder and merges in projects that changed or were added elsewhere; a "ซิงก์ทีม" button forces this immediately.
+- **Sign-in is deliberately lightweight**, not real auth: an email ending in `@coralesg.com` + a shared access code (`ACCESS_CODE` constant, currently `CORAL-ERV-2026`, changeable by the admin from inside the tool). The one hardcoded admin account is `TEAM_ADMIN = 'warid.y@coralesg.com'` (search for it near the top of the `<script>` — it's the only account that sees the settings panel and skips the access code). This is explicitly **not** a real security boundary — it's a light gate; real access control is whatever NTFS/SharePoint permissions exist on the shared folder itself. Don't over-promise security if asked to extend this.
+- **An unused, parallel M365/Graph mode still exists in the code** (`teamSignIn`, `teamPush`, `teamResolveFile`, the `M365` config object, MSAL loaded from jsDelivr) — it was the *first* design (real Azure AD app + Microsoft Graph read/write to one SharePoint file with ETag conflict detection), superseded by the simpler folder-sync approach above because it needed an Entra app registration the user didn't want to set up. It's dormant (`M365.clientId` etc. are empty strings, so `teamAutoStart()` is a no-op) but intentionally left in as an upgrade path if folder-sync conflicts become a real problem — the in-tool Guide's "ถ้าจะอัปเกรดเป็นโหมดทีม M365 ภายหลัง" section documents re-activating it. Don't delete it without checking whether the user still wants that escape hatch.
+
+**Bugs already found and fixed in this subsystem (don't reintroduce):**
+1. Linking a file that already held a teammate's plan used to overwrite it immediately — `adoptFile()` now reads first and asks before overwriting.
+2. Every screen redraw used to queue a file write regardless of whether content changed, so an idle tab silently re-saved its stale in-memory copy over a teammate's newer save every ~1s, and reset the file's mtime so the sync-detector thought nothing had changed. Fixed by content-diffing before write (`savedTxt` cache) and binding queued writes to the specific project object, not "whichever tab is open when the timer fires."
+3. The MSAL CDN URL (`alcdn.msauth.net/...`) 404'd — real bug, not a network/firewall issue as it first appeared. Now loads from jsDelivr with unpkg as fallback (only matters if the dormant M365 mode above gets reactivated).
+4. A machine that once tried M365 mode and failed used to retry-and-fail on every page load, showing a permanent red error banner even for users who only ever used folder-sync. Auto-retry now only happens on a machine that has previously connected successfully at least once (`msb-m365` flag in localStorage).
+
+## B3. Data model / file format
+
+Each project file is one JSON object (not an array) shaped like:
+```
+{ info: {name, owner, site, doc, rev, revdate, by, start, cdays, wmode, holi, pid}, tasks: [...], defects: [...], history: [...] }
+```
+`info.pid` is the stable identity used to match a project to its file across renames — **never regenerate it** on an existing project (renaming re-derives the filename from it but keeps `pid` fixed; only `dupProj()` deliberately strips it to force a new file). The in-browser workspace wrapper (`WS = {cur, mode, projects: [...]}`) is what's saved to `localStorage` for the single-machine fallback and is also the shape of the legacy combined-file format that `folderScan()` knows how to auto-split on first connect.
+
+## B4. Deployment
+
+Same mechanism as Part A: edit `Master_Schedule_Builder.html` (+ the two doc files) directly in this folder, then double-click `Update Dashboard to GitHub.bat` — it was extended (see `update_dashboard.ps1`) to also copy these three files alongside `index (1).html`. No separate push flow to remember. Tell the team to hard-refresh (Ctrl+F5) after any push, same as Part A.
+
+## B5. Related memory files
+
+`[[project-construction-standard]]` (WP numbering/edition A vs B this tool's templates mirror), `[[project-defect-report-source]]` and the Defect_Report.xlsx it references (the defect severity/due-date rules this tool's Defect module was built to match), `[[project-master-schedule-overview-page]]` (a **different**, older, hand-maintained all-projects overview page — don't confuse the two; that one lives in a different folder and has no relation to this tool's per-project files).
