@@ -1794,6 +1794,11 @@ function fitBarLabels() {
 }
 requestAnimationFrame(fitBarLabels);
 addEventListener('resize', fitBarLabels);
+// The rAF above can land before the final layout/font pass. This function
+// measures text, so on that run every bar reads 0 wide, the early return leaves
+// whatever the template printed, and a number too long for its bar sits there
+// clipped mid-digit - visible on phone widths. Re-run once the fonts are in.
+if (document.fonts) document.fonts.ready.then(fitBarLabels);
 
 
 /* ===================== Internal Work =====================
