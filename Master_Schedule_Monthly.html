@@ -1710,9 +1710,19 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
 
 /* ---- Contractor Assignments ---- */
 (function drawContractors() {
+  // Contractors kept off this chart on request. Their rows stay in the workbook
+  // and still count everywhere else on the page - only this list hides them.
+  // Matched on a fragment rather than the full name on purpose: the sheet
+  // spells some names with U+0E33 (จำ) and others with U+0E4D + า (จํา), which
+  // look identical on screen but are different strings, so an exact-match list
+  // would quietly stop working the next time someone retypes a name.
+  const HIDDEN = ['เอ.เอ็น', 'อีโค่คูล'];
+  const isHidden = name => HIDDEN.some(h => name.includes(h));
+
   const by = {};
   STAT.forEach(p => {
     const c = p.contractor || '(ยังไม่ระบุผู้รับเหมา)';
+    if (isHidden(c)) return;
     if (!by[c]) by[c] = { n: 0, value: 0 };
     by[c].n++; by[c].value += p.contract;
   });
