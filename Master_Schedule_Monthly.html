@@ -1715,7 +1715,8 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
     rows.map(([name, d]) =>
       `<div class="hrow clickable" data-contractor="${esc(name)}" tabindex="0" role="button"><div class="nm">${esc(name)}
          <small>${d.n} โครงการ · ${fmtFull(d.value)} บาท</small></div>
-       <div class="hbar"><i class="p7" style="width:${d.value / max * 100}%"></i></div></div>`).join('');
+       <div class="hbar"><i class="p7" style="width:${d.value / max * 100}%"
+         data-val="${fmtFull(d.value)}">${fmtFull(d.value)}</i></div></div>`).join('');
 })();
 
 /* ---- Data-quality check --------------------------------------------------
