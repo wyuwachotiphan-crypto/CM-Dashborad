@@ -1555,47 +1555,50 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
    shown twice. Cost is a flat neutral on purpose: it is the context, not the
    story, and a fourth hue here would compete with the row it sits next to. */
 (function drawMargin() {
-  // The five managed line items, split the way the user accounts for them:
-  //   earned  = Preliminary (O) + Cost Negotiation (Q) + VO ลูกค้า (X)
-  //   spent   = VO ผู้รับเหมา (P) + Petty Cash (I)
-  // None of these sit inside Budget: column G is typed by hand and refers to
-  // nothing, and the only formula touching any of them is Budget Actual (F) =
-  // G - Q. So the baseline to measure against is the profit at the planned
-  // budget, Sale - G, and G is recovered as budget + ve. Nothing is counted
-  // twice: the Q inside F is exactly cancelled by the Q on the earned side.
-  const earned = s => s.prelim + s.ve + s.vocust;
-  const spent  = s => s.vo + s.petty;
-  const net    = s => earned(s) - spent(s);
-  const base   = s => s.sale - (s.budget + s.ve);   // profit at the planned budget
+  // Budget (แถว G) is the whole cost of the job and Preliminary (แถว O) is an
+  // allowance sitting inside it, not an extra on top. Petty Cash (แถว I) is what
+  // has actually been drawn against that allowance, so whatever is left of it
+  // never gets spent and stays as profit. Cost Negotiation (แถว Q) is the second
+  // saving - the sheet's own Budget Actual (แถว F) = G - Q says so.
+  //   gain      = Preliminary + Cost Negotiation - Petty Cash
+  //   base      = Sale - Budget          (the profit the job was costed to make)
+  //   real cost = Sale - base - gain     (what the job actually consumes)
+  // Nothing is double counted: G is recovered as budget + ve, so the Q folded
+  // into Budget Actual is added back before the saving is credited once.
+  //   VO ลูกค้า / VO ผู้รับเหมา are deliberately NOT in this figure - they are
+  // scope changes, not budget control, and the user's formula leaves them out.
+  const gain = s => s.prelim + s.ve - s.petty;
+  const base = s => s.sale - (s.budget + s.ve);
 
   // Petty cash carried forward sits on no project, so it never reaches the
-  // per-project rows - but it is real money spent and the Financial Breakdown
-  // card beside this one already counts it. Take it off the portfolio total
-  // only, and say so in the popup rather than letting the two cards disagree.
+  // per-project rows - but it is real money drawn against the same allowance
+  // and the Financial Breakdown card beside this one already counts it. Take it
+  // off the portfolio total only, and say so in the popup rather than letting
+  // the two cards disagree.
   const carried = PETTY.carried || 0;
 
-  const income  = sum(STAT.map(s => s.sale + s.prelim + s.vocust));
-  const cost    = sum(STAT.map(s => s.budget + s.vo + s.petty)) + carried;
+  const sale    = sum(STAT.map(s => s.sale));
   const baseTot = sum(STAT.map(base));
-  const netTot  = sum(STAT.map(net)) - carried;
-  const profit  = baseTot + netTot;                 // identical to income - cost
+  const netTot  = sum(STAT.map(gain)) - carried;
+  const profit  = baseTot + netTot;
+  const cost    = sale - profit;
 
   const parts = [
-    { name: 'ต้นทุนรวม',           value: cost,    colour: 'var(--text-muted)' },
-    { name: 'กำไรฐาน',             value: baseTot, colour: 'var(--series-3)' },
-    { name: 'ส่วนต่างจากการบริหาร', value: netTot,  colour: 'var(--series-2)' }
+    { name: 'ต้นทุนจริง',            value: cost,    colour: 'var(--text-muted)' },
+    { name: 'กำไรตามงบ',             value: baseTot, colour: 'var(--series-3)' },
+    { name: 'กำไรเพิ่มจากการบริหาร', value: netTot,  colour: 'var(--series-2)' }
   ];
 
   // A negative share cannot be drawn as an arc, and a portfolio far enough in
   // the red to produce one has a bigger story than this card tells. Fall back
   // to the numbers rather than drawing something untrue.
-  const drawable = income > 0 && parts.every(p => p.value >= 0);
-  const pct = v => income > 0 ? Math.round(v / income * 100) : 0;
+  const drawable = sale > 0 && parts.every(p => p.value >= 0);
+  const pct = v => sale > 0 ? Math.round(v / sale * 100) : 0;
 
   const R = 70, C = 2 * Math.PI * R;
   let off = 0;
   const segs = drawable ? parts.map(p => {
-    const len = C * p.value / income;
+    const len = C * p.value / sale;
     const el = `<circle cx="100" cy="100" r="${R}" fill="none" stroke="${p.colour}"
         stroke-width="26" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}"
       ><title>${esc(p.name)} ${fmtFull(p.value)} บาท (${pct(p.value)}%)</title></circle>`;
@@ -1606,14 +1609,14 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
   document.getElementById('marginDonut').innerHTML =
     `<circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--surface-2)" stroke-width="26"></circle>` + segs;
   document.getElementById('marginPct').textContent =
-    income > 0 ? (Math.round(profit / income * 1000) / 10) + '%' : '—';
+    sale > 0 ? (Math.round(profit / sale * 1000) / 10) + '%' : '—';
   document.getElementById('marginLegend').innerHTML = parts.map(p =>
     `<div><i class="swatch" style="background:${p.colour}"></i>${esc(p.name)}
       <b>${fmtFull(p.value)}</b><em>${pct(p.value)}%</em></div>`).join('');
 
   const lift = baseTot > 0 ? Math.round(netTot / baseTot * 1000) / 10 : null;
   document.getElementById('marginNote').innerHTML =
-    `บริหาร 5 รายการได้เพิ่ม <b>${fmtFull(netTot)}</b> บาท — กำไร <b>${fmtFull(baseTot)}</b> → <b>${fmtFull(profit)}</b> บาท` +
+    `งบที่ใช้ไม่หมด <b>${fmtFull(netTot)}</b> บาท — กำไร <b>${fmtFull(baseTot)}</b> → <b>${fmtFull(profit)}</b> บาท` +
     (lift === null ? '' : ` คิดเป็น <b>+${lift}%</b>`) + ' · คลิกดูรายโครงการ';
 
   /* ---- per-project view ----
@@ -1636,41 +1639,45 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
 
   function openMgmt() {
     const rows = STAT.map(s => ({
-      code: s.code, name: s.name, prelim: s.prelim, ve: s.ve, vocust: s.vocust,
-      vo: s.vo, petty: s.petty, net: net(s), base: base(s),
-      pct: base(s) > 0 ? Math.round(net(s) / base(s) * 1000) / 10 : null
+      code: s.code, name: s.name, prelim: s.prelim, ve: s.ve, petty: s.petty,
+      net: gain(s), base: base(s), sale: s.sale,
+      pct: base(s) > 0 ? Math.round(gain(s) / base(s) * 1000) / 10 : null
     })).sort((a, b) => b.net - a.net);
 
-    document.getElementById('cm-title').textContent = 'ส่วนต่างจากการบริหาร รายโครงการ';
+    document.getElementById('cm-title').textContent = 'งบที่ใช้ไม่หมด รายโครงการ';
     document.getElementById('cm-sub').textContent =
-      '(Preliminary + Cost Negotiation + VO ลูกค้า) − (VO ผู้รับเหมา + Petty Cash) · เทียบกำไรฐาน = Sale Price − Budget';
+      'Preliminary + Cost Negotiation − Petty Cash · เทียบกำไรตามงบ = Sale Price − Budget';
     document.getElementById('cm-body').innerHTML = `
       <div class="pm-sum">
-        <div><div class="k">ส่วนต่างรวม</div><div class="v">${fmtFull(netTot)}</div><div class="ku">บาท</div></div>
-        <div><div class="k">กำไรฐาน</div><div class="v">${fmtFull(baseTot)}</div><div class="ku">ก่อนบริหาร</div></div>
-        <div><div class="k">กำไรหลังบริหาร</div><div class="v">${fmtFull(profit)}</div>
-             <div class="ku">${lift === null ? '' : '+' + lift + '% จากกำไรฐาน'}</div></div>
+        <div><div class="k">งบที่ใช้ไม่หมด</div><div class="v">${fmtFull(netTot)}</div><div class="ku">บาท</div></div>
+        <div><div class="k">กำไรตามงบ</div><div class="v">${fmtFull(baseTot)}</div><div class="ku">ก่อนบริหาร</div></div>
+        <div><div class="k">กำไรปัจจุบัน</div><div class="v">${fmtFull(profit)}</div>
+             <div class="ku">${lift === null ? '' : '+' + lift + '% จากกำไรตามงบ'}</div></div>
       </div>
       <div class="pm-scroll"><table>
-        <thead><tr><th>รหัส</th><th>โครงการ</th><th>Prelim.</th><th>Cost Nego.</th><th>VO ลูกค้า</th>
-          <th>VO ผู้รับเหมา</th><th>Petty</th><th>สุทธิ</th><th>กำไรฐาน</th><th>เทียบกำไรฐาน</th><th>ควบคุมงบ</th></tr></thead>
+        <thead><tr><th>รหัส</th><th>โครงการ</th><th>Preliminary</th><th>Cost Nego.</th><th>Petty Cash</th>
+          <th>เหลือ</th><th>กำไรตามงบ</th><th>กำไรปัจจุบัน</th><th>เทียบกำไรตามงบ</th><th>ควบคุมงบ</th></tr></thead>
         <tbody>${rows.map(r => {
           const g = grade(r);
           return `<tr><td>${esc(r.code || '-')}</td><td>${esc(r.name)}</td>
-            <td>${fmtFull(r.prelim)}</td><td>${fmtFull(r.ve)}</td><td>${fmtFull(r.vocust)}</td>
-            <td>${fmtFull(r.vo)}</td><td>${fmtFull(r.petty)}</td>
+            <td>${fmtFull(r.prelim)}</td><td>${fmtFull(r.ve)}</td><td>${fmtFull(r.petty)}</td>
             <td class="bal ${r.net >= 0 ? 'pos' : 'neg'}">${fmtFull(r.net)}</td>
-            <td>${fmtFull(r.base)}</td>
-            <td>${r.pct === null ? '—' : r.pct + '%'}</td>
+            <td>${fmtFull(r.base)}</td><td>${fmtFull(r.base + r.net)}</td>
+            <td>${r.pct === null ? '—' : (r.pct > 0 ? '+' : '') + r.pct + '%'}</td>
             <td class="${g.cls}">${g.label}</td></tr>`;
         }).join('')}</tbody>
-        <tfoot><tr><th colspan="7">รวมรายโครงการ</th>
+        <tfoot><tr><th colspan="5">รวมรายโครงการ</th>
           <th>${fmtFull(sum(rows.map(r => r.net)))}</th><th>${fmtFull(baseTot)}</th>
+          <th>${fmtFull(baseTot + sum(rows.map(r => r.net)))}</th>
           <th>${lift === null ? '—' : '+' + lift + '%'}</th><th></th></tr></tfoot>
       </table></div>
       ${carried ? `<div class="pm-note" style="margin-top:10px">อีก ${fmtFull(carried)} บาท เป็น Petty Cash
-        ยกมาที่ไม่ได้ระบุโครงการ จึงไม่อยู่ในตาราง แต่ถูกหักออกจากส่วนต่างรวม ${fmtFull(netTot)} บาทแล้ว</div>` : ''}
-      <div class="pm-note" style="margin-top:10px">เกณฑ์ "ควบคุมงบ" เทียบกับกำไรฐานของโครงการนั้นเอง —
+        ยกมาที่ไม่ได้ระบุโครงการ จึงไม่อยู่ในตาราง แต่ถูกหักออกจากยอดรวม ${fmtFull(netTot)} บาทแล้ว</div>` : ''}
+      <div class="pm-note" style="margin-top:10px">Preliminary เป็นงบที่กันไว้<strong>ภายใน</strong> Budget อยู่แล้ว
+        และ Petty Cash คือยอดที่เบิกใช้ไปจริง ส่วนที่เหลือจึงไม่ถูกใช้และกลายเป็นกำไร รวมกับ Cost Negotiation ที่ต่อรองลดต้นทุนได้
+        (ชีตยืนยันเองด้วยสูตร Budget Actual = Budget − Cost Negotiation) ·
+        VO ทั้งสองฝั่งไม่ได้นับในตารางนี้ เพราะเป็นงานที่เพิ่ม/ลดขอบเขต ไม่ใช่การควบคุมงบ</div>
+      <div class="pm-note" style="margin-top:10px">เกณฑ์ "ควบคุมงบ" เทียบกับกำไรตามงบของโครงการนั้นเอง —
         ดีมาก ≥ 10% · ดี ≥ 5% · พอใช้ &gt; 0% · ติดลบ &lt; 0% — เป็นเกณฑ์ที่ตั้งไว้เอง ไม่ได้มาจากชีต ปรับได้</div>`;
     cellModal.showModal();
   }
