@@ -468,6 +468,65 @@
   .repcard h4 { font-size: 13px; font-weight: 600; margin: 0 0 10px; }
   .repcard tr.tot td { border-top: 1px solid var(--border); padding-top: 7px; }
   .repcard .pm-note { margin: 0; }
+  /* ---------- mood & tone ----------------------------------------------------
+     Nothing here changes a number or a layout decision - it is depth, rhythm and
+     motion on top of what was already there. Every animation is written so the
+     finished state is the element's natural state: if the animation never runs
+     (reduced motion, a background tab, an old browser) the page still renders
+     exactly right, just instantly. That matters more than usual on this page -
+     a backgrounded preview tab can pause rAF indefinitely, and a bar that
+     animated its own width would sit at zero forever. */
+
+  .mh-top { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .mh-stamp { display: inline-flex; align-items: center; gap: 7px;
+              font-size: 11.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .mh-stamp .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--series-3); flex: none; }
+
+  /* A short coloured rule in front of every section title, for vertical rhythm. */
+  .sec-head h2::before {
+    content: ''; display: inline-block; width: 3px; height: 14px; border-radius: 2px;
+    background: var(--series-1); margin-right: 9px; vertical-align: -1px;
+  }
+
+  /* KPI tiles: a hairline of colour on top, and a surface that answers the cursor. */
+  .kpis#kpis .kpi { position: relative; transition: background .15s ease; }
+  .kpis#kpis .kpi::before {
+    content: ''; position: absolute; inset: 0 0 auto 0; height: 2px; background: var(--accent, var(--series-1));
+  }
+  .kpis#kpis .kpi:nth-child(1) { --accent: var(--series-1); }
+  .kpis#kpis .kpi:nth-child(2) { --accent: var(--series-3); }
+  .kpis#kpis .kpi:nth-child(3) { --accent: var(--text-muted); }
+  .kpis#kpis .kpi:nth-child(4) { --accent: var(--series-2); }
+  .kpis#kpis .kpi:hover { background: var(--surface-2); }
+
+  .facet, .card { transition: box-shadow .18s ease, border-color .18s ease; }
+  .hrow { transition: background .13s ease; }
+  .hrow.clickable:hover { background: var(--surface-2); }
+  .tabs button { transition: color .13s ease, background .13s ease, border-color .13s ease; }
+  .hbar i { transition: filter .13s ease; }
+  .hrow:hover .hbar i { filter: saturate(1.12); }
+
+  /* The cost-control caption is a button now - let it look like one. */
+  .dnote.clickable { border-radius: 6px; margin-left: -6px; margin-right: -6px;
+                     padding-left: 6px; padding-right: 6px; transition: background .13s ease; }
+  .dnote.clickable::after { content: ' ›'; color: var(--text-muted); }
+
+  .pm-scroll::-webkit-scrollbar { height: 9px; width: 9px; }
+  .pm-scroll::-webkit-scrollbar-thumb { background: var(--baseline); border-radius: 9px; }
+  .pm-scroll::-webkit-scrollbar-track { background: transparent; }
+
+  /* NO entrance animations here, and this is deliberate - two attempts were
+     reverted. A fade/wipe on load leaves the element at its FROM state (clipped
+     to nothing, opacity 0) whenever the animation is started but never stepped,
+     which is what a backgrounded or non-composited tab does: the animation
+     freezes on frame one and the chart is simply invisible. Removing
+     animation-fill-mode does not fix it, because the animation is running, just
+     not advancing. Hover transitions below are safe by contrast - they start
+     from the element's natural state, so not running them costs nothing.
+     If entrance motion is ever wanted, drive it from an IntersectionObserver
+     that ADDS a class, so the un-animated state is the correct one. */
+  .facet:hover, .card:hover { box-shadow: var(--shadow), 0 2px 10px rgba(11,11,11,.05); }
+
   /* Printing is the export path here, so drop the chrome and let cards break cleanly. */
   @media print {
     .tabs, #tip, .filterbar, .stripcap, .kpis#kpis { display: none !important; }
@@ -562,7 +621,10 @@
 
 <div class="masthead">
   <div class="inner">
-    <h1>Consturction management IAQ</h1>
+    <div class="mh-top">
+      <h1>Consturction management IAQ</h1>
+      <div class="mh-stamp"><i class="pulse"></i><span id="mhstamp"></span></div>
+    </div>
     <nav class="tabs" role="tablist">
       <button role="tab" id="tab-project" aria-controls="page-project" aria-selected="true">Project Overview</button>
       <button role="tab" id="tab-overview" aria-controls="page-overview" aria-selected="false">Project Pipeline &amp; Financial Forecast</button>
@@ -1053,6 +1115,11 @@ document.getElementById('kpis').innerHTML = [
 ).join('');
 
 document.getElementById('asof').textContent = REVMETA.today || META.generated.slice(0, 10);
+
+/* When the numbers on screen were last pulled out of the workbook. Worth having
+   in the masthead: this page is read far more often than it is synced, and
+   "is this current?" was otherwise unanswerable without opening the repo. */
+document.getElementById('mhstamp').textContent = 'อัปเดต ' + (META.generated || '');
 
 /* Stamp the sync time onto the download URL. GitHub Pages caches the .xlsx
    aggressively, and without this the browser happily hands back a stale
