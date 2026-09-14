@@ -28,7 +28,9 @@
     --series-3:       #1baf7a;   /* aqua    */
     --series-4:       #eda100;   /* yellow  */
     --series-5:       #e87ba4;   /* magenta */
+    --series-6:       #008300;   /* green   */
     --series-7:       #4a3aa7;   /* violet  */
+    --series-8:       #e34948;   /* red     */
     --good:           #006300;
     --stat-con:       #2a78d6;
     --stat-done:      #0ca30c;
@@ -56,7 +58,9 @@
       --series-3:       #199e70;
       --series-4:       #c98500;
       --series-5:       #d55181;
+      --series-6:       #008300;
       --series-7:       #9085e9;
+      --series-8:       #e66767;
       --good:           #0ca30c;
       --stat-con:       #3987e5;
       --stat-done:      #0ca30c;
@@ -82,7 +86,9 @@
     --series-3:       #199e70;
     --series-4:       #c98500;
     --series-5:       #d55181;
+    --series-6:       #008300;
     --series-7:       #9085e9;
+    --series-8:       #e66767;
     --good:           #0ca30c;
     --stat-con:       #3987e5;
     --stat-done:      #0ca30c;
@@ -415,7 +421,12 @@
   .hbar .p3, .swatch.p3, .seg.p3 { background: var(--series-3); }
   .hbar .p4, .swatch.p4, .seg.p4 { background: var(--series-4); }
   .hbar .p5, .swatch.p5, .seg.p5 { background: var(--series-5); }
+  .hbar .p6, .swatch.p6, .seg.p6 { background: var(--series-6); }
   .hbar .p7, .swatch.p7, .seg.p7 { background: var(--series-7); }
+  .hbar .p8, .swatch.p8, .seg.p8 { background: var(--series-8); }
+  /* Ninth category onward: the palette is out of hues that stay safely apart,
+     so these go neutral instead of repeating a colour already on screen. */
+  .hbar .p0, .swatch.p0, .seg.p0 { background: var(--baseline); }
   /* Slot 4 is the one fill light enough that white numerals vanish on it. */
   .hbar .p4 { color: #101010; }
   @media (prefers-color-scheme: dark) {
@@ -1707,15 +1718,24 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
   });
   const rows = Object.entries(by).sort((a, b) => b[1].value - a[1].value);
   const max = Math.max(1, ...rows.map(r => r[1].value));
+  // A slot per contractor, handed out in the palette's fixed order down the
+  // list. That order is the one the adjacent-pair colour-blindness gate was
+  // validated in, so each bar stays clearly apart from the bars it sits next
+  // to - which is the whole point of colouring them. The trade-off is that the
+  // slot follows the row's rank, so a contractor's colour can move when the
+  // ranking does: the name and the value on each row are the identity here,
+  // never the colour. Past eight the palette has no more hues that hold apart,
+  // so the rest go neutral rather than reusing one already on screen.
+  const SLOTS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'];
   document.getElementById('contractorCard').innerHTML =
     `<div class="pm-sum" style="margin-bottom:14px">
        <div><div class="k">ผู้รับเหมา</div><div class="v">${rows.length}</div><div class="ku">ราย</div></div>
        <div><div class="k">มูลค่าสัญญารวม</div><div class="v">${fmtFull(sum(rows.map(r => r[1].value)))}</div></div>
      </div>` +
-    rows.map(([name, d]) =>
+    rows.map(([name, d], idx) =>
       `<div class="hrow clickable" data-contractor="${esc(name)}" tabindex="0" role="button"><div class="nm">${esc(name)}
          <small>${d.n} โครงการ · ${fmtFull(d.value)} บาท</small></div>
-       <div class="hbar"><i class="p7" style="width:${d.value / max * 100}%"
+       <div class="hbar"><i class="${SLOTS[idx] || 'p0'}" style="width:${d.value / max * 100}%"
          data-val="${fmtFull(d.value)}">${fmtFull(d.value)}</i></div></div>`).join('');
 })();
 
