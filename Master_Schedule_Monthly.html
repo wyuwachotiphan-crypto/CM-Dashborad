@@ -386,6 +386,9 @@
   /* status tiles / legend rows open the project list */
   .clickable { cursor: pointer; }
   .dlegend .clickable { margin: -3px -6px; padding: 3px 6px; border-radius: 5px; }
+  .dnote { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--grid);
+           font-size: 12px; line-height: 1.55; color: var(--text-secondary); }
+  .dnote b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
   .clickable:hover, .clickable:focus-visible { background: var(--surface-2); outline: none; }
   .kpi.clickable:focus-visible { box-shadow: inset 0 0 0 2px var(--stat-con); }
 
@@ -607,7 +610,19 @@
         <h2>Financial Breakdown</h2>
         <p>ยอดรวมทั้งพอร์ต 5 รายการ — Preliminary, Cost Negotiation, VO ผู้รับเหมา, VO ลูกค้า จากชีต Summary Report แถว O, Q, P, X และ Petty Cash จากแถว I</p>
       </div>
-      <div class="card" id="extrasCard"></div>
+      <div class="ovgrid">
+        <div class="card" id="extrasCard"></div>
+        <div class="facet donutcard">
+          <h3>ควบคุมต้นทุน &amp; กำไรที่เพิ่มขึ้น</h3>
+          <div class="donutwrap">
+            <svg id="marginDonut" viewBox="0 0 200 200" role="img"
+                 aria-label="สัดส่วนต้นทุนและกำไรของทั้งพอร์ต"></svg>
+            <div class="donutmid"><b id="marginPct">0%</b><span>กำไรต่อยอดขาย</span></div>
+          </div>
+          <div class="dlegend" id="marginLegend"></div>
+          <p class="dnote" id="marginNote"></p>
+        </div>
+      </div>
     </section>
 
     <section class="sec">
@@ -1530,6 +1545,62 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
            data-val="${fmtFull(i.value)}">${fmtFull(i.value)}</i></div>
       </div>`).join('');
 })();
+/* ---- Cost control and what the negotiating bought -----------------------
+   Sale Price splits into exactly three parts and nothing is left over, because
+   the sheet defines Budget Actual (แถว F) = Budget (แถว G) - Cost Negotiation
+   (แถว Q): what the work ended up costing, the profit that was in the job
+   anyway, and the profit the negotiating created. The third slice wears the
+   same orange as the Cost Negotiation row beside it - it is the same money,
+   shown twice. Cost is a flat neutral on purpose: it is the context, not the
+   story, and a fourth hue here would compete with the row it sits next to. */
+(function drawMargin() {
+  const sale   = sum(STAT.map(s => s.sale));
+  const cost   = sum(STAT.map(s => s.budget));
+  const gained = sum(STAT.map(s => s.ve));
+  const profitNow = sale - cost;
+  const profitWas = profitNow - gained;
+
+  const parts = [
+    { name: 'ต้นทุนจริง',    value: cost,       colour: 'var(--text-muted)' },
+    { name: 'กำไรเดิม',      value: profitWas,  colour: 'var(--series-3)' },
+    { name: 'กำไรจากต่อรอง', value: gained,     colour: 'var(--series-2)' }
+  ];
+
+  // A negative share cannot be drawn as an arc, and a portfolio deep enough in
+  // the red to produce one has a bigger story than this card tells. Fall back
+  // to the numbers rather than drawing something untrue.
+  const drawable = sale > 0 && parts.every(p => p.value >= 0);
+  const pct = v => sale > 0 ? Math.round(v / sale * 100) : 0;
+
+  const R = 70, C = 2 * Math.PI * R;
+  let off = 0;
+  const segs = drawable ? parts.map(p => {
+    const len = C * p.value / sale;
+    const el = `<circle cx="100" cy="100" r="${R}" fill="none" stroke="${p.colour}"
+        stroke-width="26" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}"
+      ><title>${esc(p.name)} ${fmtFull(p.value)} บาท (${pct(p.value)}%)</title></circle>`;
+    off += len;
+    return p.value ? el : '';
+  }).join('') : '';
+
+  document.getElementById('marginDonut').innerHTML =
+    `<circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--surface-2)" stroke-width="26"></circle>` + segs;
+  document.getElementById('marginPct').textContent =
+    sale > 0 ? (Math.round(profitNow / sale * 1000) / 10) + '%' : '—';
+  document.getElementById('marginLegend').innerHTML = parts.map(p =>
+    `<div><i class="swatch" style="background:${p.colour}"></i>${esc(p.name)}
+      <b>${fmtFull(p.value)}</b><em>${pct(p.value)}%</em></div>`).join('');
+
+  // The lift is quoted against the profit that already existed - that is the
+  // "จากเดิม" the number is answering. It is a different denominator from the
+  // one in the Cost Negotiation popup, which only counts the projects that
+  // actually negotiated, so say which base this one uses.
+  const lift = profitWas > 0 ? Math.round(gained / profitWas * 1000) / 10 : null;
+  document.getElementById('marginNote').innerHTML =
+    `การต่อรองราคาเพิ่มกำไรจาก <b>${fmtFull(profitWas)}</b> เป็น <b>${fmtFull(profitNow)}</b> บาท` +
+    (lift === null ? '' : ` — มากขึ้น <b>${lift}%</b> เทียบกำไรเดิมทั้งพอร์ต`);
+})();
+
 /* ---- Contract Variations & Preliminary ---- */
 (function drawVariations() {
   const rows = STAT.filter(p => p.prelim || p.vo || p.vocust || p.ve);
