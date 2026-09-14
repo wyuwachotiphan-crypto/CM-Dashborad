@@ -127,17 +127,18 @@
   h1 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.015em; color: var(--on-brand); }
   .sub { color: var(--on-brand-mute); font-size: 12px; margin: 2px 0 0; }
 
-  /* Headline figure for the whole portfolio. Deliberately NOT sticky: it is
-     orientation you read once on arrival, not a control you reach for, and a
-     sticky block this tall would eat a third of a laptop screen. It scrolls
-     away under the brand bar, which stays. */
-  .hero { background: linear-gradient(180deg, var(--brand) 0%, var(--brand-deep) 100%); color: var(--on-brand); }
-  .hero-inner { max-width: 1120px; margin: 0 auto; padding: 20px 24px 24px;
+  /* The portfolio's headline figure, sitting at the top of Financial Breakdown -
+     the section whose two cards break that very number down. It carries the
+     brand colour so it reads as the section's answer rather than one more card,
+     and it is theme-invariant like the masthead. */
+  .hero { background: linear-gradient(180deg, var(--brand) 0%, var(--brand-deep) 100%);
+          color: var(--on-brand); border-radius: 12px; margin-bottom: 12px; }
+  .hero-inner { padding: 18px 22px 20px;
                 display: flex; align-items: flex-end; justify-content: space-between;
-                gap: 20px 28px; flex-wrap: wrap; }
+                gap: 16px 28px; flex-wrap: wrap; }
   .hero-label { display: block; font-size: 12px; letter-spacing: .04em;
                 text-transform: uppercase; color: var(--on-brand-mute); }
-  .hero-num { display: block; font-size: clamp(30px, 5.2vw, 46px); font-weight: 680;
+  .hero-num { display: block; font-size: clamp(28px, 4.4vw, 40px); font-weight: 680;
               letter-spacing: -0.03em; line-height: 1.08; margin-top: 4px;
               font-variant-numeric: tabular-nums; }
   .hero-sub { display: block; font-size: 12.5px; color: var(--on-brand-soft); margin-top: 5px; }
@@ -675,17 +676,6 @@
   </div>
 </div>
 
-<div class="hero">
-  <div class="hero-inner">
-    <div class="hero-main">
-      <span class="hero-label">กำไรปัจจุบันทั้งพอร์ต</span>
-      <b class="hero-num" id="heroProfit">—</b>
-      <span class="hero-sub" id="heroSub"></span>
-    </div>
-    <div class="hero-chips" id="heroChips"></div>
-  </div>
-</div>
-
 <div class="wrap">
 
   <p class="stripcap">มูลค่าตามสัญญาทั้งพอร์ต — ไม่ใช่กระแสเงินสด ดูคำอธิบายส่วนต่างได้ที่ท้ายหน้า Project Pipeline &amp; Financial Forecast</p>
@@ -724,6 +714,16 @@
       <div class="sec-head">
         <h2>Financial Breakdown</h2>
         <p>ยอดรวมทั้งพอร์ต 5 รายการ — Preliminary, Cost Negotiation, VO ผู้รับเหมา, VO ลูกค้า จากชีต Summary Report แถว O, Q, P, X และ Petty Cash จากแถว I</p>
+      </div>
+      <div class="hero">
+        <div class="hero-inner">
+          <div class="hero-main">
+            <span class="hero-label">กำไรปัจจุบันทั้งพอร์ต</span>
+            <b class="hero-num" id="heroProfit">—</b>
+            <span class="hero-sub" id="heroSub"></span>
+          </div>
+          <div class="hero-chips" id="heroChips"></div>
+        </div>
       </div>
       <div class="ovgrid">
         <div class="card" id="extrasCard"></div>
