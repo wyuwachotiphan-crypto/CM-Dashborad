@@ -713,7 +713,7 @@
     <section class="sec">
       <div class="sec-head">
         <h2>Financial Breakdown</h2>
-        <p>ยอดรวมทั้งพอร์ต 5 รายการ — Preliminary, Cost Negotiation, VO ผู้รับเหมา, VO ลูกค้า จากชีต Summary Report แถว O, Q, P, X และ Petty Cash จากแถว I</p>
+        <p>ยอดรวมทั้งพอร์ต 5 รายการ — Preliminary, Cost Negotiation, VO ผู้รับเหมา, VO ลูกค้า จากชีต Summary Report แถว O, Q, P, X และ AdvanceMoney จากแถว I</p>
       </div>
       <div class="hero">
         <div class="hero-inner">
@@ -1674,7 +1674,7 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
     row.click();
   });
 })();
-/* ---- Preliminary / Cost Negotiation / VO / Petty Cash --------------------
+/* ---- Preliminary / Cost Negotiation / VO / AdvanceMoney --------------------
    Five portfolio totals in the order the user asked for, not sorted by size -
    the sequence is the point. VO is split into the contractor side (what we owe
    the contractor for extra work) and the customer side (what we bill on), which
@@ -1687,7 +1687,7 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
     { key: 've', name: 'Cost Negotiation', value: sum(STAT.map(s => s.ve)), note: 'ต่อรองราคา · แถว Q', slot: 'p2' },
     { key: 'vo', name: 'VO ผู้รับเหมา', value: sum(STAT.map(s => s.vo)), note: 'งานเพิ่มฝั่งผู้รับเหมา · แถว P', slot: 'p3' },
     { key: 'vocust', name: 'VO ลูกค้า', value: sum(STAT.map(s => s.vocust)), note: 'งานเพิ่มฝั่งลูกค้า · แถว X', slot: 'p4' },
-    { key: 'petty', name: 'Petty Cash', value: sum((PETTY.rows || []).map(r => r.amount)) + (PETTY.carried || 0),
+    { key: 'petty', name: 'AdvanceMoney', value: sum((PETTY.rows || []).map(r => r.amount)) + (PETTY.carried || 0),
       note: 'แถว I · รวมยอดยกมา', slot: 'p5' }
   ];
   const total = sum(items.map(i => i.value));
@@ -1716,11 +1716,11 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
    story, and a fourth hue here would compete with the row it sits next to. */
 (function drawMargin() {
   // Budget (แถว G) is the whole cost of the job and Preliminary (แถว O) is an
-  // allowance sitting inside it, not an extra on top. Petty Cash (แถว I) is what
+  // allowance sitting inside it, not an extra on top. AdvanceMoney (แถว I) is what
   // has actually been drawn against that allowance, so whatever is left of it
   // never gets spent and stays as profit. Cost Negotiation (แถว Q) is the second
   // saving - the sheet's own Budget Actual (แถว F) = G - Q says so.
-  //   gain      = Preliminary + Cost Negotiation - Petty Cash
+  //   gain      = Preliminary + Cost Negotiation - AdvanceMoney
   //   base      = Sale - Budget          (the profit the job was costed to make)
   //   real cost = Sale - base - gain     (what the job actually consumes)
   // Nothing is double counted: G is recovered as budget + ve, so the Q folded
@@ -1797,7 +1797,7 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
 
     document.getElementById('cm-title').textContent = 'งบที่ใช้ไม่หมด รายโครงการ';
     document.getElementById('cm-sub').textContent =
-      'Preliminary + Cost Negotiation − Petty Cash · เทียบกำไรตามงบ = Sale Price − Budget';
+      'Preliminary + Cost Negotiation − AdvanceMoney · เทียบกำไรตามงบ = Sale Price − Budget';
     document.getElementById('cm-body').innerHTML = `
       <div class="pm-sum">
         <div><div class="k">งบที่ใช้ไม่หมด</div><div class="v">${fmtFull(netTot)}</div><div class="ku">บาท</div></div>
@@ -1806,7 +1806,7 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
              <div class="ku">${lift === null ? '' : '+' + lift + '% จากกำไรตามงบ'}</div></div>
       </div>
       <div class="pm-scroll"><table>
-        <thead><tr><th>รหัส</th><th>โครงการ</th><th>Preliminary</th><th>Cost Nego.</th><th>Petty Cash</th>
+        <thead><tr><th>รหัส</th><th>โครงการ</th><th>Preliminary</th><th>Cost Nego.</th><th>AdvanceMoney</th>
           <th>เหลือ</th><th>กำไรตามงบ</th><th>กำไรปัจจุบัน</th><th>เทียบกำไรตามงบ</th><th>ควบคุมงบ</th></tr></thead>
         <tbody>${rows.map(r => {
           const g = grade(r);
@@ -1822,10 +1822,10 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
           <th>${fmtFull(baseTot + sum(rows.map(r => r.net)))}</th>
           <th>${lift === null ? '—' : '+' + lift + '%'}</th><th></th></tr></tfoot>
       </table></div>
-      ${carried ? `<div class="pm-note" style="margin-top:10px">อีก ${fmtFull(carried)} บาท เป็น Petty Cash
+      ${carried ? `<div class="pm-note" style="margin-top:10px">อีก ${fmtFull(carried)} บาท เป็น AdvanceMoney
         ยกมาที่ไม่ได้ระบุโครงการ จึงไม่อยู่ในตาราง แต่ถูกหักออกจากยอดรวม ${fmtFull(netTot)} บาทแล้ว</div>` : ''}
       <div class="pm-note" style="margin-top:10px">Preliminary เป็นงบที่กันไว้<strong>ภายใน</strong> Budget อยู่แล้ว
-        และ Petty Cash คือยอดที่เบิกใช้ไปจริง ส่วนที่เหลือจึงไม่ถูกใช้และกลายเป็นกำไร รวมกับ Cost Negotiation ที่ต่อรองลดต้นทุนได้
+        และ AdvanceMoney คือยอดที่เบิกใช้ไปจริง ส่วนที่เหลือจึงไม่ถูกใช้และกลายเป็นกำไร รวมกับ Cost Negotiation ที่ต่อรองลดต้นทุนได้
         (ชีตยืนยันเองด้วยสูตร Budget Actual = Budget − Cost Negotiation) ·
         VO ทั้งสองฝั่งไม่ได้นับในตารางนี้ เพราะเป็นงานที่เพิ่ม/ลดขอบเขต ไม่ใช่การควบคุมงบ</div>
       <div class="pm-note" style="margin-top:10px">เกณฑ์ "ควบคุมงบ" เทียบกับกำไรตามงบของโครงการนั้นเอง —
@@ -2603,7 +2603,7 @@ const iwColor = s => `var(${IW_VAR[s] || '--text-muted'})`;
     ve:     { label: 'Cost Negotiation', note: 'ต่อรองราคา · แถว Q · Budget Actual = Budget − ค่านี้' },
     vo:     { label: 'VO ผู้รับเหมา',      note: 'งานเพิ่มฝั่งผู้รับเหมา · แถว P' },
     vocust: { label: 'VO ลูกค้า',          note: 'งานเพิ่มฝั่งลูกค้า · แถว X' },
-    petty:  { label: 'Petty Cash',       note: 'แถว I' }
+    petty:  { label: 'AdvanceMoney',       note: 'แถว I' }
   };
 
   function openBreakdown(key) {
