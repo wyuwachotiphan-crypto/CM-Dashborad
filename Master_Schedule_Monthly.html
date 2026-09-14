@@ -23,6 +23,12 @@
        opposites, and staying off slot-2 orange keeps the two charts apart */
     --series-rev:     #2a78d6;
     --series-exp:     #e34948;
+    /* Categorical slots 3-7, same reference palette the first two came from.
+       Fixed order: a slot belongs to an entity, never to a bar's rank. */
+    --series-3:       #1baf7a;   /* aqua    */
+    --series-4:       #eda100;   /* yellow  */
+    --series-5:       #e87ba4;   /* magenta */
+    --series-7:       #4a3aa7;   /* violet  */
     --good:           #006300;
     --stat-con:       #2a78d6;
     --stat-done:      #0ca30c;
@@ -47,6 +53,10 @@
       --series-2:       #d95926;
       --series-rev:     #3987e5;
       --series-exp:     #e66767;
+      --series-3:       #199e70;
+      --series-4:       #c98500;
+      --series-5:       #d55181;
+      --series-7:       #9085e9;
       --good:           #0ca30c;
       --stat-con:       #3987e5;
       --stat-done:      #0ca30c;
@@ -69,6 +79,10 @@
     --series-2:       #d95926;
     --series-rev:     #3987e5;
     --series-exp:     #e66767;
+    --series-3:       #199e70;
+    --series-4:       #c98500;
+    --series-5:       #d55181;
+    --series-7:       #9085e9;
     --good:           #0ca30c;
     --stat-con:       #3987e5;
     --stat-done:      #0ca30c;
@@ -393,6 +407,21 @@
   .swatch.c4 { background: var(--stat-con); }
   .swatch.c4.due { background: color-mix(in srgb, var(--stat-con) 40%, var(--surface-1)); }
   .swatch.c5 { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border); }
+  /* Identity slots. Deliberately separate from c1-c5 above: those carry the Cost
+     chart's paid/due meaning, and .c4 resolves to the same blue as --series-1,
+     so reusing them for identity would paint two different things alike. */
+  .hbar .p1, .swatch.p1, .seg.p1 { background: var(--series-1); }
+  .hbar .p2, .swatch.p2, .seg.p2 { background: var(--series-2); }
+  .hbar .p3, .swatch.p3, .seg.p3 { background: var(--series-3); }
+  .hbar .p4, .swatch.p4, .seg.p4 { background: var(--series-4); }
+  .hbar .p5, .swatch.p5, .seg.p5 { background: var(--series-5); }
+  .hbar .p7, .swatch.p7, .seg.p7 { background: var(--series-7); }
+  /* Slot 4 is the one fill light enough that white numerals vanish on it. */
+  .hbar .p4 { color: #101010; }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .hbar .p4 { color: #fff; }
+  }
+  :root[data-theme="dark"] .hbar .p4 { color: #fff; }
   .warnchip { display: inline-block; font-size: 10.5px; padding: 1px 6px; border-radius: 20px;
               border: 1px solid var(--series-exp); color: var(--series-exp); white-space: nowrap; }
   .warnchip.soft { border-color: var(--stat-hold); color: var(--stat-hold); }
@@ -592,14 +621,14 @@
         <summary>
           <div class="sec-head">
             <h2>Contract Variations &amp; Preliminary</h2>
-            <p>Preliminary · VO ผู้รับเหมา · VO ลูกค้า · Cost Negotiation รายโครงการ — แสดงเฉพาะโครงการที่มีตัวเลข</p>
+            <p>Preliminary · Cost Negotiation · VO ผู้รับเหมา · VO ลูกค้า รายโครงการ — แสดงเฉพาะโครงการที่มีตัวเลข</p>
           </div>
         </summary>
         <div class="legend">
-          <span><i class="swatch c1"></i>Preliminary</span>
-          <span><i class="swatch c2"></i>VO ผู้รับเหมา</span>
-          <span><i class="swatch c4"></i>VO ลูกค้า</span>
-          <span><i class="swatch c3"></i>Cost Negotiation</span>
+          <span><i class="swatch p1"></i>Preliminary</span>
+          <span><i class="swatch p2"></i>Cost Negotiation</span>
+          <span><i class="swatch p3"></i>VO ผู้รับเหมา</span>
+          <span><i class="swatch p4"></i>VO ลูกค้า</span>
         </div>
         <div class="card" id="varCard"></div>
       </details>
@@ -1398,9 +1427,9 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
   const pending = sale - collected;
 
   const items = [
-    { key: 'sale',      name: 'Sale Price',  value: sale,      note: 'Summary Report แถว E' },
-    { key: 'collected', name: 'Collected',   value: collected, note: 'เก็บเงินแล้ว · แถว J' },
-    { key: 'pending',   name: 'Pending',     value: pending,   note: 'Sale Price − Collected' }
+    { key: 'sale',      name: 'Sale Price',  value: sale,      note: 'Summary Report แถว E', slot: 'p1' },
+    { key: 'collected', name: 'Collected',   value: collected, note: 'เก็บเงินแล้ว · แถว J', slot: 'p3' },
+    { key: 'pending',   name: 'Pending',     value: pending,   note: 'Sale Price − Collected', slot: 'p4' }
   ];
   const max = Math.max(1, ...items.map(i => i.value));
 
@@ -1413,7 +1442,7 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
     items.map(i => `<div class="hrow clickable" data-cl="${i.key}" tabindex="0" role="button"
         title="${esc(i.name)} ${fmtFull(i.value)} บาท - คลิกเพื่อดูรายโครงการ">
         <div class="nm">${esc(i.name)}<small>${esc(i.note)}</small></div>
-        <div class="hbar"><i class="c1" style="width:${i.value / max * 100}%"
+        <div class="hbar"><i class="${i.slot}" style="width:${i.value / max * 100}%"
            data-val="${fmtFull(i.value)}">${fmtFull(i.value)}</i></div>
       </div>`).join('');
 
@@ -1467,12 +1496,12 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
    own bar. */
 (function drawExtras() {
   const items = [
-    { key: 'prelim', name: 'Preliminary', value: sum(STAT.map(s => s.prelim)), note: 'Summary Report แถว O' },
-    { key: 've', name: 'Cost Negotiation', value: sum(STAT.map(s => s.ve)), note: 'ต่อรองราคา · แถว Q' },
-    { key: 'vo', name: 'VO ผู้รับเหมา', value: sum(STAT.map(s => s.vo)), note: 'งานเพิ่มฝั่งผู้รับเหมา · แถว P' },
-    { key: 'vocust', name: 'VO ลูกค้า', value: sum(STAT.map(s => s.vocust)), note: 'งานเพิ่มฝั่งลูกค้า · แถว X' },
+    { key: 'prelim', name: 'Preliminary', value: sum(STAT.map(s => s.prelim)), note: 'Summary Report แถว O', slot: 'p1' },
+    { key: 've', name: 'Cost Negotiation', value: sum(STAT.map(s => s.ve)), note: 'ต่อรองราคา · แถว Q', slot: 'p2' },
+    { key: 'vo', name: 'VO ผู้รับเหมา', value: sum(STAT.map(s => s.vo)), note: 'งานเพิ่มฝั่งผู้รับเหมา · แถว P', slot: 'p3' },
+    { key: 'vocust', name: 'VO ลูกค้า', value: sum(STAT.map(s => s.vocust)), note: 'งานเพิ่มฝั่งลูกค้า · แถว X', slot: 'p4' },
     { key: 'petty', name: 'Petty Cash', value: sum((PETTY.rows || []).map(r => r.amount)) + (PETTY.carried || 0),
-      note: 'แถว I · รวมยอดยกมา' }
+      note: 'แถว I · รวมยอดยกมา', slot: 'p5' }
   ];
   const total = sum(items.map(i => i.value));
   const max = Math.max(1, ...items.map(i => i.value));
@@ -1486,7 +1515,7 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
     items.map(i => `<div class="hrow clickable" data-fb="${i.key}" tabindex="0" role="button"
         title="${esc(i.name)} ${fmtFull(i.value)} บาท - คลิกเพื่อดูรายโครงการ">
         <div class="nm">${esc(i.name)}<small>${esc(i.note)}</small></div>
-        <div class="hbar"><i class="c1" style="width:${i.value / max * 100}%"
+        <div class="hbar"><i class="${i.slot}" style="width:${i.value / max * 100}%"
            data-val="${fmtFull(i.value)}">${fmtFull(i.value)}</i></div>
       </div>`).join('');
 })();
@@ -1498,9 +1527,9 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
   document.getElementById('varCard').innerHTML =
     `<div class="pm-sum" style="margin-bottom:14px">
        <div><div class="k">Preliminary</div><div class="v">${fmtFull(tot('prelim'))}</div></div>
+       <div><div class="k">Cost Negotiation</div><div class="v">${fmtFull(tot('ve'))}</div></div>
        <div><div class="k">VO — ผู้รับเหมา</div><div class="v">${fmtFull(tot('vo'))}</div></div>
        <div><div class="k">VO — ลูกค้า</div><div class="v">${fmtFull(tot('vocust'))}</div></div>
-       <div><div class="k">Cost Negotiation</div><div class="v">${fmtFull(tot('ve'))}</div></div>
      </div>` +
     rows.map(p => {
       // Print every value, then let fitBarLabels() drop the ones that do not
@@ -1508,10 +1537,10 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
       // because the bar width changes with the viewport.
       const seg = (v, c) => v
         ? `<i class="${c}" style="width:${v / max * 100}%" data-val="${fmtFull(v)}">${fmtFull(v)}</i>` : '';
-      const title = `Preliminary ${fmtFull(p.prelim)} · VO ผู้รับเหมา ${fmtFull(p.vo)}`
-        + ` · VO ลูกค้า ${fmtFull(p.vocust)} · Cost Negotiation ${fmtFull(p.ve)}`;
+      const title = `Preliminary ${fmtFull(p.prelim)} · Cost Negotiation ${fmtFull(p.ve)}`
+        + ` · VO ผู้รับเหมา ${fmtFull(p.vo)} · VO ลูกค้า ${fmtFull(p.vocust)}`;
       return `<div class="hrow" title="${esc(title)}"><div class="nm">${esc(p.name)}</div>
-        <div class="hbar">${seg(p.prelim,'c1')}${seg(p.vo,'c2')}${seg(p.vocust,'c4')}${seg(p.ve,'c3')}</div></div>`;
+        <div class="hbar">${seg(p.prelim,'p1')}${seg(p.ve,'p2')}${seg(p.vo,'p3')}${seg(p.vocust,'p4')}</div></div>`;
     }).join('');
 })();
 
@@ -1595,6 +1624,9 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
   document.getElementById('visitLegend').innerHTML =
     `<span style="color:var(--text-muted)">คลิกที่แท่งของเดือนไหน เพื่อดูว่าไปไซต์ไหน โครงการอะไรบ้าง</span>`;
 
+  // One slot per year so the three cards are told apart at a glance. The year
+  // is in each card's heading too, so identity never rests on colour alone.
+  const yearSlot = y => ['p1', 'p2', 'p3'][years.indexOf(y) % 3];
   document.getElementById('visitChart').innerHTML = VISITS.length ? years.map(y => {
     const grid = ticks.map(v => `<u class="${v === 0 ? 'base' : ''}" style="bottom:${v / scale.max * 100}%"></u>`).join('');
     const yaxis = ticks.map(v => `<i style="bottom:${v / scale.max * 100}%">${v}</i>`).join('');
@@ -1610,7 +1642,7 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
           title="${MONTHS[i]} ${y} — ${t} ชม. ${rows.length} ครั้ง (${esc(tip)})">
           <div class="cap" style="bottom:calc(${t / scale.max * 100}% + 5px)">${t}</div>
           <div class="stack" style="height:${t / scale.max * 100}%">
-            <div class="seg" style="flex:1;background:var(--series-1)"></div></div></div>`;
+            <div class="seg ${yearSlot(y)}" style="flex:1"></div></div></div>`;
     }).join('');
     const yTot = round1(sum(Array.from({ length: 12 }, (_, i) => monthTotal(y, i + 1))));
     const yVisits = VISITS.filter(v => +v.date.slice(0, 4) === y).length;
@@ -1683,7 +1715,7 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
     rows.map(([name, d]) =>
       `<div class="hrow clickable" data-contractor="${esc(name)}" tabindex="0" role="button"><div class="nm">${esc(name)}
          <small>${d.n} โครงการ · ${fmtFull(d.value)} บาท</small></div>
-       <div class="hbar"><i class="c1" style="width:${d.value / max * 100}%"></i></div></div>`).join('');
+       <div class="hbar"><i class="p7" style="width:${d.value / max * 100}%"></i></div></div>`).join('');
 })();
 
 /* ---- Data-quality check --------------------------------------------------
