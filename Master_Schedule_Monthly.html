@@ -959,8 +959,8 @@ const GEN = {
 "PETTY": {"rows":[{"code":"CRLEV-26-003","name":"สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2","amount":603},{"code":"CRLEV-26-006","name":"Ventier courtyard ชั้น 3","amount":715},{"code":"CRLEV-26-009","name":"บ้านคุณอิสระ","amount":470},{"code":"CRLEV-26-012","name":"S’rin House","amount":840},{"code":"CRLEV-26-015","name":"PhanasonSamutprakhan Residence","amount":734},{"code":"CRLEV-26-014","name":"P'Gummy @Sildrom Residence FL.21","amount":489},{"code":"CRLEV-26-004","name":"Granpix","amount":735},{"code":"CRLEV-26-018","name":"คุณเต้ย หมู่บ้านรัตนา","amount":1211},{"code":"CRLST-25-003","name":"Khun Sarut's House","amount":255},{"code":"CRLEV-26-020","name":"คุณทวีชัย สมุทรปราการ","amount":725},{"code":"CRLEV-26-021","name":"The Grand Pinklao","amount":1086},{"code":"CRLEV-26-025","name":"Achalaboon Residence","amount":660}],"carried":4896},
 "PROGRESS": [{"code":"CRLEV-26-027","name":"K'Ink & K'Cody Residence","date":"2026-08-31","fromP":0,"toP":0,"fromS":"","toS":"Construction","kind":"new"},{"code":"CRLEV-26-011","name":"บ้านบางบอน5ซอย7","date":"2026-09-02","fromP":0,"toP":0,"fromS":"On Hold","toS":"Construction","kind":""},{"code":"CRLEV-26-003","name":"สำนักงานบริษัท เอส.บี.-ซีร่า จำกัดพระราม2","date":"2026-09-02","fromP":0.9,"toP":1,"fromS":"Completed","toS":"Completed","kind":""},{"code":"CRLEV-26-030","name":"Peter KohLanta Residence","date":"2026-09-09","fromP":0,"toP":0,"fromS":"","toS":"Construction","kind":"new"},{"code":"","name":"MMJ : AP บ้านกลางเมืองคุณมอส","date":"2026-09-14","fromP":0,"toP":0,"fromS":"","toS":"Construction","kind":"new"}],
 "PORTFOLIO": {"sale":12718543,"budgetActual":7746868,"projects":23},
-"REVMETA": {"rows":128,"rate":0.4,"today":"2026-09-14","noEnd":[],"noJoin":[["MMJ : AP บ้านกลางเมืองคุณมอส","First Fix"],["K'Ink & K'Cody Residence","First Fix"]],"unsched":[["MMJ : AP บ้านกลางเมืองคุณมอส","R3",49747]]},
-"META": {"projects":23,"rows":45,"generated":"2026-09-14 17:40","missing":[["The Grand Pinklao","Second Fix"]]}
+"REVMETA": {"rows":128,"rate":0.4,"today":"2026-09-15","noEnd":[],"noJoin":[["MMJ : AP บ้านกลางเมืองคุณมอส","First Fix"],["K'Ink & K'Cody Residence","First Fix"]],"unsched":[["MMJ : AP บ้านกลางเมืองคุณมอส","R3",49747]]},
+"META": {"projects":23,"rows":45,"generated":"2026-09-15 09:37","missing":[["The Grand Pinklao","Second Fix"]]}
 };
 /* DATA:END */
 
@@ -1767,47 +1767,91 @@ document.querySelector('.ovgrid').addEventListener('keydown', e => {
   };
 
   function openMgmt() {
-    const rows = STAT.map(s => ({
-      code: s.code, name: s.name, prelim: s.prelim, ve: s.ve, petty: s.petty,
+    const all = STAT.map(s => ({
+      code: s.code, name: s.name, status: s.status,
+      prelim: s.prelim, ve: s.ve, petty: s.petty,
       net: gain(s), base: base(s), sale: s.sale,
       pct: base(s) > 0 ? Math.round(gain(s) / base(s) * 1000) / 10 : null
     })).sort((a, b) => b.net - a.net);
 
-    document.getElementById('cm-title').textContent = 'งบที่ใช้ไม่หมด รายโครงการ';
-    document.getElementById('cm-sub').textContent =
-      'Preliminary + Cost Negotiation − AdvanceMoney · เทียบกำไรตามงบ = Sale Price − Budget';
-    document.getElementById('cm-body').innerHTML = `
+    /* A finished job's leftover is final - nothing more can be drawn against it.
+       One still running can still spend what is left, so its figure is only a
+       forecast. Filtering to Completed is therefore the honest way to ask "what
+       did controlling the budget actually earn us", and every total below is
+       recomputed from the filtered rows - a filter that left the headline
+       numbers portfolio-wide would be worse than no filter at all. */
+    const FILTERS = [['all', 'ทั้งหมด']].concat(STATUS_ORDER.map(s => [s, s]));
+    let pick = 'all';
+    const body = document.getElementById('cm-body');
+
+    function render() {
+      const rows = pick === 'all' ? all : all.filter(r => r.status === pick);
+      // AdvanceMoney carried forward belongs to no project, so it can only be
+      // charged against the whole portfolio - never against a subset of it.
+      const carriedNow = pick === 'all' ? carried : 0;
+      const netSum  = sum(rows.map(r => r.net)) - carriedNow;
+      const baseSum = sum(rows.map(r => r.base));
+      const liftNow = baseSum > 0 ? Math.round(netSum / baseSum * 1000) / 10 : null;
+
+      body.innerHTML = `
+      <div class="filterbar">
+        <div class="seg" id="mgfilter" role="group" aria-label="กรองตามสถานะโครงการ">
+          ${FILTERS.map(([v, label]) => {
+            const n = v === 'all' ? all.length : all.filter(r => r.status === v).length;
+            return `<button data-mg="${esc(v)}" aria-pressed="${v === pick}">${esc(label)} (${n})</button>`;
+          }).join('')}
+        </div>
+        <span class="repwindow">${rows.length} โครงการ${pick === 'all' ? '' : ' · เฉพาะ ' + esc(pick)}</span>
+      </div>
       <div class="pm-sum">
-        <div><div class="k">งบที่ใช้ไม่หมด</div><div class="v">${fmtFull(netTot)}</div><div class="ku">บาท</div></div>
-        <div><div class="k">กำไรตามงบ</div><div class="v">${fmtFull(baseTot)}</div><div class="ku">ก่อนบริหาร</div></div>
-        <div><div class="k">กำไรปัจจุบัน</div><div class="v">${fmtFull(profit)}</div>
-             <div class="ku">${lift === null ? '' : '+' + lift + '% จากกำไรตามงบ'}</div></div>
+        <div><div class="k">งบที่ใช้ไม่หมด</div><div class="v">${fmtFull(netSum)}</div><div class="ku">บาท</div></div>
+        <div><div class="k">กำไรตามงบ</div><div class="v">${fmtFull(baseSum)}</div><div class="ku">ก่อนบริหาร</div></div>
+        <div><div class="k">กำไรปัจจุบัน</div><div class="v">${fmtFull(baseSum + netSum)}</div>
+             <div class="ku">${liftNow === null ? '' : '+' + liftNow + '% จากกำไรตามงบ'}</div></div>
       </div>
       <div class="pm-scroll"><table>
-        <thead><tr><th>รหัส</th><th>โครงการ</th><th>Preliminary</th><th>Cost Nego.</th><th>AdvanceMoney</th>
+        <thead><tr><th>รหัส</th><th>โครงการ</th><th>สถานะ</th><th>Preliminary</th><th>Cost Nego.</th><th>AdvanceMoney</th>
           <th>เหลือ</th><th>กำไรตามงบ</th><th>กำไรปัจจุบัน</th><th>เทียบกำไรตามงบ</th><th>ควบคุมงบ</th></tr></thead>
         <tbody>${rows.map(r => {
           const g = grade(r);
           return `<tr><td>${esc(r.code || '-')}</td><td>${esc(r.name)}</td>
+            <td><span class="pill" style="background:var(${STATUS_VAR[r.status] || '--text-muted'});color:#fff">${esc(r.status)}</span></td>
             <td>${fmtFull(r.prelim)}</td><td>${fmtFull(r.ve)}</td><td>${fmtFull(r.petty)}</td>
             <td class="bal ${r.net >= 0 ? 'pos' : 'neg'}">${fmtFull(r.net)}</td>
             <td>${fmtFull(r.base)}</td><td>${fmtFull(r.base + r.net)}</td>
             <td>${r.pct === null ? '—' : (r.pct > 0 ? '+' : '') + r.pct + '%'}</td>
             <td class="${g.cls}">${g.label}</td></tr>`;
         }).join('')}</tbody>
-        <tfoot><tr><th colspan="5">รวมรายโครงการ</th>
-          <th>${fmtFull(sum(rows.map(r => r.net)))}</th><th>${fmtFull(baseTot)}</th>
-          <th>${fmtFull(baseTot + sum(rows.map(r => r.net)))}</th>
-          <th>${lift === null ? '—' : '+' + lift + '%'}</th><th></th></tr></tfoot>
+        <tfoot><tr><th colspan="6">รวมรายโครงการ</th>
+          <th>${fmtFull(sum(rows.map(r => r.net)))}</th><th>${fmtFull(baseSum)}</th>
+          <th>${fmtFull(baseSum + sum(rows.map(r => r.net)))}</th>
+          <th>${liftNow === null ? '—' : '+' + liftNow + '%'}</th><th></th></tr></tfoot>
       </table></div>
-      ${carried ? `<div class="pm-note" style="margin-top:10px">อีก ${fmtFull(carried)} บาท เป็น AdvanceMoney
-        ยกมาที่ไม่ได้ระบุโครงการ จึงไม่อยู่ในตาราง แต่ถูกหักออกจากยอดรวม ${fmtFull(netTot)} บาทแล้ว</div>` : ''}
+      ${carriedNow ? `<div class="pm-note" style="margin-top:10px">อีก ${fmtFull(carriedNow)} บาท เป็น AdvanceMoney
+        ยกมาที่ไม่ได้ระบุโครงการ จึงไม่อยู่ในตาราง แต่ถูกหักออกจากยอดรวม ${fmtFull(netSum)} บาทแล้ว</div>` : ''}
+      ${pick === 'all' ? '' : `<div class="pm-note" style="margin-top:10px">กรองเฉพาะ ${esc(pick)} —
+        ทุกตัวเลขด้านบนคำนวณจาก ${rows.length} โครงการนี้เท่านั้น${pick === 'Completed'
+          ? ' ตัวเลขชุดนี้คือของจริงที่ปิดงานแล้ว ไม่เปลี่ยนอีก' : ' งานยังไม่จบ ตัวเลขจึงยังขยับได้'}</div>`}
       <div class="pm-note" style="margin-top:10px">Preliminary เป็นงบที่กันไว้<strong>ภายใน</strong> Budget อยู่แล้ว
         และ AdvanceMoney คือยอดที่เบิกใช้ไปจริง ส่วนที่เหลือจึงไม่ถูกใช้และกลายเป็นกำไร รวมกับ Cost Negotiation ที่ต่อรองลดต้นทุนได้
         (ชีตยืนยันเองด้วยสูตร Budget Actual = Budget − Cost Negotiation) ·
         VO ทั้งสองฝั่งไม่ได้นับในตารางนี้ เพราะเป็นงานที่เพิ่ม/ลดขอบเขต ไม่ใช่การควบคุมงบ</div>
       <div class="pm-note" style="margin-top:10px">เกณฑ์ "ควบคุมงบ" เทียบกับกำไรตามงบของโครงการนั้นเอง —
         ดีมาก ≥ 10% · ดี ≥ 5% · พอใช้ &gt; 0% · ติดลบ &lt; 0% — เป็นเกณฑ์ที่ตั้งไว้เอง ไม่ได้มาจากชีต ปรับได้</div>`;
+
+      // render() replaces the whole body, so the listener goes back on each pass
+      // rather than being delegated from #cm-body - that element is shared with
+      // the other popups and a stray listener there would outlive this one.
+      body.querySelector('#mgfilter').addEventListener('click', e => {
+        const b = e.target.closest('button[data-mg]');
+        if (b) { pick = b.dataset.mg; render(); }
+      });
+    }
+
+    document.getElementById('cm-title').textContent = 'งบที่ใช้ไม่หมด รายโครงการ';
+    document.getElementById('cm-sub').textContent =
+      'Preliminary + Cost Negotiation − AdvanceMoney · เทียบกำไรตามงบ = Sale Price − Budget';
+    render();
     cellModal.showModal();
   }
 
