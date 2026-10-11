@@ -165,6 +165,10 @@ label.req::after{content:' •';color:var(--accent);font-weight:700}
 .bar.late{--solid:var(--accent); --plan:rgba(193,18,31,.16)}
 .bar.phase{--solid:var(--ink); --plan:rgba(0,48,73,.14); font-weight:600; justify-content:flex-start}
 .bar.done{color:#fff}
+.ovr{position:absolute;top:5px;height:16px;border:1px solid var(--accent);border-radius:3px;z-index:1;
+  background:repeating-linear-gradient(45deg,rgba(193,18,31,.55),rgba(193,18,31,.55) 4px,rgba(193,18,31,.2) 4px,rgba(193,18,31,.2) 8px);
+  color:#7a0010;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap}
+.ovr>span{background:rgba(255,255,255,.8);border-radius:2px;padding:0 3px}
 .bar.ext{--plan:transparent;border-color:#C9C6BF;color:var(--steel);
   background:repeating-linear-gradient(45deg,#DEDCD7,#DEDCD7 4px,#F5F4F1 4px,#F5F4F1 8px)}
 .bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--solid);border-radius:2px 0 0 2px}
@@ -301,6 +305,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
     <div class="sec-h">
       <h2>แผนภูมิ Gantt</h2>
       <div class="tools noprint">
+        <label style="margin:0;font-size:12px" title="เปิด = วันที่เกินแผนดันงานถัดไปให้เลื่อนตาม · ปิด = แผนเดิมไม่ขยับ แสดงส่วนเกินเป็นแถบแดงเฉยๆ"><input type="checkbox" id="gshift" onchange="S.info.shiftOver=this.checked;refresh()" style="width:auto"> งานถัดไปเลื่อนตามวันที่เกิน</label>
         <label style="margin:0;font-size:12px"><input type="checkbox" id="glinks" checked onchange="refresh()" style="width:auto"> เส้นเชื่อมงาน</label>
         <label style="margin:0"><select id="scale" onchange="refresh()" style="width:auto">
           <option value="day">รายวัน</option><option value="week" selected>รายสัปดาห์</option><option value="month">รายเดือน</option>
@@ -482,7 +487,10 @@ function compute(){
     if(s<p0)s=new Date(p0);
     t.s=t.sm&&!isNaN(+D(t.sm))?D(t.sm):snapWork(s);   // ผู้ใช้กำหนดวันเริ่มเอง (t.sm) = ใช้วันนั้นตรง ๆ
     const dur=Math.max(0,+t.dur||0);
-    t.f=dur<=1?new Date(t.s):nextWork(t.s,dur-1);
+    const ov=Math.max(0,+t.over||0);
+    t.fp=dur<=1?new Date(t.s):nextWork(t.s,dur-1);          // วันเสร็จตามแผน
+    t.fo=ov?nextWork(t.fp,ov):new Date(t.fp);               // วันเสร็จจริง = แผน + วันที่เกิน
+    t.f=S.info.shiftOver?t.fo:t.fp;                         // เปิด "ให้งานถัดไปเลื่อนตาม" แล้วใช้วันเสร็จจริง
   };
   // คำนวณแบบไม่ยึดลำดับแถว — งานอ้างอิงงานที่อยู่ใต้มันในตารางก็คำนวณถูก
   S.tasks.forEach(t=>{if(t.phase){t.s=null;t.f=null}});
@@ -556,14 +564,14 @@ function buildInfo(){
 function esc(v){return String(v??'').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
 
 /* ══════════════════ RENDER: ตารางงาน ══════════════════ */
-const COLS=['#','WBS','ชื่องาน','เฟส','เริ่มหลังจาก','ชนิด','Lag','วัน','เริ่ม','เสร็จ','น้ำหนัก%','ทำแล้ว %','ผู้รับผิดชอบ','MS','รอผู้อื่น',''];
-const TIP={'น้ำหนัก%':'สัดส่วนของงานนี้ในโครงการ · รวมทุกงาน = 100%',
+const COLS=['#','WBS','ชื่องาน','เฟส','เริ่มหลังจาก','ชนิด','Lag','วัน','เริ่ม','เสร็จ','น้ำหนัก%','ทำแล้ว %','ผู้รับผิดชอบ','MS','รอผู้อื่น','เกินแผน (วัน)','Remark (เหตุผลที่เกิน)',''];
+const TIP={'เกินแผน (วัน)':'จำนวนวันทำงานที่ใช้เกินจากระยะเวลาตามแผน (ใส่ได้เมื่องานไม่ได้ตามแผน) — แสดงเป็นแถบแดงต่อท้ายงานใน Gantt','Remark (เหตุผลที่เกิน)':'เหตุผลที่งานเกินแผน เช่น รอวัสดุ / ฝนตก / ลูกค้าเปลี่ยนแบบ','น้ำหนัก%':'สัดส่วนของงานนี้ในโครงการ · รวมทุกงาน = 100%',
   'ทำแล้ว %':'ความคืบหน้าของงานนี้เอง 0–100 (เสร็จแล้ว = 100) ไม่ใช่ % ของทั้งโครงการ',
   'เริ่มหลังจาก':'งานที่ต้องเสร็จก่อน','ชนิด':'FS = เริ่มหลังงานก่อนเสร็จ · SS = เริ่มพร้อมกัน',
   'Lag':'เว้นกี่วันทำงาน ใส่ติดลบได้ถ้าต้องการให้คาบเกี่ยว','วัน':'ระยะเวลา นับเฉพาะวันทำงาน',
   'MS':'Milestone / Hold Point','รอผู้อื่น':'งานที่เราไม่ได้ทำ — กินเวลาแต่ไม่นับน้ำหนัก'};
 /* ความกว้างคอลัมน์ — ชื่องานเว้นว่างไว้ให้ยืดกินพื้นที่ที่เหลือ */
-const CW=[32,64,0,98,160,56,52,52,76,76,68,58,120,36,64,106];
+const CW=[32,64,0,98,160,56,52,52,76,76,68,58,120,36,64,86,220,106];
 /* ความกว้างคอลัมน์ที่ผู้ใช้ลากเอง — จำไว้ในเครื่องนี้ (ดับเบิลคลิกที่ขอบเพื่อกลับเป็นอัตโนมัติ) */
 let COLW={};try{COLW=JSON.parse(localStorage.getItem("msb-colw"))||{}}catch(e){}
 function saveColW(){try{localStorage.setItem("msb-colw",JSON.stringify(COLW))}catch(e){}}
@@ -623,8 +631,8 @@ function fitTaskCols(){
   need[12]=Math.max(hd(12),wMax(T,t=>m(t.own)))+PAD.text;
   need[13]=Math.max(hd(13),18)+PAD.plain;
   need[14]=Math.max(hd(14),18)+PAD.plain;
-  need[15]=106;
-  return need.map((v,i)=>(COLW[i]&&i!==2&&i!==15)?COLW[i]:Math.min(240,Math.ceil(v)));
+  need[15]=96; need[16]=230; need[17]=106;
+  return need.map((v,i)=>(COLW[i]&&i!==2&&i!==17)?COLW[i]:Math.min(240,Math.ceil(v)));
 }
 function fitDefCols(){
   const m=measurer('#deftbl tbody input:not([type=date])',12),
@@ -703,7 +711,7 @@ function buildTable(){
   const keep=(v,i)=>!H.has(i);
   const W=fitTaskCols();                                   // ความกว้างที่วัดจากข้อความจริง
   const cols='<colgroup>'+W.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
-  const head='<thead><tr>'+COLS.map((c,i)=>!keep(0,i)?'':`<th data-c="${i}"${TIP[c]?` title="${TIP[c]}"`:''}>${c}${(i===2||i===15)?'':'<span class="rz" title="ลากเพื่อปรับความกว้าง · ดับเบิลคลิกเพื่อกลับเป็นอัตโนมัติ"></span>'}</th>`).join('')+'</tr></thead>';
+  const head='<thead><tr>'+COLS.map((c,i)=>!keep(0,i)?'':`<th data-c="${i}"${TIP[c]?` title="${TIP[c]}"`:''}>${c}${(i===2||i===17)?'':'<span class="rz" title="ลากเพื่อปรับความกว้าง · ดับเบิลคลิกเพื่อกลับเป็นอัตโนมัติ"></span>'}</th>`).join('')+'</tr></thead>';
   const body=S.tasks.map((t,i)=>t.phase?rowPhase(t,i,H):rowTask(t,i,H)).join('');
   tbl.innerHTML=cols+head+'<tbody>'+body+'</tbody>';
   const box=document.getElementById('tblbox'), avail=box?box.clientWidth:1500;
@@ -742,12 +750,12 @@ function rowPhase(t,i,H){
   H=H||new Set();
   const gc=(GRP[i]||{}).c||PAL[0];
   const span=(a,b)=>{let n=0;for(let k=a;k<=b;k++)if(!H.has(k))n++;return n};
-  const s1=span(1,7), s2=span(10,14);
+  const s1=span(1,7), s2=span(10,16);
   return `<tr class="ph" style="background:${tint(gc,.18)};box-shadow:inset 4px 0 0 ${gc}"><td class="derived">${i+1}</td>`
    +(s1?`<td colspan="${s1}"><input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;refresh()" style="font-weight:700"></td>`:'')
    +`<td class="derived" id="s${i}"></td><td class="derived" id="f${i}"></td>`
    +(s2?`<td colspan="${s2}"></td>`:'')
-   +(H.has(15)?'':`<td>${act(i)}</td>`)+`</tr>`;
+   +(H.has(17)?'':`<td>${act(i)}</td>`)+`</tr>`;
 }
 function rowTask(t,i,H){
   H=H||new Set();
@@ -779,6 +787,9 @@ function rowTask(t,i,H){
    `<td><input list="dl-own" value="${esc(t.own)}" title="${esc(t.own)}" oninput="S.tasks[${i}].own=this.value;this.title=this.value;refresh()"></td>`,
    `<td style="text-align:center"><input type="checkbox" ${t.ms?'checked':''} onchange="S.tasks[${i}].ms=this.checked;refresh()"></td>`,
    `<td style="text-align:center"><input type="checkbox" ${t.ext?'checked':''} onchange="S.tasks[${i}].ext=this.checked;refresh()"></td>`,
+   t.ext?`<td class="derived" style="color:var(--gray);text-align:center">—</td>`
+        :`<td><input type="number" min="0" value="${t.over||''}" placeholder="0" title="จำนวนวันทำงานที่ใช้เกินจากแผน" oninput="S.tasks[${i}].over=+this.value;this.closest('tr').querySelector('.rmk').placeholder=+this.value>0?'ระบุเหตุผลที่เกิน…':'';refresh()"></td>`,
+   `<td><input class="rmk" value="${esc(t.rmk||'')}" placeholder="${+t.over>0?'ระบุเหตุผลที่เกิน…':''}" title="${esc(t.rmk||'')}" oninput="S.tasks[${i}].rmk=this.value;this.title=this.value;refresh()"></td>`,
    `<td>${act(i)}</td>`];
   const gc=(GRP[i]||{}).c||PAL[0];
   return `<tr style="background:${tint(gc,.07)};box-shadow:inset 3px 0 0 ${tint(gc,.55)}">`
@@ -1027,6 +1038,10 @@ function drawGantt(C){
           ${pc>0?`<div class="fill" style="width:${pc}%"></div>`:''}<span>${t.dur} วัน${pc?' · '+pc+'%':''}</span></div>`;
       }
     }
+    if(t.s&&!t.phase&&!t.ms&&+t.dur!==0&&+t.over>0&&t.fo>t.fp){   // ส่วนที่เกินแผน — แถบแดงลาย ต่อท้ายวันเสร็จตามแผน
+      const ox=(days(g0,t.fp)+1)*px, ow=Math.max(px*0.8,days(t.fp,t.fo)*px);
+      bar+=`<div class="ovr" style="left:${ox}px;width:${ow}px" title="${esc(t.name)} · เกินแผน ${t.over} วัน${t.rmk?' · '+esc(t.rmk):''}"><span>+${t.over}</span></div>`;
+    }
     let wknd='';
     if(scale==='day')for(let i=0;i<total;i++){const d2=addD(g0,i);if(!isWork(d2))wknd+=`<div class="wknd" style="left:${i*px}px;width:${px}px"></div>`}
     R.push(`<div class="lane" style="width:${W}px">${wknd}${bar}</div>`);
@@ -1111,12 +1126,14 @@ function drawKpi(C){
   const now=new Date();now.setHours(0,0,0,0);
   const pl=plannedAt(now,C)*100, ac=actualNow(C)*100, dv=ac-pl;
   const wOK=Math.abs(C.wsum-100)<0.5;
+  const ovl=C.real.filter(t=>+t.over>0), ovT=ovl.reduce((a,t)=>a+(+t.over),0), ovN=ovl.length;
   kpis.innerHTML=[
     ['วันเริ่ม – วันแล้วเสร็จ',fmt(C.st)+' – '+fmt(C.en),dur+' วันปฏิทิน · '+C.real.length+' งาน',''],
     ['ครบกำหนดตามสัญญา',fmt(C.cend),over>0?`ช้ากว่าสัญญา ${over} วัน`:`เหลือ buffer ${-over} วัน`,over>0?'bad':'ok'],
     ['น้ำหนักงานรวม',C.wsum.toFixed(1)+'%',wOK?'ครบ 100%':'ต้องเท่ากับ 100%',wOK?'ok':'warn'],
     ['แผน ณ วันนี้',pl.toFixed(1)+'%','คำนวณจากเส้น S-Curve',''],
-    ['ผลงานจริง',ac.toFixed(1)+'%',(dv>=0?'เร็วกว่าแผน +':'ช้ากว่าแผน ')+dv.toFixed(1)+'%',dv<-2?'bad':dv<0?'warn':'ok']
+    ['ผลงานจริง',ac.toFixed(1)+'%',(dv>=0?'เร็วกว่าแผน +':'ช้ากว่าแผน ')+dv.toFixed(1)+'%',dv<-2?'bad':dv<0?'warn':'ok'],
+    ['เกินแผนรวม',ovT+' วัน',ovN?ovN+' งานเกินแผน':'ไม่มีงานเกินแผน',ovT?'bad':'ok']
   ].map(([k,v,n,c])=>`<div class="kpi"><div class="k">${k}</div><div class="v ${c}">${v}</div><div class="n ${c}">${n}</div></div>`).join('');
 
   const nm=t=>(t.wbs||t.name||'(ไม่มีชื่อ)').slice(0,24);
@@ -1139,6 +1156,8 @@ function drawKpi(C){
   if(dl.length)es.push(`Defect เกินกำหนดแก้แล้ว ${dl.length} รายการ (Critical ${dl.filter(d=>sevLv(d)===3).length}) — ดูตาราง Defect ด้านบน`);
   if(C.loop.length)es.push(`งานอ้างอิงวนกลับหากัน: ${C.loop.map(nm).join(', ')} — ตั้งให้เริ่มวันแรกของโครงการชั่วคราว กรุณาแก้ช่อง "เริ่มหลังจาก"`);
   if(C.back.length)es.push(`ลำดับแถวไม่ตรงกับความจริง: ${C.back.map(nm).join(', ')} อ้างอิงงานที่อยู่ "ใต้" มันในตาราง — วันที่คำนวณถูกแล้ว แต่ควรกด ↑ ↓ ย้ายแถวให้เรียงตามลำดับงานจริง`);
+  const noR=ovl.filter(t=>!String(t.rmk||'').trim());
+  if(noR.length)es.push(`งานที่เกินแผนแต่ยังไม่ระบุเหตุผล (Remark): ${noR.map(nm).join(', ')}`);
   warn.innerHTML=es.map(e=>`<div class="msg e">⚠ ${e}</div>`).join('');
 }
 
@@ -1378,6 +1397,7 @@ function drawFinChart(rows){
 
 /* ══════════════════ REFRESH ══════════════════ */
 function refresh(){
+  const gs=document.getElementById('gshift'); if(gs)gs.checked=!!S.info.shiftOver;
   DEFBY=defByTask(); GRP=groupMap();
   const C=compute();
   S.tasks.forEach((t,i)=>{
@@ -1586,7 +1606,7 @@ function dupProj(){
   const c=JSON.parse(JSON.stringify(S));
   c.info.name=pname(S)+' (สำเนา)';
   delete c.info.pid;                       // สำเนาต้องเป็นคนละไฟล์กับต้นฉบับ
-  c.tasks.forEach(t=>{t.act=0});
+  c.tasks.forEach(t=>{t.act=0;t.over=0;t.rmk=""});
   if(c.fin){(c.fin.income||[]).forEach(x=>{x.ra="";x.rd=""});(c.fin.cost||[]).forEach(x=>{x.pa="";x.pd=""})}   // สำเนา = ล้างยอดรับ/จ่ายจริง
   WS.projects.push(c);useProj(WS.projects.length-1);
 }
