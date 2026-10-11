@@ -109,6 +109,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 td.autocell{background:#F4F3F0}
 .tbl td.dcell input[type=date]{font-family:var(--f-mono);font-size:12px;padding:3px 2px}
 .tbl td.dcell input:focus{position:static;width:100%}
+body.rowdrag,body.rowdrag *{cursor:grabbing!important;user-select:none!important}
+.tbl tr.dragging{opacity:.35}
+.tbl tr.moved td{animation:movedflash .9s}
+@keyframes movedflash{from{background:#FFE9A8}to{background:transparent}}
+#dropLine{position:fixed;height:3px;background:var(--accent);border-radius:2px;z-index:99999;display:none;pointer-events:none}
+.tbl tbody tr[data-i] td:first-child{cursor:grab}
 .tbl td.dcell input.pin{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
 .ftbl{width:100%;border-collapse:collapse;font-size:12.5px}
 .ftbl th{background:var(--ink-soft);color:#fff;font-size:10.5px;font-weight:600;padding:7px 6px;text-align:left;white-space:nowrap}
@@ -575,7 +581,7 @@ function esc(v){return String(v??'').replace(/"/g,'&quot;').replace(/</g,'&lt;')
 
 /* ══════════════════ RENDER: ตารางงาน ══════════════════ */
 const COLS=['#','WBS','ชื่องาน','เฟส','เริ่มหลังจาก','ชนิด','Lag','วัน','เริ่ม','เสร็จ','น้ำหนัก%','ทำแล้ว %','ผู้รับผิดชอบ','MS','รอผู้อื่น','เกินแผน (วัน)','Remark (เหตุผลที่เกิน)',''];
-const TIP={'เกินแผน (วัน)':'จำนวนวันทำงานที่ใช้เกินจากระยะเวลาตามแผน (ใส่ได้เมื่องานไม่ได้ตามแผน) — แสดงเป็นแถบแดงต่อท้ายงานใน Gantt','Remark (เหตุผลที่เกิน)':'เหตุผลที่งานเกินแผน เช่น รอวัสดุ / ฝนตก / ลูกค้าเปลี่ยนแบบ','น้ำหนัก%':'สัดส่วนของงานนี้ในโครงการ · รวมทุกงาน = 100%',
+const TIP={'ชื่องาน':'กดค้างที่ชื่องาน (หรือเลขลำดับ) แล้วลากเพื่อย้ายแถว · ลากหัวข้อ = ย้ายทั้งกลุ่ม','เกินแผน (วัน)':'จำนวนวันทำงานที่ใช้เกินจากระยะเวลาตามแผน (ใส่ได้เมื่องานไม่ได้ตามแผน) — แสดงเป็นแถบแดงต่อท้ายงานใน Gantt','Remark (เหตุผลที่เกิน)':'เหตุผลที่งานเกินแผน เช่น รอวัสดุ / ฝนตก / ลูกค้าเปลี่ยนแบบ','น้ำหนัก%':'สัดส่วนของงานนี้ในโครงการ · รวมทุกงาน = 100%',
   'ทำแล้ว %':'ความคืบหน้าของงานนี้เอง 0–100 (เสร็จแล้ว = 100) ไม่ใช่ % ของทั้งโครงการ',
   'เริ่มหลังจาก':'งานที่ต้องเสร็จก่อน','ชนิด':'FS = เริ่มหลังงานก่อนเสร็จ · SS = เริ่มพร้อมกัน',
   'Lag':'เว้นกี่วันทำงาน ใส่ติดลบได้ถ้าต้องการให้คาบเกี่ยว','วัน':'ระยะเวลา นับเฉพาะวันทำงาน',
@@ -698,6 +704,57 @@ function focusNeed(){
   const el=document.querySelector('#info .need,#tbl .need,#deftbl .need');
   if(el){el.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>el.focus(),250)}
 }
+/* ลากชื่องาน (หรือเลขลำดับ) เพื่อย้ายแถว — ลากหัวข้อ = ย้ายทั้งกลุ่มงานใต้หัวข้อนั้น
+   คลิกครั้งแรกที่ชื่อ = เริ่มพิมพ์แก้ชื่อ · กดค้างแล้วลาก = ย้าย (ถ้าช่องกำลังพิมพ์อยู่ ลากเลือกข้อความได้ตามปกติ) */
+(function(){
+  let st=null; const line=document.createElement('div'); line.id='dropLine'; document.body.appendChild(line);
+  const rowsOf=()=>[...tbl.tBodies[0].rows];
+  const blockOf=i=>{ let e=i+1; if(S.tasks[i].phase){while(e<S.tasks.length&&!S.tasks[e].phase)e++} return [i,e]; };
+  const clear=()=>{ line.style.display='none'; document.body.classList.remove('rowdrag'); rowsOf().forEach(r=>r.classList.remove('dragging')); };
+  document.addEventListener('mousedown',e=>{
+    if(e.button!==0)return;
+    const td=e.target.closest&&e.target.closest('#tbl tbody td'); if(!td)return;
+    const tr=td.parentElement; if(tr.dataset.i===undefined)return;
+    const onName=td.cellIndex===2&&e.target.tagName==='INPUT'&&document.activeElement!==e.target, onNum=td.cellIndex===0;
+    if(!onName&&!onNum)return;
+    st={i:+tr.dataset.i,x:e.clientX,y:e.clientY,on:false,to:null};
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!st)return;
+    if(!st.on){
+      if(Math.hypot(e.clientX-st.x,e.clientY-st.y)<6)return;
+      st.on=true; if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+      getSelection().removeAllRanges(); document.body.classList.add('rowdrag');
+      const [a,b]=blockOf(st.i); rowsOf().slice(a,b).forEach(r=>r.classList.add('dragging'));
+    }
+    if(e.clientY<70)scrollBy(0,-18); else if(e.clientY>innerHeight-70)scrollBy(0,18);
+    const rows=rowsOf(), n=rows.length; if(!n)return;
+    let j=rows.findIndex(r=>{const q=r.getBoundingClientRect();return e.clientY>=q.top&&e.clientY<q.bottom});
+    if(j<0)j=e.clientY<rows[0].getBoundingClientRect().top?0:n-1;
+    const q=rows[j].getBoundingClientRect(); let ins=e.clientY<(q.top+q.bottom)/2?j:j+1;
+    if(S.tasks[st.i].phase){           // หัวข้อวางได้เฉพาะระหว่างกลุ่ม ไม่แทรกกลางกลุ่มอื่น
+      let gs=j; while(gs>0&&!S.tasks[gs].phase)gs--;
+      let ge=j+1; while(ge<n&&!S.tasks[ge].phase)ge++;
+      ins=(j-gs<=ge-1-j)?gs:ge;
+    }
+    const [a,b]=blockOf(st.i);
+    if(ins>=a&&ins<=b){ st.to=null; line.style.display='none'; return }
+    st.to=ins;
+    const box=tbl.getBoundingClientRect(), y=ins>=n?rows[n-1].getBoundingClientRect().bottom:rows[ins].getBoundingClientRect().top;
+    Object.assign(line.style,{display:'block',left:box.left+'px',width:box.width+'px',top:(y-1)+'px'});
+  });
+  document.addEventListener('mouseup',()=>{
+    if(!st)return; const s=st; st=null;
+    if(!s.on)return;
+    addEventListener('click',ev=>ev.stopPropagation(),{capture:true,once:true});   // ไม่ให้การปล่อยเมาส์ไปโฟกัสช่องพิมพ์
+    clear();
+    if(s.to==null)return;
+    const [a,b]=blockOf(s.i), blk=S.tasks.splice(a,b-a); let ins=s.to; if(ins>a)ins-=b-a;
+    S.tasks.splice(ins,0,...blk); rebuild();
+    rowsOf().slice(ins,ins+blk.length).forEach(r=>{r.classList.add('moved'); setTimeout(()=>r.classList.remove('moved'),900)});
+  });
+  addEventListener('blur',()=>{ if(st&&st.on){st=null;clear()} });
+})();
 /* ลากขอบหัวตารางเพื่อปรับความกว้างคอลัมน์ได้เอง */
 document.addEventListener('mousedown',e=>{
   const h=e.target.closest&&e.target.closest('#tbl th .rz'); if(!h)return;
@@ -762,7 +819,7 @@ function rowPhase(t,i,H){
   const gc=(GRP[i]||{}).c||PAL[0];
   const span=(a,b)=>{let n=0;for(let k=a;k<=b;k++)if(!H.has(k))n++;return n};
   const s1=span(2,7), s2=span(10,16);
-  return `<tr class="ph" style="background:${tint(gc,.18)};box-shadow:inset 4px 0 0 ${gc}"><td class="derived">${i+1}</td>`
+  return `<tr class="ph" data-i="${i}" style="background:${tint(gc,.18)};box-shadow:inset 4px 0 0 ${gc}"><td class="derived">${i+1}</td>`
    +`<td class="derived" style="font-weight:700;color:var(--text)" title="เลขหัวข้อ — ระบบเรียงให้อัตโนมัติ">${esc(t.wbs)}</td>`
    +(s1?`<td colspan="${s1}"><input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;refresh()" style="font-weight:700"></td>`:'')
    +`<td class="derived" id="s${i}"></td><td class="derived" id="f${i}"></td>`
@@ -804,7 +861,7 @@ function rowTask(t,i,H){
    `<td><input class="rmk" value="${esc(t.rmk||'')}" placeholder="${+t.over>0?'ระบุเหตุผลที่เกิน…':''}" title="${esc(t.rmk||'')}" oninput="S.tasks[${i}].rmk=this.value;this.title=this.value;refresh()"></td>`,
    `<td>${act(i)}</td>`];
   const gc=(GRP[i]||{}).c||PAL[0];
-  return `<tr style="background:${tint(gc,.07)};box-shadow:inset 3px 0 0 ${tint(gc,.55)}">`
+  return `<tr data-i="${i}" style="background:${tint(gc,.07)};box-shadow:inset 3px 0 0 ${tint(gc,.55)}">`
     +c.filter((x,ix)=>!H.has(ix)).join('')+'</tr>';
 }
 function act(i){
