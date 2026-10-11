@@ -107,6 +107,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .need{background:#FFF6E0!important;box-shadow:inset 0 0 0 1.5px #E0A93B;border-radius:4px}
 .need::placeholder{color:#B98A2E}
 td.autocell{background:#F4F3F0}
+.tbl td.dcell input[type=date]{font-family:var(--f-mono);font-size:12px;padding:3px 2px}
+.tbl td.dcell input:focus{position:static;width:100%}
+.tbl td.dcell input.pin{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
 label.req::after{content:' •';color:var(--accent);font-weight:700}
 .needchip{font-size:12px;font-weight:600;border-radius:20px;padding:3px 10px;border:1px solid;cursor:pointer}
 .needchip.on{color:#8A6412;border-color:#E0A93B;background:#FFF6E0}
@@ -440,7 +443,7 @@ function compute(){
     else if(t.dt==='SS') s=t.lag?nextWork(dep.s,t.lag):new Date(dep.s);
     else s=nextWork(dep.f,(+t.lag||0)+1);
     if(s<p0)s=new Date(p0);
-    t.s=snapWork(s);
+    t.s=t.sm&&!isNaN(+D(t.sm))?D(t.sm):snapWork(s);   // ผู้ใช้กำหนดวันเริ่มเอง (t.sm) = ใช้วันนั้นตรง ๆ
     const dur=Math.max(0,+t.dur||0);
     t.f=dur<=1?new Date(t.s):nextWork(t.s,dur-1);
   };
@@ -577,7 +580,7 @@ function fitTaskCols(){
   need[5]=Math.max(hd(5),m('FS'))+PAD.sel;
   need[6]=Math.max(hd(6),wMax(T,t=>m(t.lag||0)))+PAD.num;
   need[7]=Math.max(hd(7),wMax(T,t=>m(t.dur)))+PAD.num;
-  need[8]=need[9]=Math.max(hd(8),hd(9),md('99/99/99'))+PAD.plain;
+  need[8]=need[9]=132;
   need[10]=Math.max(hd(10),wMax(T,t=>m(t.w)))+PAD.num;
   need[11]=Math.max(hd(11),wMax(T,t=>m(t.act||0)),m('100'))+PAD.num;
   need[12]=Math.max(hd(12),wMax(T,t=>m(t.own)))+PAD.text;
@@ -730,8 +733,8 @@ function rowTask(t,i,H){
        <option value="FS" ${t.dt!=='SS'?'selected':''}>FS</option><option value="SS" ${t.dt==='SS'?'selected':''}>SS</option></select></td>`,
    `<td><input type="number" value="${t.lag||0}" oninput="S.tasks[${i}].lag=+this.value;refresh()"></td>`,
    `<td><input type="number" min="0" ${t.ms||t.ext?'':'data-need="num"'} value="${t.dur}" oninput="S.tasks[${i}].dur=+this.value;refresh()"></td>`,
-   `<td class="derived autocell" id="s${i}" title="ระบบคำนวณให้จากลำดับงานและวันทำงาน"></td>`,
-   `<td class="derived autocell" id="f${i}" title="ระบบคำนวณให้จากระยะเวลา"></td>`,
+   `<td class="dcell"><input type="date" id="s${i}" title="ปล่อยว่าง = ระบบคำนวณให้ · ใส่วันที่เอง = ล็อกวันเริ่มของงานนี้ (ลบเพื่อกลับเป็นอัตโนมัติ)" onchange="S.tasks[${i}].sm=this.value;refresh()"></td>`,
+   `<td class="dcell"><input type="date" id="f${i}" title="ใส่วันที่เสร็จเอง = ระบบปรับจำนวนวันทำงานให้ตรงกับวันที่นั้น" onchange="setEnd(${i},this.value)"></td>`,
    t.ext?`<td class="derived" style="color:var(--gray);text-align:center" title="งานรอผู้อื่น — ไม่นับน้ำหนักและผลงาน">—</td>`
         :`<td><input type="number" min="0" step="0.5" value="${t.w}" title="สัดส่วนของงานนี้ในโครงการ · รวมทุกงาน = 100%" oninput="S.tasks[${i}].w=+this.value;refresh()"></td>`,
    t.ext?`<td class="derived" style="color:var(--gray);text-align:center" title="งานรอผู้อื่น — ไม่นับน้ำหนักและผลงาน">—</td>`
@@ -1091,7 +1094,8 @@ function refresh(){
   const C=compute();
   S.tasks.forEach((t,i)=>{
     const a=document.getElementById('s'+i), b=document.getElementById('f'+i);
-    if(a)a.textContent=t.s?fmt(t.s):'—'; if(b)b.textContent=t.f?fmt(t.f):'—';
+    const put=(el,d)=>{if(!el)return; if(el.tagName==='INPUT'){if(document.activeElement!==el)el.value=d?iso(d):''} else el.textContent=d?fmt(d):'—'};
+    put(a,t.s); put(b,t.f); if(a&&a.tagName==='INPUT')a.classList.toggle('pin',!!t.sm);
   });
   drawKpi(C); drawGantt(C); drawCurve(C); markNeeds();
   save(); queueWrite(); queueFolderWrite(); queueTeamPush();
@@ -1100,6 +1104,14 @@ function refresh(){
   if(lb)lb.textContent=pname(S); if(cn)cn.textContent=S.tasks.filter(t=>!t.phase).length;
 }
 function rebuild(){buildTable();refresh()}
+/* ผู้ใช้ใส่วันที่เสร็จเอง → ปรับจำนวนวันทำงานให้ตรง (นับเฉพาะวันทำงานตามปฏิทินของโครงการ) */
+function setEnd(i,v){
+  const t=S.tasks[i]; if(!v||!t.s){refresh();return}
+  const f=D(v);
+  if(f<t.s){alert("วันเสร็จต้องไม่ก่อนวันเริ่ม");refresh();return}
+  let n=0,x=new Date(t.s),g=0; while(x<=f&&g++<3000){if(isWork(x))n++;x=addD(x,1)}
+  t.dur=Math.max(1,n); rebuild();
+}
 
 /* ══════════════════ ACTIONS ══════════════════ */
 function newT(o={}){return Object.assign({id:'t'+(seq++),wbs:'',name:'',pf:'',dep:'',dt:'FS',lag:0,dur:1,w:0,act:0,own:'',ms:false,ext:false,phase:false},o)}
