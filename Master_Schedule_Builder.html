@@ -110,6 +110,17 @@ td.autocell{background:#F4F3F0}
 .tbl td.dcell input[type=date]{font-family:var(--f-mono);font-size:12px;padding:3px 2px}
 .tbl td.dcell input:focus{position:static;width:100%}
 .tbl td.dcell input.pin{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.ftbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.ftbl th{background:var(--ink-soft);color:#fff;font-size:10.5px;font-weight:600;padding:7px 6px;text-align:left;white-space:nowrap}
+.ftbl td{border-bottom:1px solid var(--line);padding:2px 4px}
+.ftbl td input,.ftbl td select{width:100%;padding:4px 6px;font-size:12.5px;border:1px solid transparent;background:transparent}
+.ftbl td input:hover,.ftbl td select:hover{border-color:var(--line);background:#fff}
+.ftbl td input[readonly]{color:var(--steel)}
+.ftbl td input.num,.ftbl td.num{text-align:right;font-family:var(--f-mono)}
+.ftbl td.d{font-family:var(--f-mono);font-size:12px;color:var(--steel);white-space:nowrap;padding:2px 8px}
+.ftbl td.num{padding:5px 8px}
+.ftbl tfoot td{font-weight:700;background:var(--canvas);padding:6px 8px}
+.ftbl .neg{color:var(--red)}
 label.req::after{content:' •';color:var(--accent);font-weight:700}
 .needchip{font-size:12px;font-weight:600;border-radius:20px;padding:3px 10px;border:1px solid;cursor:pointer}
 .needchip.on{color:#8A6412;border-color:#E0A93B;background:#FFF6E0}
@@ -295,6 +306,22 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
     <div class="pad" id="curve"></div>
   </section>
 
+  <section id="finsec" style="display:none">
+    <div class="sec-h"><h2>งบประมาณ / กระแสเงินสด (รับ–จ่ายตามแผนงาน)</h2>
+      <span class="hint">วันรับ–จ่ายคำนวณจากวันของงานที่ผูก — เลื่อนแผนแล้วตัวเลขเลื่อนตามเอง</span>
+      <label style="margin:0;font-size:12px">มูลค่าสัญญา (บาท) <input id="fcontract" type="number" min="0" style="width:150px;text-align:right" oninput="finContract(this.value)"></label></div>
+    <div class="kpis" id="finKpi"></div>
+    <div class="pad"><div id="finWarn"></div></div>
+    <div class="sec-h" style="border-top:1px solid var(--line)"><h2 style="font-size:14px">งวดรับเงิน</h2>
+      <button class="noprint" onclick="finAdd('income')">+ เพิ่มงวดรับ</button></div>
+    <div class="scroll"><table class="ftbl" id="finInc"></table></div>
+    <div class="sec-h" style="border-top:1px solid var(--line)"><h2 style="font-size:14px">รายการจ่าย / ต้นทุน</h2>
+      <button class="noprint" onclick="finAdd('cost')">+ เพิ่มรายการจ่าย</button></div>
+    <div class="scroll"><table class="ftbl" id="finCost"></table></div>
+    <div class="sec-h" style="border-top:1px solid var(--line)"><h2 style="font-size:14px">สรุปรายเดือน เทียบแผนกับจริง</h2></div>
+    <div class="pad"><div class="scroll"><table class="ftbl" id="finTbl"></table></div><div id="finChart" style="margin-top:12px"></div></div>
+  </section>
+
   <div class="foot">Coral Life · IAQ Construction Management — ไฟล์เดียว ทำงานออฟไลน์ได้ ไม่ต้องติดตั้งอะไร</div>
 </div>
 </div></div>
@@ -400,7 +427,7 @@ const KEY='ms-builder-v2', OLDKEY='ms-builder-v1';
 const CATS=[['TS','TS','งาน TS'],['IAQ','IAQ','งาน IAQ'],['NP','Non Project','งานที่ไม่ใช่โครงการ']];
 let catSel=null;   // null = ยังไม่เลือกหมวด → แสดงหน้าเลือกหมวดก่อน
 function catName(c){const x=CATS.find(k=>k[0]===c);return x?x[1]:'ยังไม่จัดหมวด'}
-function blankProj(){return {info:{cat:catSel||'',name:'',owner:'',site:'',doc:'',rev:'R0',revdate:today0(),by:'',start:today0(),cdays:120,wmode:'mon-sat',holi:''},tasks:[],defects:[],history:[]}}
+function blankProj(){return {info:{cat:catSel||'',name:'',owner:'',site:'',doc:'',rev:'R0',revdate:today0(),by:'',start:today0(),cdays:120,wmode:'mon-sat',holi:''},tasks:[],defects:[],history:[],fin:{contract:0,income:[],cost:[]}}}
 let WS={cur:0,projects:[]};   // ทุกโครงการอยู่ในไฟล์เดียว สลับด้วยแท็บด้านบน
 let S=blankProj();            // โครงการที่กำลังเปิดอยู่
 let seq=1;
@@ -506,7 +533,7 @@ function buildInfo(){
   info.innerHTML=F.map(([k,l,t])=>{
     const req=REQ.includes(k);
     return `<div><label class="${req?'req':''}">${l}</label><input type="${t}" ${req?'data-need="'+(t==='number'?'num':'text')+'"':''} value="${esc(S.info[k])}" oninput="S.info.${k}=this.value;refresh()"></div>`}).join('')
-  +`<div><label>หมวดงาน</label><select onchange="S.info.cat=this.value;catSel=this.value;buildTabs();buildCatBar();refresh()">
+  +`<div><label>หมวดงาน</label><select onchange="S.info.cat=this.value;catSel=this.value;buildTabs();buildCatBar();buildFin();refresh()">
       <option value="" ${S.info.cat?'':'selected'}>— ยังไม่จัดหมวด —</option>
       ${CATS.map(([v,l])=>`<option value="${v}" ${S.info.cat===v?'selected':''}>${l}</option>`).join('')}</select></div>
    <div><label>วันทำงาน</label><select onchange="S.info.wmode=this.value;refresh()">
@@ -1088,6 +1115,193 @@ function drawKpi(C){
   warn.innerHTML=es.map(e=>`<div class="msg e">⚠ ${e}</div>`).join('');
 }
 
+/* ══════════════════ งบประมาณ / กระแสเงินสด (ผูกกับงานในแผน) ══════════════════
+   S.fin = {contract, income:[งวดรับ], cost:[รายการจ่าย]} — วันที่รับ/จ่ายตามแผนคำนวณจากวันของงานที่ผูก
+   ใช้เฉพาะหมวด TS และ IAQ */
+const FIN_CATS=['TS','IAQ'];
+function finEnsure(){ if(!S.fin)S.fin={contract:0,income:[],cost:[]}; S.fin.income=S.fin.income||[]; S.fin.cost=S.fin.cost||[]; return S.fin }
+function finOn(){return FIN_CATS.includes(S.info.cat||'')}
+const money=n=>Math.round(+n||0).toLocaleString('en-US');
+const mkey=d=>d.getFullYear()*12+d.getMonth();
+const mlabel=k=>TH[k%12]+' '+String(Math.floor(k/12)).slice(2);
+function finTask(id){return S.tasks.find(t=>t.id===id&&!t.phase)}
+function incDate(x){
+  if(x.trig==='date')return x.date?D(x.date):null;
+  const t=finTask(x.task); if(!t||!t.s)return null;
+  return addD(x.trig==='start'?t.s:t.f,+x.lag||0);
+}
+function incAmt(x){return +x.pct>0?(+S.fin.contract||0)*x.pct/100:(+x.amt||0)}
+function costEvents(x){
+  const v=+x.budget||0; if(!v)return [];
+  if(x.mode==='date')return x.date?[{d:D(x.date),v}]:[];
+  const t=finTask(x.task); if(!t||!t.s)return [];
+  if(x.mode==='start')return [{d:t.s,v}];
+  if(x.mode==='finish')return [{d:t.f,v}];
+  const ds=[]; for(let d=new Date(t.s);d<=t.f;d=addD(d,1))if(isWork(d))ds.push(new Date(d));
+  if(!ds.length)ds.push(new Date(t.s));
+  return ds.map(d=>({d,v:v/ds.length}));
+}
+function costDateTxt(x){
+  const e=costEvents(x); if(!e.length)return '—';
+  const a=e[0].d,b=e[e.length-1].d; return +a===+b?fmt(a):fmt(a)+' – '+fmt(b);
+}
+function taskOpts(sel){
+  return '<option value="">— เลือกงาน —</option>'+S.tasks.filter(t=>!t.phase).map(t=>{
+    const lb=(t.wbs?t.wbs+' ':'')+(t.name||'(ไม่มีชื่อ)');
+    return `<option value="${t.id}" ${sel===t.id?'selected':''}>${esc(lb.slice(0,46))}</option>`}).join('');
+}
+function fset(arr,i,k,v,re){ finEnsure()[arr][i][k]=v; if(re)buildFin(); refresh() }
+function fnum(arr,i,k,el){ fset(arr,i,k,el.value===''?'':+el.value) }
+function finAdd(arr){
+  const id=Math.random().toString(36).slice(2,8);
+  finEnsure()[arr].push(arr==='income'
+    ?{id,name:'',task:'',trig:'finish',lag:30,date:'',pct:0,amt:0,ra:'',rd:''}
+    :{id,name:'',vendor:'',task:'',mode:'finish',date:'',budget:0,pa:'',pd:''});
+  buildFin(); refresh();
+}
+function finDel(arr,i){ finEnsure()[arr].splice(i,1); buildFin(); refresh() }
+function finContract(v){ finEnsure().contract=+v||0; refresh() }
+
+function buildFin(){
+  const F=finEnsure(); finsec.style.display=finOn()?'':'none'; if(!finOn())return;
+  fcontract.value=F.contract||'';
+  const del=(a,i)=>`<button class="noprint" style="padding:2px 8px" onclick="finDel('${a}',${i})" title="ลบแถว">✕</button>`;
+  finInc.innerHTML=`<thead><tr><th style="min-width:140px">งวดรับเงิน</th><th style="min-width:190px">ผูกกับงาน</th><th>เมื่อ</th><th>เครดิต (วัน) / วันที่</th>
+      <th>% สัญญา</th><th>จำนวนเงิน (บาท)</th><th>รับตามแผน</th><th>รับจริง (บาท)</th><th>วันที่รับจริง</th><th></th></tr></thead><tbody>`
+    +F.income.map((x,i)=>`<tr>
+      <td><input value="${esc(x.name)}" placeholder="เช่น งวด 1 เริ่มงาน" oninput="fset('income',${i},'name',this.value)"></td>
+      <td><select class="ftask" ${x.trig==='date'?'disabled':''} onchange="fset('income',${i},'task',this.value)">${taskOpts(x.task)}</select></td>
+      <td><select onchange="fset('income',${i},'trig',this.value,true)">
+        ${[['start','งานเริ่ม'],['finish','งานเสร็จ'],['date','ระบุวันเอง']].map(([v,l])=>`<option value="${v}" ${x.trig===v?'selected':''}>${l}</option>`).join('')}</select></td>
+      <td>${x.trig==='date'?`<input type="date" value="${esc(x.date)}" onchange="fset('income',${i},'date',this.value)">`
+        :`<input class="num" type="number" value="${x.lag??0}" title="บวกจากวันงานที่ผูก เช่น 30 = เครดิต 30 วัน" oninput="fnum('income',${i},'lag',this)">`}</td>
+      <td><input class="num" type="number" min="0" step="0.5" value="${x.pct||''}" oninput="fnum('income',${i},'pct',this)"></td>
+      <td><input class="num" type="number" min="0" id="fia${i}" value="${x.amt||''}" oninput="fnum('income',${i},'amt',this)"></td>
+      <td class="d" id="fid${i}"></td>
+      <td><input class="num" type="number" min="0" value="${x.ra??''}" oninput="fnum('income',${i},'ra',this)"></td>
+      <td><input type="date" value="${esc(x.rd)}" onchange="fset('income',${i},'rd',this.value)"></td>
+      <td>${del('income',i)}</td></tr>`).join('')
+    +`</tbody>`;
+  finCost.innerHTML=`<thead><tr><th style="min-width:140px">รายการจ่าย</th><th style="min-width:110px">ผู้รับเหมา / ผู้ขาย</th><th style="min-width:190px">ผูกกับงาน</th><th>รูปแบบจ่าย</th>
+      <th>วันที่</th><th>งบ (บาท)</th><th>จ่ายตามแผน</th><th>จ่ายจริง (บาท)</th><th>วันที่จ่ายจริง</th><th></th></tr></thead><tbody>`
+    +F.cost.map((x,i)=>`<tr>
+      <td><input value="${esc(x.name)}" placeholder="เช่น ค่าแรงเดินท่อ" oninput="fset('cost',${i},'name',this.value)"></td>
+      <td><input value="${esc(x.vendor)}" oninput="fset('cost',${i},'vendor',this.value)"></td>
+      <td><select class="ftask" ${x.mode==='date'?'disabled':''} onchange="fset('cost',${i},'task',this.value)">${taskOpts(x.task)}</select></td>
+      <td><select onchange="fset('cost',${i},'mode',this.value,true)">
+        ${[['start','ตอนงานเริ่ม'],['finish','ตอนงานเสร็จ'],['spread','กระจายตามระยะงาน'],['date','ระบุวันเอง']].map(([v,l])=>`<option value="${v}" ${x.mode===v?'selected':''}>${l}</option>`).join('')}</select></td>
+      <td>${x.mode==='date'?`<input type="date" value="${esc(x.date)}" onchange="fset('cost',${i},'date',this.value)">`:'<span class="d">—</span>'}</td>
+      <td><input class="num" type="number" min="0" value="${x.budget||''}" oninput="fnum('cost',${i},'budget',this)"></td>
+      <td class="d" id="fcd${i}"></td>
+      <td><input class="num" type="number" min="0" value="${x.pa??''}" oninput="fnum('cost',${i},'pa',this)"></td>
+      <td><input type="date" value="${esc(x.pd)}" onchange="fset('cost',${i},'pd',this.value)"></td>
+      <td>${del('cost',i)}</td></tr>`).join('')
+    +`</tbody>`;
+}
+
+/* คำนวณกระแสเงินสดรายเดือน (แผน/จริง) */
+function finCalc(){
+  const F=finEnsure();
+  const pl={}, ac={}, add=(m,k,d,v)=>{if(!v)return; const key=mkey(d); (m[key]=m[key]||{in:0,out:0})[k]+=v};
+  F.income.forEach(x=>{
+    const pd=incDate(x); if(pd)add(pl,'in',pd,incAmt(x));
+    if(+x.ra>0){const d=x.rd?D(x.rd):pd; if(d)add(ac,'in',d,+x.ra)}
+  });
+  F.cost.forEach(x=>{
+    const ev=costEvents(x); ev.forEach(e=>add(pl,'out',e.d,e.v));
+    if(+x.pa>0){const d=x.pd?D(x.pd):(ev.length?ev[ev.length-1].d:null); if(d)add(ac,'out',d,+x.pa)}
+  });
+  const keys=[...Object.keys(pl),...Object.keys(ac)].map(Number);
+  const rows=[]; if(keys.length){
+    const a=Math.min(...keys), b=Math.max(...keys); let cp=0, ca=0;
+    for(let k=a;k<=b;k++){
+      const p=pl[k]||{in:0,out:0}, q=ac[k]||{in:0,out:0};
+      cp+=p.in-p.out; ca+=q.in-q.out;
+      rows.push({k,pi:p.in,po:p.out,ai:q.in,ao:q.out,cp,ca});
+    }
+  }
+  return {rows};
+}
+function finUpdate(){
+  const F=finEnsure(); finsec.style.display=finOn()?'':'none'; if(!finOn())return;
+  /* ป้ายตัวเลือกงานให้ตรงกับชื่อล่าสุด (แตะเฉพาะเมื่อเปลี่ยน) */
+  document.querySelectorAll('#finsec select.ftask').forEach(s=>{
+    const arr=s.closest('table').id==='finInc'?'income':'cost';
+    const i=[...s.closest('tbody').children].indexOf(s.closest('tr')); const h=taskOpts((F[arr][i]||{}).task);
+    if(s.dataset.h!==h){ if(s.dataset.h!==undefined)s.innerHTML=h; s.dataset.h=h }
+  });
+  const now=new Date(); now.setHours(0,0,0,0);
+  const totIn=F.income.reduce((a,x)=>a+incAmt(x),0), totBud=F.cost.reduce((a,x)=>a+(+x.budget||0),0);
+  const gotIn=F.income.reduce((a,x)=>a+(+x.ra||0),0), paid=F.cost.reduce((a,x)=>a+(+x.pa||0),0);
+  const contract=+F.contract||0, margin=contract-totBud;
+  F.income.forEach((x,i)=>{
+    const d=incDate(x), el=document.getElementById('fid'+i), am=document.getElementById('fia'+i);
+    if(el)el.textContent=d?fmt(d):'—';
+    if(am){am.readOnly=+x.pct>0; if(+x.pct>0&&document.activeElement!==am)am.value=Math.round(incAmt(x))}
+  });
+  F.cost.forEach((x,i)=>{const el=document.getElementById('fcd'+i); if(el)el.textContent=costDateTxt(x)});
+  const due=F.income.filter(x=>{const d=incDate(x);return d&&d<=now&&!(+x.ra>0)&&incAmt(x)>0});
+  const pending=due.reduce((a,x)=>a+incAmt(x),0);
+  finKpi.innerHTML=[
+    ['มูลค่าสัญญา',money(contract),'บาท',''],
+    ['งบต้นทุนรวม',money(totBud),contract?`${(totBud/contract*100).toFixed(1)}% ของสัญญา`:'บาท',contract&&totBud>contract?'bad':''],
+    ['กำไรตามแผน',money(margin),contract?`${(margin/contract*100).toFixed(1)}% ของสัญญา`:'',margin<0?'bad':'ok'],
+    ['รับแล้ว',money(gotIn),totIn?`${(gotIn/totIn*100).toFixed(0)}% ของงวดรับทั้งหมด`:'',''],
+    ['จ่ายแล้ว',money(paid),totBud?`${(paid/totBud*100).toFixed(0)}% ของงบ`:'',paid>totBud&&totBud?'bad':''],
+    ['เงินรอเบิก (ถึงกำหนดแล้ว)',money(pending),due.length?`${due.length} งวดยังไม่ได้รับ`:'ไม่มีค้าง',due.length?'warn':'ok']
+  ].map(([k,v,n,c])=>`<div class="kpi"><div class="k">${k}</div><div class="v ${c}">${v}</div><div class="n ${c}">${n}</div></div>`).join('');
+
+  /* คำเตือน */
+  const es=[], nm=x=>esc(x.name||'(ไม่มีชื่อ)');
+  if(contract>0&&F.income.length&&Math.abs(totIn-contract)>1)es.push(`งวดรับรวม ${money(totIn)} ไม่เท่ากับมูลค่าสัญญา ${money(contract)} (ต่างกัน ${money(totIn-contract)})`);
+  F.income.forEach(x=>{
+    if(x.trig!=='date'&&!finTask(x.task))es.push(`งวดรับ “${nm(x)}” ยังไม่ได้เลือกงานที่ผูก (หรืองานถูกลบไปแล้ว) — ยังไม่มีวันตามแผน`);
+    const t=finTask(x.task), d=incDate(x);
+    if(t&&d&&d<=now&&!(+x.ra>0)&&(+t.act||0)<100)es.push(`งวดรับ “${nm(x)}” ถึงกำหนดแล้วแต่งานที่ผูกยังไม่เสร็จ (${+t.act||0}%) — รับเงินไม่ได้ตามแผน`);
+    if(t&&DEFBY[t.id])es.push(`งวดรับ “${nm(x)}” ผูกกับงานที่ยังมี Defect ค้าง ${DEFBY[t.id].n} รายการ — ไม่ควรวางบิลก่อนปิด`);
+  });
+  F.cost.forEach(x=>{
+    if(x.mode!=='date'&&!finTask(x.task))es.push(`รายการจ่าย “${nm(x)}” ยังไม่ได้เลือกงานที่ผูก (หรืองานถูกลบไปแล้ว) — ยังไม่มีวันตามแผน`);
+    if((+x.pa||0)>(+x.budget||0)&&+x.budget>0)es.push(`รายการจ่าย “${nm(x)}” จ่ายจริง ${money(x.pa)} เกินงบ ${money(x.budget)} อยู่ ${money(x.pa-x.budget)} บาท`);
+  });
+  const {rows}=finCalc();
+  const neg=rows.find(r=>r.cp<0); if(neg)es.push(`เงินสะสมตามแผนติดลบตั้งแต่ ${mlabel(neg.k)} (${money(neg.cp)} บาท) — ต้องสำรองเงินหมุนเวียนหรือเลื่อนงวดจ่าย`);
+  finWarn.innerHTML=es.map(e=>`<div class="msg e">⚠ ${e}</div>`).join('');
+
+  /* ตารางรายเดือน */
+  const cl=v=>v<0?'neg':'';
+  const tot=rows.reduce((a,r)=>({pi:a.pi+r.pi,po:a.po+r.po,ai:a.ai+r.ai,ao:a.ao+r.ao}),{pi:0,po:0,ai:0,ao:0});
+  finTbl.innerHTML=`<thead><tr><th>เดือน</th><th>รับ (แผน)</th><th>จ่าย (แผน)</th><th>สุทธิ (แผน)</th><th>สะสม (แผน)</th>
+      <th>รับ (จริง)</th><th>จ่าย (จริง)</th><th>สุทธิ (จริง)</th><th>สะสม (จริง)</th></tr></thead><tbody>`
+    +rows.map(r=>`<tr><td class="d">${mlabel(r.k)}</td><td class="num">${money(r.pi)}</td><td class="num">${money(r.po)}</td>
+      <td class="num ${cl(r.pi-r.po)}">${money(r.pi-r.po)}</td><td class="num ${cl(r.cp)}">${money(r.cp)}</td>
+      <td class="num">${money(r.ai)}</td><td class="num">${money(r.ao)}</td><td class="num ${cl(r.ai-r.ao)}">${money(r.ai-r.ao)}</td><td class="num ${cl(r.ca)}">${money(r.ca)}</td></tr>`).join('')
+    +(rows.length?`</tbody><tfoot><tr><td>รวม</td><td class="num">${money(tot.pi)}</td><td class="num">${money(tot.po)}</td><td class="num ${cl(tot.pi-tot.po)}">${money(tot.pi-tot.po)}</td><td></td>
+      <td class="num">${money(tot.ai)}</td><td class="num">${money(tot.ao)}</td><td class="num ${cl(tot.ai-tot.ao)}">${money(tot.ai-tot.ao)}</td><td></td></tr></tfoot>`
+      :`</tbody><tfoot><tr><td colspan="9" style="font-weight:400;color:var(--steel)">ยังไม่มีรายการ — กด “+ เพิ่มงวดรับ” หรือ “+ เพิ่มรายการจ่าย” แล้วผูกกับงานในแผน</td></tr></tfoot>`);
+  drawFinChart(rows);
+}
+function drawFinChart(rows){
+  if(!rows.length){finChart.innerHTML='';return}
+  const W=900,H=260,L=64,R=14,T=14,B=30, n=rows.length, pw=(W-L-R)/n;
+  const ys=[0]; rows.forEach(r=>ys.push(r.pi,r.po,r.cp,r.ca,r.ai,r.ao));
+  const mx=Math.max(...ys), mn=Math.min(...ys), span=(mx-mn)||1;
+  const y=v=>T+(H-T-B)*(1-(v-mn)/span), x=i=>L+pw*(i+.5), bw=Math.max(3,Math.min(18,pw/4));
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;font-family:var(--f-mono);font-size:10px">`;
+  for(let g=0;g<=4;g++){const v=mn+span*g/4, yy=y(v);
+    s+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="#E3E2DE"/><text x="${L-6}" y="${yy+3}" text-anchor="end" fill="#787774">${Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1e3?Math.round(v/1e3)+'k':Math.round(v)}</text>`}
+  s+=`<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="#003049" stroke-width=".8"/>`;
+  rows.forEach((r,i)=>{
+    s+=`<rect x="${x(i)-bw-1}" y="${y(r.pi)}" width="${bw}" height="${Math.max(0,y(0)-y(r.pi))}" fill="#3E8F63" opacity=".55"><title>${mlabel(r.k)} รับตามแผน ${money(r.pi)}</title></rect>`
+     +`<rect x="${x(i)+1}" y="${y(r.po)}" width="${bw}" height="${Math.max(0,y(0)-y(r.po))}" fill="#C1121F" opacity=".5"><title>${mlabel(r.k)} จ่ายตามแผน ${money(r.po)}</title></rect>`;
+    if(n<=18||i%Math.ceil(n/18)===0)s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" fill="#787774">${mlabel(r.k)}</text>`});
+  const line=(k,col,dash)=>`<polyline fill="none" stroke="${col}" stroke-width="2" ${dash?'stroke-dasharray="6 4"':''} points="${rows.map((r,i)=>x(i)+','+y(r[k])).join(' ')}"/>`;
+  s+=line('cp','#669BBC',true)+(rows.some(r=>r.ai||r.ao)?line('ca','#003049',false):'');
+  s+=`</svg><div class="legend" style="margin-top:6px"><span><i style="background:#3E8F63;opacity:.55"></i> รับ (แผน)</span><span><i style="background:#C1121F;opacity:.5"></i> จ่าย (แผน)</span>
+    <span><i style="background:#669BBC"></i> สะสมสุทธิ (แผน)</span><span><i style="background:#003049"></i> สะสมสุทธิ (จริง)</span></div>`;
+  finChart.innerHTML=s;
+}
+
 /* ══════════════════ REFRESH ══════════════════ */
 function refresh(){
   DEFBY=defByTask(); GRP=groupMap();
@@ -1097,13 +1311,13 @@ function refresh(){
     const put=(el,d)=>{if(!el)return; if(el.tagName==='INPUT'){if(document.activeElement!==el)el.value=d?iso(d):''} else el.textContent=d?fmt(d):'—'};
     put(a,t.s); put(b,t.f); if(a&&a.tagName==='INPUT')a.classList.toggle('pin',!!t.sm);
   });
-  drawKpi(C); drawGantt(C); drawCurve(C); markNeeds();
+  drawKpi(C); drawGantt(C); drawCurve(C); markNeeds(); finUpdate();
   save(); queueWrite(); queueFolderWrite(); queueTeamPush();
   revbadge.textContent='Rev. '+(S.info.rev||'R0')+(S.info.revdate?' · ออกเมื่อ '+fmt(D(S.info.revdate)):'');
   const lb=document.querySelector(".tab.on .lbl"), cn=document.querySelector(".tab.on .cnt");
   if(lb)lb.textContent=pname(S); if(cn)cn.textContent=S.tasks.filter(t=>!t.phase).length;
 }
-function rebuild(){buildTable();refresh()}
+function rebuild(){buildTable();buildFin();refresh()}
 /* ผู้ใช้ใส่วันที่เสร็จเอง → ปรับจำนวนวันทำงานให้ตรง (นับเฉพาะวันทำงานตามปฏิทินของโครงการ) */
 function setEnd(i,v){
   const t=S.tasks[i]; if(!v||!t.s){refresh();return}
@@ -1299,6 +1513,7 @@ function dupProj(){
   c.info.name=pname(S)+' (สำเนา)';
   delete c.info.pid;                       // สำเนาต้องเป็นคนละไฟล์กับต้นฉบับ
   c.tasks.forEach(t=>{t.act=0});
+  if(c.fin){(c.fin.income||[]).forEach(x=>{x.ra="";x.rd=""});(c.fin.cost||[]).forEach(x=>{x.pa="";x.pd=""})}   // สำเนา = ล้างยอดรับ/จ่ายจริง
   WS.projects.push(c);useProj(WS.projects.length-1);
 }
 function delProj(i){
