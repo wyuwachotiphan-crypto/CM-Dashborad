@@ -21,14 +21,19 @@ body{background:var(--canvas);color:var(--text);padding-bottom:60px;font-size:14
 header{background:var(--ink);color:#fff;padding:16px 0 0}
 .head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:14px}
 /* แท็บโครงการ */
-.tabbar{display:flex;flex-direction:column;gap:3px;align-items:stretch;overflow-y:auto;max-height:280px;padding:2px 0 10px}
-.tabbar .tab{background:rgba(255,255,255,.07);border:0;border-radius:8px;text-align:left;color:#CFE2EC;
-  font-size:13px;padding:8px 13px;white-space:nowrap;display:flex;align-items:center;gap:7px;cursor:pointer}
-.tabbar .tab:hover{background:rgba(255,255,255,.16)}
-.tabbar .tab.on{background:var(--canvas);color:var(--text);font-weight:600}
-.tabbar .tab .lbl{flex:1;overflow:hidden;text-overflow:ellipsis}
-.tabbar .tab .cnt{font-size:10.5px;background:rgba(0,0,0,.18);border-radius:9px;padding:1px 6px;font-weight:500}
-.tabbar .tab.on .cnt{background:var(--accent-soft);color:var(--ink)}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;align-items:start;max-width:1680px;margin:0 auto;padding:0 20px}
+.layout.nogrid{grid-template-columns:minmax(0,1fr)}
+.layout .wrap{max-width:none;padding:0}
+#side{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow-y:auto;padding:14px 0}
+.layout.nogrid #side{display:none}
+.tabbar{display:flex;flex-direction:column;gap:4px}
+.tabbar .tab{background:#fff;border:1px solid var(--line,#E3E2DE);border-left:4px solid transparent;border-radius:6px;text-align:left;color:var(--text);
+  font-size:13px;padding:8px 10px;display:flex;align-items:center;gap:7px;cursor:pointer}
+.tabbar .tab:hover{background:var(--accent-soft)}
+.tabbar .tab.on{background:var(--accent-soft);border-left-color:var(--accent);font-weight:600}
+.tabbar .tab .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabbar .tab .cnt{font-size:10.5px;background:#eee;border-radius:9px;padding:1px 6px;font-weight:500}
+.tabbar .tab.on .cnt{background:#fff;color:var(--ink)}
 .tabbar .tab .x{opacity:.45;font-size:11px}
 .tabbar .tab .x:hover{opacity:1;color:var(--accent)}
 .catbar{display:flex;gap:6px;align-items:center;padding:0 0 8px;flex-wrap:wrap}
@@ -43,7 +48,8 @@ header{background:var(--ink);color:#fff;padding:16px 0 0}
 .catcard em{display:block;font-style:normal;font-size:12px;margin-top:12px;color:var(--accent);font-weight:600}
 #catEmpty{padding:36px 0;text-align:center;color:var(--steel)}
 body.nocat .projonly{display:none!important}
-.tabbar .tab.add{background:transparent;color:#9EC4D8;font-size:12px}
+.tabbar .tab.add{background:transparent;border:1px dashed var(--grid);border-left-width:1px;color:var(--ink-soft,#0F4C6B);font-size:12px;justify-content:center}
+@media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}#side{position:static;max-height:240px}}
 .defbadge{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:700;color:#fff;
   background:var(--amber);border-radius:9px;padding:0 6px;cursor:pointer;vertical-align:1px}
 .defbadge.crit{background:var(--accent)}
@@ -150,6 +156,7 @@ dialog{border:1px solid var(--line);border-radius:10px;padding:0;width:min(620px
 dialog::backdrop{background:rgba(0,48,73,.4)}
 .foot{text-align:center;font-size:11px;color:var(--steel);margin-top:20px}
 @media print{
+  .layout{display:block;padding:0}
   @page{size:A3 landscape;margin:8mm}
   body{background:#fff;padding:0;font-size:12px}
   .wrap{max-width:none;padding:0}
@@ -201,12 +208,13 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
     </div>
   </div>
   <div class="wrap" style="padding-bottom:10px;display:flex;gap:8px;flex-wrap:wrap"><span class="fchip noprint" id="ustat" style="display:none"></span><span class="fchip noprint" id="fstat"></span><span class="fchip noprint" id="tstat" style="display:none"></span></div>
-  <div class="wrap"><div class="catbar noprint" id="catbar"></div><div class="tabbar noprint" id="tabs"></div></div>
+  <div class="wrap"><div class="catbar noprint" id="catbar"></div></div>
 </header>
 <input type="file" id="fileIn" accept=".json" hidden onchange="loadFile(this)">
 <datalist id="dl-wbs"></datalist><datalist id="dl-name"></datalist>
 <datalist id="dl-own"></datalist><datalist id="dl-loc"></datalist>
 
+<div class="layout" id="layout"><aside id="side" class="noprint"><div class="tabbar" id="tabs"></div></aside><div class="content">
 <div class="wrap" id="catGate" style="display:none"></div>
 <div class="wrap" id="catEmpty" style="display:none"></div>
 <div class="wrap" id="main">
@@ -284,6 +292,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 
   <div class="foot">Coral Life · IAQ Construction Management — ไฟล์เดียว ทำงานออฟไลน์ได้ ไม่ต้องติดตั้งอะไร</div>
 </div>
+</div></div>
 
 <dialog id="dlgSave">
   <div class="sec-h"><h2>บันทึกแผนงาน — ออก Rev. ใหม่</h2></div>
@@ -1199,6 +1208,7 @@ function buildGate(){
 }
 function showCat(){
   const gate=catSel===null, mine=!gate&&(S.info.cat||'')===catSel, empty=!gate&&!mine;
+  layout.classList.toggle('nogrid',gate);
   catGate.style.display=gate?'':'none';
   catEmpty.style.display=empty?'':'none';
   main.style.display=mine?'':'none';
