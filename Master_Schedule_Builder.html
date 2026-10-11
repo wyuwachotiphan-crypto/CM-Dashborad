@@ -1120,7 +1120,11 @@ function drawKpi(C){
    S.fin = {contract, income:[งวดรับ], cost:[รายการจ่าย]} — วันที่รับ/จ่ายตามแผนคำนวณจากวันของงานที่ผูก
    ใช้เฉพาะหมวด TS และ IAQ */
 const FIN_CATS=['TS','IAQ'];
-function finEnsure(){ if(!S.fin)S.fin={contract:0,income:[],cost:[]}; S.fin.income=S.fin.income||[]; S.fin.cost=S.fin.cost||[]; return S.fin }
+function finEnsure(){ if(!S.fin)S.fin={contract:0,income:[],cost:[]}; S.fin.income=S.fin.income||[]; S.fin.cost=S.fin.cost||[];
+  /* วันตามแผนต้องมาจากงานเท่านั้น — รายการเก่าที่เคยระบุวันเองให้เปลี่ยนเป็น "งานเสร็จ" แล้วเลือกงานใหม่ */
+  S.fin.income.forEach(x=>{if(x.trig==='date'){x.trig='finish';x.task='';x.date=''}});
+  S.fin.cost.forEach(x=>{if(x.mode==='date'){x.mode='finish';x.task='';x.date=''}});
+  return S.fin }
 function finOn(){return FIN_CATS.includes(S.info.cat||'')}
 const money=n=>Math.round(+n||0).toLocaleString('en-US');
 const mkey=d=>d.getFullYear()*12+d.getMonth();
@@ -1167,15 +1171,14 @@ function buildFin(){
   const F=finEnsure(); finsec.style.display=finOn()?'':'none'; if(!finOn())return;
   fcontract.value=F.contract||'';
   const del=(a,i)=>`<button class="noprint" style="padding:2px 8px" onclick="finDel('${a}',${i})" title="ลบแถว">✕</button>`;
-  finInc.innerHTML=`<thead><tr><th style="min-width:140px">งวดรับเงิน</th><th style="min-width:190px">ผูกกับงาน</th><th>เมื่อ</th><th>เครดิต (วัน) / วันที่</th>
+  finInc.innerHTML=`<thead><tr><th style="min-width:140px">งวดรับเงิน</th><th style="min-width:190px">ผูกกับงาน</th><th>เมื่อ</th><th>เครดิต (วัน)</th>
       <th>% สัญญา</th><th>จำนวนเงิน (บาท)</th><th>รับตามแผน</th><th>รับจริง (บาท)</th><th>วันที่รับจริง</th><th></th></tr></thead><tbody>`
     +F.income.map((x,i)=>`<tr>
       <td><input value="${esc(x.name)}" placeholder="เช่น งวด 1 เริ่มงาน" oninput="fset('income',${i},'name',this.value)"></td>
       <td><select class="ftask" ${x.trig==='date'?'disabled':''} onchange="fset('income',${i},'task',this.value)">${taskOpts(x.task)}</select></td>
       <td><select onchange="fset('income',${i},'trig',this.value,true)">
-        ${[['start','งานเริ่ม'],['finish','งานเสร็จ'],['date','ระบุวันเอง']].map(([v,l])=>`<option value="${v}" ${x.trig===v?'selected':''}>${l}</option>`).join('')}</select></td>
-      <td>${x.trig==='date'?`<input type="date" value="${esc(x.date)}" onchange="fset('income',${i},'date',this.value)">`
-        :`<input class="num" type="number" value="${x.lag??0}" title="บวกจากวันงานที่ผูก เช่น 30 = เครดิต 30 วัน" oninput="fnum('income',${i},'lag',this)">`}</td>
+        ${[['start','งานเริ่ม'],['finish','งานเสร็จ']].map(([v,l])=>`<option value="${v}" ${x.trig===v?'selected':''}>${l}</option>`).join('')}</select></td>
+      <td><input class="num" type="number" value="${x.lag??0}" title="บวกจากวันงานที่ผูก เช่น 30 = เครดิต 30 วัน" oninput="fnum('income',${i},'lag',this)"></td>
       <td><input class="num" type="number" min="0" step="0.5" value="${x.pct||''}" oninput="fnum('income',${i},'pct',this)"></td>
       <td><input class="num" type="number" min="0" id="fia${i}" value="${x.amt||''}" oninput="fnum('income',${i},'amt',this)"></td>
       <td class="d" id="fid${i}"></td>
@@ -1184,14 +1187,13 @@ function buildFin(){
       <td>${del('income',i)}</td></tr>`).join('')
     +`</tbody>`;
   finCost.innerHTML=`<thead><tr><th style="min-width:140px">รายการจ่าย</th><th style="min-width:110px">ผู้รับเหมา / ผู้ขาย</th><th style="min-width:190px">ผูกกับงาน</th><th>รูปแบบจ่าย</th>
-      <th>วันที่</th><th>งบ (บาท)</th><th>จ่ายตามแผน</th><th>จ่ายจริง (บาท)</th><th>วันที่จ่ายจริง</th><th></th></tr></thead><tbody>`
+      <th>งบ (บาท)</th><th>จ่ายตามแผน</th><th>จ่ายจริง (บาท)</th><th>วันที่จ่ายจริง</th><th></th></tr></thead><tbody>`
     +F.cost.map((x,i)=>`<tr>
       <td><input value="${esc(x.name)}" placeholder="เช่น ค่าแรงเดินท่อ" oninput="fset('cost',${i},'name',this.value)"></td>
       <td><input value="${esc(x.vendor)}" oninput="fset('cost',${i},'vendor',this.value)"></td>
       <td><select class="ftask" ${x.mode==='date'?'disabled':''} onchange="fset('cost',${i},'task',this.value)">${taskOpts(x.task)}</select></td>
       <td><select onchange="fset('cost',${i},'mode',this.value,true)">
-        ${[['start','ตอนงานเริ่ม'],['finish','ตอนงานเสร็จ'],['spread','กระจายตามระยะงาน'],['date','ระบุวันเอง']].map(([v,l])=>`<option value="${v}" ${x.mode===v?'selected':''}>${l}</option>`).join('')}</select></td>
-      <td>${x.mode==='date'?`<input type="date" value="${esc(x.date)}" onchange="fset('cost',${i},'date',this.value)">`:'<span class="d">—</span>'}</td>
+        ${[['start','ตอนงานเริ่ม'],['finish','ตอนงานเสร็จ'],['spread','กระจายตามระยะงาน']].map(([v,l])=>`<option value="${v}" ${x.mode===v?'selected':''}>${l}</option>`).join('')}</select></td>
       <td><input class="num" type="number" min="0" value="${x.budget||''}" oninput="fnum('cost',${i},'budget',this)"></td>
       <td class="d" id="fcd${i}"></td>
       <td><input class="num" type="number" min="0" value="${x.pa??''}" oninput="fnum('cost',${i},'pa',this)"></td>
@@ -1203,6 +1205,8 @@ function buildFin(){
 /* คำนวณกระแสเงินสดรายเดือน (แผน/จริง)
    เดือนในตาราง = ช่วงของแผนงาน (วันเริ่มงานแรก – วันเสร็จงานสุดท้าย) + เดือนของวันรับ/จ่ายที่คำนวณจากงานที่ผูก
    วันที่ที่ผู้ใช้ระบุเอง / ยอดจริงที่ตกนอกช่วงนี้ จะไม่สร้างเดือนใหม่ — แยกไว้ในแถว "นอกช่วงแผน" */
+/* วันที่ตามแผนแสดงพร้อมงานที่ผูก — วันที่มาจากงานเท่านั้น */
+function planCell(dt,how,taskId){const t=finTask(taskId);return dt+(t?'<br><span style="font-size:10.5px;color:var(--steel)">'+esc(FIN_TL[how]||'')+' '+esc((t.wbs||t.name||'').slice(0,18))+'</span>':'')}
 const FIN_TL={start:'งานเริ่ม',finish:'งานเสร็จ',date:'ระบุวันเอง',spread:'กระจายตามระยะงาน'};
 function finCalc(){
   const F=finEnsure(), C=compute();
@@ -1249,10 +1253,10 @@ function finUpdate(){
   const contract=+F.contract||0, margin=contract-totBud;
   F.income.forEach((x,i)=>{
     const d=incDate(x), el=document.getElementById('fid'+i), am=document.getElementById('fia'+i);
-    if(el)el.textContent=d?fmt(d):'—';
+    if(el)el.innerHTML=planCell(d?fmt(d):'—',x.trig,x.task);
     if(am){am.readOnly=+x.pct>0; if(+x.pct>0&&document.activeElement!==am)am.value=Math.round(incAmt(x))}
   });
-  F.cost.forEach((x,i)=>{const el=document.getElementById('fcd'+i); if(el)el.textContent=costDateTxt(x)});
+  F.cost.forEach((x,i)=>{const el=document.getElementById("fcd"+i); if(el)el.innerHTML=planCell(costDateTxt(x),x.mode,x.task)});
   const due=F.income.filter(x=>{const d=incDate(x);return d&&d<=now&&!(+x.ra>0)&&incAmt(x)>0});
   const pending=due.reduce((a,x)=>a+incAmt(x),0);
   finKpi.innerHTML=[
@@ -1288,20 +1292,19 @@ function finUpdate(){
   const has=F.income.length||F.cost.length;
   const all=rows.concat(nOut||outside.pi||outside.po||outside.ai||outside.ao?[outside]:[]);
   const tot=all.reduce((a,r)=>({pi:a.pi+r.pi,po:a.po+r.po,ai:a.ai+r.ai,ao:a.ao+r.ao}),{pi:0,po:0,ai:0,ao:0});
-  const srcTxt=r=>r.src.length?r.src.map(esc).join('<br>'):'<span style="color:var(--steel)">— ไม่มีรายการรับ/จ่ายในเดือนนี้</span>';
   finTbl.innerHTML=`<thead><tr><th>เดือน</th><th>รับ (แผน)</th><th>จ่าย (แผน)</th><th>สุทธิ (แผน)</th><th>สะสม (แผน)</th>
-      <th>รับ (จริง)</th><th>จ่าย (จริง)</th><th>สุทธิ (จริง)</th><th>สะสม (จริง)</th><th style="min-width:260px">ที่มาของตัวเลข</th></tr></thead><tbody>`
+      <th>รับ (จริง)</th><th>จ่าย (จริง)</th><th>สุทธิ (จริง)</th><th>สะสม (จริง)</th></tr></thead><tbody>`
     +(has?rows.map(r=>`<tr><td class="d">${mlabel(r.k)}</td><td class="num">${money(r.pi)}</td><td class="num">${money(r.po)}</td>
       <td class="num ${cl(r.pi-r.po)}">${money(r.pi-r.po)}</td><td class="num ${cl(r.cp)}">${money(r.cp)}</td>
       <td class="num">${money(r.ai)}</td><td class="num">${money(r.ao)}</td><td class="num ${cl(r.ai-r.ao)}">${money(r.ai-r.ao)}</td><td class="num ${cl(r.ca)}">${money(r.ca)}</td>
-      <td class="src">${srcTxt(r)}</td></tr>`).join('')
+      </tr>`).join('')
       +(all.length>rows.length?`<tr style="background:#FFF6E5"><td class="d">นอกช่วงแผน</td><td class="num">${money(outside.pi)}</td><td class="num">${money(outside.po)}</td>
         <td class="num ${cl(outside.pi-outside.po)}">${money(outside.pi-outside.po)}</td><td></td>
         <td class="num">${money(outside.ai)}</td><td class="num">${money(outside.ao)}</td><td class="num ${cl(outside.ai-outside.ao)}">${money(outside.ai-outside.ao)}</td><td></td>
-        <td class="src">${srcTxt(outside)}</td></tr>`:''):'')
+        </tr>`:''):'')
     +(has?`</tbody><tfoot><tr><td>รวม</td><td class="num">${money(tot.pi)}</td><td class="num">${money(tot.po)}</td><td class="num ${cl(tot.pi-tot.po)}">${money(tot.pi-tot.po)}</td><td></td>
-      <td class="num">${money(tot.ai)}</td><td class="num">${money(tot.ao)}</td><td class="num ${cl(tot.ai-tot.ao)}">${money(tot.ai-tot.ao)}</td><td></td><td></td></tr></tfoot>`
-      :`</tbody><tfoot><tr><td colspan="10" style="font-weight:400;color:var(--steel)">ยังไม่มีรายการ — กด “+ เพิ่มงวดรับ” หรือ “+ เพิ่มรายการจ่าย” แล้วผูกกับงานในแผน</td></tr></tfoot>`);
+      <td class="num">${money(tot.ai)}</td><td class="num">${money(tot.ao)}</td><td class="num ${cl(tot.ai-tot.ao)}">${money(tot.ai-tot.ao)}</td><td></td></tr></tfoot>`
+      :`</tbody><tfoot><tr><td colspan="9" style="font-weight:400;color:var(--steel)">ยังไม่มีรายการ — กด “+ เพิ่มงวดรับ” หรือ “+ เพิ่มรายการจ่าย” แล้วผูกกับงานในแผน</td></tr></tfoot>`);
   drawFinChart(has?rows:[]);
 }
 function drawFinChart(rows){
