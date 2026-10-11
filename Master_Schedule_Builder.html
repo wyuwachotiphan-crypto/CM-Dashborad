@@ -121,6 +121,8 @@ td.autocell{background:#F4F3F0}
 .ftbl td.num{padding:5px 8px}
 .ftbl tfoot td{font-weight:700;background:var(--canvas);padding:6px 8px}
 .ftbl .neg{color:var(--red)}
+.ftbl td input.ovr{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.ftbl td.num.neg{color:var(--red)}
 .ftbl th,.ftbl td{border-right:1px solid #D4D2CC}
 .ftbl th{border-right-color:rgba(255,255,255,.3)}
 .ftbl th:last-child,.ftbl td:last-child{border-right:0}
@@ -326,7 +328,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
       <button class="noprint" onclick="finAdd('cost')">+ เพิ่มรายการจ่าย</button></div>
     <div class="scroll"><table class="ftbl" id="finCost"></table></div>
     <div class="sec-h" style="border-top:1px solid var(--line)"><h2 style="font-size:14px">สรุปรายเดือน เทียบแผนกับจริง</h2></div>
-    <div class="pad"><div class="scroll"><table class="ftbl" id="finTbl"></table></div><div id="finChart" style="margin-top:12px"></div></div>
+    <div class="pad"><div class="scroll"><table class="ftbl" id="finTbl"></table></div><div id="finOvNote" style="font-size:12px;color:var(--steel);margin-top:6px"></div><div id="finChart" style="margin-top:12px"></div></div>
   </section>
 
   <div class="foot">Coral Life · IAQ Construction Management — ไฟล์เดียว ทำงานออฟไลน์ได้ ไม่ต้องติดตั้งอะไร</div>
@@ -1242,6 +1244,7 @@ function finCalc(){
     r[(e.real?'a':'p')+(e.type==='in'?'i':'o')]+=e.v;
     if(e.src)r.src.push(e.src);
   });
+  const ovr=F.ov||{}; rows.forEach(r=>{const o=ovr[r.k]; if(o)["pi","po","ai","ao"].forEach(c=>{if(o[c]!==undefined&&o[c]!=="")r[c]=+o[c]})});   // ตัวเลขที่ผู้ใช้แก้เองรายเดือน
   let cp=0, ca=0; rows.forEach(r=>{cp+=r.pi-r.po; ca+=r.ai-r.ao; r.cp=cp; r.ca=ca});
   return {rows,outside,lo,hi};
 }
@@ -1293,25 +1296,46 @@ function finUpdate(){
   if(nOut)es.push(`มี ${nOut} รายการที่วันที่อยู่นอกช่วงของแผนงาน (ระบุวันเอง หรือวันที่รับ/จ่ายจริงที่กรอกไว้) — แยกไว้ในแถว “นอกช่วงแผน” ตรวจว่าพิมพ์วันที่ถูกเดือนหรือไม่`);
   finWarn.innerHTML=es.map(e=>`<div class="msg e">⚠ ${e}</div>`).join('');
 
-  /* ตารางรายเดือน — เดือนมาจากช่วงของแผนงานเท่านั้น และคอลัมน์สุดท้ายบอกที่มาของตัวเลขแต่ละเดือน */
-  const cl=v=>v<0?'neg':'';
+  /* ตารางรายเดือน — เดือนล็อกตามช่วงแผนงาน · ตัวเลขทุกช่องแก้ไขได้ (ช่องที่แก้ไฮไลต์ ดับเบิลคลิกเพื่อกลับเป็นค่าคำนวณ) */
   const has=F.income.length||F.cost.length;
-  const all=rows.concat(nOut||outside.pi||outside.po||outside.ai||outside.ao?[outside]:[]);
-  const tot=all.reduce((a,r)=>({pi:a.pi+r.pi,po:a.po+r.po,ai:a.ai+r.ai,ao:a.ao+r.ao}),{pi:0,po:0,ai:0,ao:0});
-  finTbl.innerHTML=`<thead><tr><th>เดือน</th><th>รับ (แผน)</th><th>จ่าย (แผน)</th><th>สุทธิ (แผน)</th><th>สะสม (แผน)</th>
-      <th>รับ (จริง)</th><th>จ่าย (จริง)</th><th>สุทธิ (จริง)</th><th>สะสม (จริง)</th></tr></thead><tbody>`
-    +(has?rows.map(r=>`<tr><td class="d">${mlabel(r.k)}</td><td class="num">${money(r.pi)}</td><td class="num">${money(r.po)}</td>
-      <td class="num ${cl(r.pi-r.po)}">${money(r.pi-r.po)}</td><td class="num ${cl(r.cp)}">${money(r.cp)}</td>
-      <td class="num">${money(r.ai)}</td><td class="num">${money(r.ao)}</td><td class="num ${cl(r.ai-r.ao)}">${money(r.ai-r.ao)}</td><td class="num ${cl(r.ca)}">${money(r.ca)}</td>
-      </tr>`).join('')
-      +(all.length>rows.length?`<tr style="background:#FFF6E5"><td class="d">นอกช่วงแผน</td><td class="num">${money(outside.pi)}</td><td class="num">${money(outside.po)}</td>
-        <td class="num ${cl(outside.pi-outside.po)}">${money(outside.pi-outside.po)}</td><td></td>
-        <td class="num">${money(outside.ai)}</td><td class="num">${money(outside.ao)}</td><td class="num ${cl(outside.ai-outside.ao)}">${money(outside.ai-outside.ao)}</td><td></td>
-        </tr>`:''):'')
-    +(has?`</tbody><tfoot><tr><td>รวม</td><td class="num">${money(tot.pi)}</td><td class="num">${money(tot.po)}</td><td class="num ${cl(tot.pi-tot.po)}">${money(tot.pi-tot.po)}</td><td></td>
-      <td class="num">${money(tot.ai)}</td><td class="num">${money(tot.ao)}</td><td class="num ${cl(tot.ai-tot.ao)}">${money(tot.ai-tot.ao)}</td><td></td></tr></tfoot>`
-      :`</tbody><tfoot><tr><td colspan="9" style="font-weight:400;color:var(--steel)">ยังไม่มีรายการ — กด “+ เพิ่มงวดรับ” หรือ “+ เพิ่มรายการจ่าย” แล้วผูกกับงานในแผน</td></tr></tfoot>`);
+  const sig=(has?rows.map(r=>r.k).join(','):'')+'|'+(nOut?1:0)+'|'+(has?1:0);
+  if(finTbl.dataset.sig!==sig){ finTbl.dataset.sig=sig; finTbl.innerHTML=finTblHtml(rows,has,nOut) }
+  if(has)finTblFill(rows,outside);
   drawFinChart(has?rows:[]);
+}
+function finOv(k,f,v){
+  const F=finEnsure(); F.ov=F.ov||{};
+  if(v===''||v==null){ if(F.ov[k]){delete F.ov[k][f]; if(!Object.keys(F.ov[k]).length)delete F.ov[k]} }
+  else (F.ov[k]=F.ov[k]||{})[f]=+v;
+  refresh();
+}
+function finTblHtml(rows,has,nOut){
+  const head=`<thead><tr><th>เดือน</th><th>รับ (แผน)</th><th>จ่าย (แผน)</th><th>สุทธิ (แผน)</th><th>สะสม (แผน)</th>
+      <th>รับ (จริง)</th><th>จ่าย (จริง)</th><th>สุทธิ (จริง)</th><th>สะสม (จริง)</th></tr></thead>`;
+  if(!has)return head+`<tbody></tbody><tfoot><tr><td colspan="9" style="font-weight:400;color:var(--steel)">ยังไม่มีรายการ — กด “+ เพิ่มงวดรับ” หรือ “+ เพิ่มรายการจ่าย” แล้วผูกกับงานในแผน</td></tr></tfoot>`;
+  const inp=(k,f)=>`<td><input class="num" type="number" data-k="${k}" data-f="${f}" oninput="finOv(${k},'${f}',this.value)" ondblclick="this.blur();finOv(${k},'${f}','')" title="แก้ตัวเลขได้ · ดับเบิลคลิกเพื่อกลับเป็นค่าที่ระบบคำนวณ"></td>`;
+  const txt=(k,f)=>`<td class="num" data-k="${k}" data-f="${f}"></td>`;
+  return head+'<tbody>'+rows.map(r=>`<tr><td class="d">${mlabel(r.k)}</td>${inp(r.k,'pi')}${inp(r.k,'po')}${txt(r.k,'np')}${txt(r.k,'cp')}${inp(r.k,'ai')}${inp(r.k,'ao')}${txt(r.k,'na')}${txt(r.k,'ca')}</tr>`).join('')
+    +(nOut?`<tr style="background:#FFF6E5"><td class="d">นอกช่วงแผน</td>${txt('o','pi')}${txt('o','po')}${txt('o','np')}<td></td>${txt('o','ai')}${txt('o','ao')}${txt('o','na')}<td></td></tr>`:'')
+    +`</tbody><tfoot><tr><td>รวม</td>${txt('t','pi')}${txt('t','po')}${txt('t','np')}<td></td>${txt('t','ai')}${txt('t','ao')}${txt('t','na')}<td></td></tr></tfoot>`;
+}
+/* ใส่ตัวเลขลงช่อง — ไม่แตะช่องที่กำลังพิมพ์อยู่ */
+function finTblFill(rows,outside){
+  const ov=finEnsure().ov||{}, q=(k,f)=>finTbl.querySelector(`[data-k="${k}"][data-f="${f}"]`);
+  const setT=(k,f,v)=>{const e=q(k,f); if(e){e.textContent=money(v); e.classList.toggle('neg',v<0)}};
+  const sum={pi:0,po:0,ai:0,ao:0}; let nOv=0;
+  rows.forEach(r=>{
+    ['pi','po','ai','ao'].forEach(f=>{
+      const e=q(r.k,f); sum[f]+=r[f]; if(!e)return;
+      const o=ov[r.k]&&ov[r.k][f]!==undefined; if(o)nOv++;
+      e.classList.toggle('ovr',o); if(document.activeElement!==e)e.value=Math.round(r[f])});
+    setT(r.k,'np',r.pi-r.po); setT(r.k,'cp',r.cp); setT(r.k,'na',r.ai-r.ao); setT(r.k,'ca',r.ca);
+  });
+  ['pi','po','ai','ao'].forEach(f=>{sum[f]+=outside[f]; setT('o',f,outside[f])});
+  setT('o','np',outside.pi-outside.po); setT('o','na',outside.ai-outside.ao);
+  ['pi','po','ai','ao'].forEach(f=>setT('t',f,sum[f]));
+  setT('t','np',sum.pi-sum.po); setT('t','na',sum.ai-sum.ao);
+  finOvNote.textContent=nOv?`มี ${nOv} ช่องที่แก้ตัวเลขรายเดือนเอง (ไฮไลต์) — ตัวเลขนี้ไม่เปลี่ยนยอดในรายการงวดรับ/รายการจ่ายด้านบน`:'';
 }
 function drawFinChart(rows){
   if(!rows.length){finChart.innerHTML='';return}
