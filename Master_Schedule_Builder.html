@@ -30,6 +30,18 @@ header{background:var(--ink);color:#fff;padding:16px 0 0}
 .tabbar .tab.on .cnt{background:var(--accent-soft);color:var(--ink)}
 .tabbar .tab .x{opacity:.45;font-size:11px}
 .tabbar .tab .x:hover{opacity:1;color:var(--accent)}
+.catbar{display:flex;gap:6px;align-items:center;padding:0 0 8px;flex-wrap:wrap}
+.catbar .cb{border:1px solid rgba(255,255,255,.3);background:transparent;color:#CFE2EC;border-radius:16px;padding:3px 12px;font-size:12px;cursor:pointer}
+.catbar .cb.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+#catGate{padding:36px 0}
+#catGate h2{font-size:20px;margin-bottom:6px}
+.catcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+.catcard{background:#fff;border:1px solid #E3E2DE;border-top:4px solid var(--accent);border-radius:8px;padding:22px 18px;text-align:left;cursor:pointer;color:var(--text)}
+.catcard:hover{box-shadow:0 4px 14px rgba(0,48,73,.15)}
+.catcard b{display:block;font-size:22px}.catcard span{display:block;font-size:12.5px;color:var(--steel);margin-top:4px}
+.catcard em{display:block;font-style:normal;font-size:12px;margin-top:12px;color:var(--accent);font-weight:600}
+#catEmpty{padding:36px 0;text-align:center;color:var(--steel)}
+body.nocat .projonly{display:none!important}
 .tabbar .tab.add{background:transparent;color:#9EC4D8;font-size:12px}
 .defbadge{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:700;color:#fff;
   background:var(--amber);border-radius:9px;padding:0 6px;cursor:pointer;vertical-align:1px}
@@ -176,25 +188,27 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
       <div class="sub">เครื่องมือจัดทำแผนงานหลักงานก่อสร้าง — Gantt + S-Curve + Defect</div>
     </div>
     <div class="tools noprint">
-      <button class="ghost" onclick="openTpl()">เทมเพลตงาน</button>
+      <button class="ghost projonly" onclick="openTpl()">เทมเพลตงาน</button>
       <button class="pri" id="flink" onclick="linkFolder()">เชื่อมโฟลเดอร์ของทีม</button>
       <button class="pri" id="fgrant" style="display:none" onclick="grantFile()">อนุญาตเขียนไฟล์</button>
       <button class="ghost" onclick="syncNow()" title="ดึงงานล่าสุดของทีมจากโฟลเดอร์เดี๋ยวนี้">ซิงก์ทีม</button>
       <button class="ghost" onclick="teamOpen()">เข้าสู่ระบบ</button>
-      <button class="ghost" onclick="saveFile()">บันทึกโครงการนี้</button>
+      <button class="ghost projonly" onclick="saveFile()">บันทึกโครงการนี้</button>
       <button class="ghost" onclick="backupAll()">สำรองทุกโครงการ</button>
       <button class="ghost" onclick="fileIn.click()">เปิดไฟล์</button>
       <button class="ghost pri" onclick="window.print()">พิมพ์ / PDF</button>
     </div>
   </div>
   <div class="wrap" style="padding-bottom:10px;display:flex;gap:8px;flex-wrap:wrap"><span class="fchip noprint" id="ustat" style="display:none"></span><span class="fchip noprint" id="fstat"></span><span class="fchip noprint" id="tstat" style="display:none"></span></div>
-  <div class="wrap"><div class="tabbar noprint" id="tabs"></div></div>
+  <div class="wrap"><div class="catbar noprint" id="catbar"></div><div class="tabbar noprint" id="tabs"></div></div>
 </header>
 <input type="file" id="fileIn" accept=".json" hidden onchange="loadFile(this)">
 <datalist id="dl-wbs"></datalist><datalist id="dl-name"></datalist>
 <datalist id="dl-own"></datalist><datalist id="dl-loc"></datalist>
 
-<div class="wrap">
+<div class="wrap" id="catGate" style="display:none"></div>
+<div class="wrap" id="catEmpty" style="display:none"></div>
+<div class="wrap" id="main">
 
   <section>
     <div class="sec-h"><h2>ข้อมูลโครงการ</h2>
@@ -368,7 +382,10 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
 <script>
 /* ══════════════════ STATE ══════════════════ */
 const KEY='ms-builder-v2', OLDKEY='ms-builder-v1';
-function blankProj(){return {info:{name:'',owner:'',site:'',doc:'',rev:'R0',revdate:today0(),by:'',start:today0(),cdays:120,wmode:'mon-sat',holi:''},tasks:[],defects:[],history:[]}}
+const CATS=[['TS','TS','งาน TS'],['IAQ','IAQ','งาน IAQ'],['NP','Non Project','งานที่ไม่ใช่โครงการ']];
+let catSel=null;   // null = ยังไม่เลือกหมวด → แสดงหน้าเลือกหมวดก่อน
+function catName(c){const x=CATS.find(k=>k[0]===c);return x?x[1]:'ยังไม่จัดหมวด'}
+function blankProj(){return {info:{cat:catSel||'',name:'',owner:'',site:'',doc:'',rev:'R0',revdate:today0(),by:'',start:today0(),cdays:120,wmode:'mon-sat',holi:''},tasks:[],defects:[],history:[]}}
 let WS={cur:0,projects:[]};   // ทุกโครงการอยู่ในไฟล์เดียว สลับด้วยแท็บด้านบน
 let S=blankProj();            // โครงการที่กำลังเปิดอยู่
 let seq=1;
@@ -474,7 +491,10 @@ function buildInfo(){
   info.innerHTML=F.map(([k,l,t])=>{
     const req=REQ.includes(k);
     return `<div><label class="${req?'req':''}">${l}</label><input type="${t}" ${req?'data-need="'+(t==='number'?'num':'text')+'"':''} value="${esc(S.info[k])}" oninput="S.info.${k}=this.value;refresh()"></div>`}).join('')
-  +`<div><label>วันทำงาน</label><select onchange="S.info.wmode=this.value;refresh()">
+  +`<div><label>หมวดงาน</label><select onchange="S.info.cat=this.value;catSel=this.value;buildTabs();buildCatBar();refresh()">
+      <option value="" ${S.info.cat?'':'selected'}>— ยังไม่จัดหมวด —</option>
+      ${CATS.map(([v,l])=>`<option value="${v}" ${S.info.cat===v?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div><label>วันทำงาน</label><select onchange="S.info.wmode=this.value;refresh()">
       ${[['mon-sat','จ.–ส. (หยุดอาทิตย์)'],['mon-fri','จ.–ศ. (หยุด ส.–อา.)'],['all','ทำงานทุกวัน']]
         .map(([v,l])=>`<option value="${v}" ${S.info.wmode===v?'selected':''}>${l}</option>`).join('')}
     </select></div>
@@ -1143,22 +1163,55 @@ function useProj(i){
   flushFolder();                                  // บันทึกงานที่ค้างก่อนสลับแท็บ
   WS.cur=Math.max(0,Math.min(i,WS.projects.length-1));
   S=WS.projects[WS.cur];
+  if(catSel!==null)catSel=S.info.cat||'';
   seq=Math.max(0,...S.tasks.map(t=>+String(t.id).replace(/\D/g,'')||0))+1;
   DEFBY=defByTask();defFilter='';
   viewMode=WS.mode||'normal'; showAll=(viewMode==='full');
   const vm=document.getElementById('viewmode'); if(vm)vm.value=viewMode;
-  buildTabs();buildInfo();buildDefects();buildHistory();rebuild();
+  buildTabs();buildInfo();buildDefects();buildHistory();rebuild();showCat();
 }
 function buildTabs(){
   tabs.innerHTML=WS.projects.map((p,i)=>{
+    if(catSel===null||(p.info.cat||'')!==catSel)return '';
     const cnt=p.tasks.filter(t=>!t.phase).length;
     return `<button class="tab ${i===WS.cur?'on':''}" onclick="useProj(${i})" title="${esc(p.info.owner||'')}">
       <span class="lbl">${esc(pname(p))}</span><span class="cnt">${cnt}</span>
       ${i===WS.cur&&WS.projects.length>1?`<span class="x" onclick="event.stopPropagation();delProj(${i})" title="ลบโครงการนี้">✕</span>`:''}</button>`;
   }).join('')
-  +`<button class="tab add" onclick="newProj()">+ เพิ่มโครงการ</button>
-    <button class="tab add" onclick="dupProj()">⧉ ทำสำเนา</button>`;
+  +(catSel===null||catSel===''?'':`<button class="tab add" onclick="newProj()">+ เพิ่มโครงการ</button>`
+    +((S.info.cat||'')===catSel?`<button class="tab add" onclick="dupProj()">⧉ ทำสำเนา</button>`:''));
 }
+function catCount(c){return WS.projects.filter(p=>(p.info.cat||'')===c).length}
+function buildCatBar(){
+  const un=catCount('');
+  catbar.innerHTML=catSel===null?'':'<span style="font-size:12px;color:#9EC4D8">หมวดงาน:</span>'
+    +CATS.map(([v,l])=>`<button class="cb ${catSel===v?'on':''}" onclick="setCat('${v}')">${l} (${catCount(v)})</button>`).join('')
+    +(un?`<button class="cb ${catSel===''?'on':''}" onclick="setCat('')">ยังไม่จัดหมวด (${un})</button>`:'')
+    +'<button class="cb" onclick="goGate()">⌂ หน้าเลือกหมวด</button>';
+}
+function buildGate(){
+  const un=catCount('');
+  catGate.innerHTML=`<h2>เลือกหมวดงานก่อน</h2><div style="color:var(--steel);font-size:13px">เลือกหมวดเพื่อดูโครงการและแผนงานด้านใน</div>
+    <div class="catcards">`+CATS.map(([v,l,d])=>`<button class="catcard" onclick="setCat('${v}')"><b>${l}</b><span>${d}</span><em>${catCount(v)} โครงการ →</em></button>`).join('')
+    +(un?`<button class="catcard" style="border-top-color:var(--steel)" onclick="setCat('')"><b>ยังไม่จัดหมวด</b><span>โครงการเดิมที่ยังไม่ได้ระบุหมวด — เปิดแล้วเลือกหมวดในช่อง “หมวดงาน”</span><em>${un} โครงการ →</em></button>`:'')
+    +`</div>`;
+}
+function showCat(){
+  const gate=catSel===null, mine=!gate&&(S.info.cat||'')===catSel, empty=!gate&&!mine;
+  catGate.style.display=gate?'':'none';
+  catEmpty.style.display=empty?'':'none';
+  main.style.display=mine?'':'none';
+  document.body.classList.toggle('nocat',!mine);
+  if(gate)buildGate();
+  if(empty)catEmpty.innerHTML=`<h2>ยังไม่มีโครงการในหมวด ${esc(catName(catSel))}</h2><p style="margin:10px 0 16px">กดปุ่มด้านล่างเพื่อเริ่มโครงการแรกของหมวดนี้</p>${catSel===''?'':'<button class="pri" onclick="newProj()">+ เพิ่มโครงการ</button>'}`;
+  buildCatBar();
+}
+function setCat(c){
+  catSel=c;
+  const i=WS.projects.findIndex(p=>(p.info.cat||'')===c);
+  if(i>=0)useProj(i); else {buildTabs();showCat()}
+}
+function goGate(){flushFolder();catSel=null;buildTabs();showCat()}
 function nextRev(cur){
   cur=String(cur||'R0');
   return /\d/.test(cur)?cur.replace(/(\d+)(\D*)$/,(m,n,tail)=>(+n+1)+tail):cur+'1';
@@ -1195,7 +1248,7 @@ function buildHistory(){
         <td>${esc(r.by)}</td><td>${esc(r.note||'—')}</td></tr>`).join('')+`</tbody></table>`
     :`<div class="pad" style="color:var(--steel);font-size:12.5px">ยังไม่มีประวัติ — กด “บันทึกแผนงาน” เพื่อออก Rev. แรก</div>`;
 }
-function newProj(){WS.projects.push(blankProj());useProj(WS.projects.length-1);dlgTpl.showModal()}
+function newProj(){if(!catSel)return;WS.projects.push(blankProj());useProj(WS.projects.length-1);dlgTpl.showModal()}
 function dupProj(){
   const c=JSON.parse(JSON.stringify(S));
   c.info.name=pname(S)+' (สำเนา)';
@@ -1209,7 +1262,7 @@ function delProj(i){
   folderRemove(p);
   WS.projects.splice(i,1);
   if(!WS.projects.length)WS.projects.push(blankProj());
-  useProj(Math.min(i,WS.projects.length-1));
+  setCat(catSel);
 }
 
 /* ══════════════════ SAVE / LOAD / EXPORT ══════════════════ */
