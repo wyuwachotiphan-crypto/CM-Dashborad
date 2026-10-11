@@ -121,6 +121,7 @@ td.autocell{background:#F4F3F0}
 .ftbl td.num{padding:5px 8px}
 .ftbl tfoot td{font-weight:700;background:var(--canvas);padding:6px 8px}
 .ftbl .neg{color:var(--red)}
+.ftbl td.src{font-size:11.5px;color:var(--text);padding:5px 8px;line-height:1.5}
 label.req::after{content:' •';color:var(--accent);font-weight:700}
 .needchip{font-size:12px;font-weight:600;border-radius:20px;padding:3px 10px;border:1px solid;cursor:pointer}
 .needchip.on{color:#8A6412;border-color:#E0A93B;background:#FFF6E0}
@@ -1199,28 +1200,40 @@ function buildFin(){
     +`</tbody>`;
 }
 
-/* คำนวณกระแสเงินสดรายเดือน (แผน/จริง) */
+/* คำนวณกระแสเงินสดรายเดือน (แผน/จริง)
+   เดือนในตาราง = ช่วงของแผนงาน (วันเริ่มงานแรก – วันเสร็จงานสุดท้าย) + เดือนของวันรับ/จ่ายที่คำนวณจากงานที่ผูก
+   วันที่ที่ผู้ใช้ระบุเอง / ยอดจริงที่ตกนอกช่วงนี้ จะไม่สร้างเดือนใหม่ — แยกไว้ในแถว "นอกช่วงแผน" */
+const FIN_TL={start:'งานเริ่ม',finish:'งานเสร็จ',date:'ระบุวันเอง',spread:'กระจายตามระยะงาน'};
 function finCalc(){
-  const F=finEnsure();
-  const pl={}, ac={}, add=(m,k,d,v)=>{if(!v)return; const key=mkey(d); (m[key]=m[key]||{in:0,out:0})[k]+=v};
+  const F=finEnsure(), C=compute();
+  const tl=t=>t?(t.wbs||t.name||'งาน'):'';
+  const ev=[];   // {d, v, type:'in'|'out', real:bool, plan:bool(มาจากแผนงาน), src}
   F.income.forEach(x=>{
-    const pd=incDate(x); if(pd)add(pl,'in',pd,incAmt(x));
-    if(+x.ra>0){const d=x.rd?D(x.rd):pd; if(d)add(ac,'in',d,+x.ra)}
+    const pd=incDate(x), nm=x.name||'(ไม่มีชื่อ)', t=finTask(x.task);
+    if(pd)ev.push({d:pd,v:incAmt(x),type:'in',real:false,plan:x.trig!=='date',
+      src:`รับ “${nm}” ${money(incAmt(x))} — ${x.trig==='date'?'ระบุวันเอง':FIN_TL[x.trig]+' '+tl(t)+(+x.lag?' +'+x.lag+' วัน':'')} = ${fmt(pd)}`});
+    if(+x.ra>0){const d=x.rd?D(x.rd):pd; if(d)ev.push({d,v:+x.ra,type:'in',real:true,plan:false,src:`รับจริง “${nm}” ${money(x.ra)} — ${fmt(d)}`})}
   });
   F.cost.forEach(x=>{
-    const ev=costEvents(x); ev.forEach(e=>add(pl,'out',e.d,e.v));
-    if(+x.pa>0){const d=x.pd?D(x.pd):(ev.length?ev[ev.length-1].d:null); if(d)add(ac,'out',d,+x.pa)}
+    const e=costEvents(x), nm=x.name||'(ไม่มีชื่อ)', t=finTask(x.task);
+    const how=x.mode==='date'?'ระบุวันเอง':FIN_TL[x.mode]+' '+tl(t);
+    e.forEach(p=>ev.push({d:p.d,v:p.v,type:'out',real:false,plan:x.mode!=='date',src:null,grp:x}));
+    if(e.length)ev.filter(p=>p.grp===x).forEach((p,i,a)=>{ if(i===0)p.src=`จ่าย “${nm}” ${money(+x.budget)} — ${how} = ${costDateTxt(x)}`; });
+    if(+x.pa>0){const d=x.pd?D(x.pd):(e.length?e[e.length-1].d:null); if(d)ev.push({d,v:+x.pa,type:'out',real:true,plan:false,src:`จ่ายจริง “${nm}” ${money(x.pa)} — ${fmt(d)}`})}
   });
-  const keys=[...Object.keys(pl),...Object.keys(ac)].map(Number);
-  const rows=[]; if(keys.length){
-    const a=Math.min(...keys), b=Math.max(...keys); let cp=0, ca=0;
-    for(let k=a;k<=b;k++){
-      const p=pl[k]||{in:0,out:0}, q=ac[k]||{in:0,out:0};
-      cp+=p.in-p.out; ca+=q.in-q.out;
-      rows.push({k,pi:p.in,po:p.out,ai:q.in,ao:q.out,cp,ca});
-    }
-  }
-  return {rows};
+  /* ช่วงเดือนที่ยอมให้มี = ช่วงของแผน ขยายตามวันรับ/จ่ายที่คำนวณจากงาน */
+  const keys=[mkey(C.st),mkey(C.en)];
+  ev.filter(e=>e.plan).forEach(e=>keys.push(mkey(e.d)));
+  const lo=Math.min(...keys), hi=Math.max(...keys);
+  const rows=[]; for(let k=lo;k<=hi;k++)rows.push({k,pi:0,po:0,ai:0,ao:0,cp:0,ca:0,src:[]});
+  const outside={pi:0,po:0,ai:0,ao:0,src:[]};
+  ev.forEach(e=>{
+    const k=mkey(e.d), r=(k>=lo&&k<=hi)?rows[k-lo]:outside;
+    r[(e.real?'a':'p')+(e.type==='in'?'i':'o')]+=e.v;
+    if(e.src)r.src.push(e.src);
+  });
+  let cp=0, ca=0; rows.forEach(r=>{cp+=r.pi-r.po; ca+=r.ai-r.ao; r.cp=cp; r.ca=ca});
+  return {rows,outside,lo,hi};
 }
 function finUpdate(){
   const F=finEnsure(); finsec.style.display=finOn()?'':'none'; if(!finOn())return;
@@ -1264,22 +1277,32 @@ function finUpdate(){
     if(x.mode!=='date'&&!finTask(x.task))es.push(`รายการจ่าย “${nm(x)}” ยังไม่ได้เลือกงานที่ผูก (หรืองานถูกลบไปแล้ว) — ยังไม่มีวันตามแผน`);
     if((+x.pa||0)>(+x.budget||0)&&+x.budget>0)es.push(`รายการจ่าย “${nm(x)}” จ่ายจริง ${money(x.pa)} เกินงบ ${money(x.budget)} อยู่ ${money(x.pa-x.budget)} บาท`);
   });
-  const {rows}=finCalc();
+  const {rows,outside}=finCalc();
   const neg=rows.find(r=>r.cp<0); if(neg)es.push(`เงินสะสมตามแผนติดลบตั้งแต่ ${mlabel(neg.k)} (${money(neg.cp)} บาท) — ต้องสำรองเงินหมุนเวียนหรือเลื่อนงวดจ่าย`);
+  const nOut=outside.src.length;
+  if(nOut)es.push(`มี ${nOut} รายการที่วันที่อยู่นอกช่วงของแผนงาน (ระบุวันเอง หรือวันที่รับ/จ่ายจริงที่กรอกไว้) — แยกไว้ในแถว “นอกช่วงแผน” ตรวจว่าพิมพ์วันที่ถูกเดือนหรือไม่`);
   finWarn.innerHTML=es.map(e=>`<div class="msg e">⚠ ${e}</div>`).join('');
 
-  /* ตารางรายเดือน */
+  /* ตารางรายเดือน — เดือนมาจากช่วงของแผนงานเท่านั้น และคอลัมน์สุดท้ายบอกที่มาของตัวเลขแต่ละเดือน */
   const cl=v=>v<0?'neg':'';
-  const tot=rows.reduce((a,r)=>({pi:a.pi+r.pi,po:a.po+r.po,ai:a.ai+r.ai,ao:a.ao+r.ao}),{pi:0,po:0,ai:0,ao:0});
+  const has=F.income.length||F.cost.length;
+  const all=rows.concat(nOut||outside.pi||outside.po||outside.ai||outside.ao?[outside]:[]);
+  const tot=all.reduce((a,r)=>({pi:a.pi+r.pi,po:a.po+r.po,ai:a.ai+r.ai,ao:a.ao+r.ao}),{pi:0,po:0,ai:0,ao:0});
+  const srcTxt=r=>r.src.length?r.src.map(esc).join('<br>'):'<span style="color:var(--steel)">— ไม่มีรายการรับ/จ่ายในเดือนนี้</span>';
   finTbl.innerHTML=`<thead><tr><th>เดือน</th><th>รับ (แผน)</th><th>จ่าย (แผน)</th><th>สุทธิ (แผน)</th><th>สะสม (แผน)</th>
-      <th>รับ (จริง)</th><th>จ่าย (จริง)</th><th>สุทธิ (จริง)</th><th>สะสม (จริง)</th></tr></thead><tbody>`
-    +rows.map(r=>`<tr><td class="d">${mlabel(r.k)}</td><td class="num">${money(r.pi)}</td><td class="num">${money(r.po)}</td>
+      <th>รับ (จริง)</th><th>จ่าย (จริง)</th><th>สุทธิ (จริง)</th><th>สะสม (จริง)</th><th style="min-width:260px">ที่มาของตัวเลข</th></tr></thead><tbody>`
+    +(has?rows.map(r=>`<tr><td class="d">${mlabel(r.k)}</td><td class="num">${money(r.pi)}</td><td class="num">${money(r.po)}</td>
       <td class="num ${cl(r.pi-r.po)}">${money(r.pi-r.po)}</td><td class="num ${cl(r.cp)}">${money(r.cp)}</td>
-      <td class="num">${money(r.ai)}</td><td class="num">${money(r.ao)}</td><td class="num ${cl(r.ai-r.ao)}">${money(r.ai-r.ao)}</td><td class="num ${cl(r.ca)}">${money(r.ca)}</td></tr>`).join('')
-    +(rows.length?`</tbody><tfoot><tr><td>รวม</td><td class="num">${money(tot.pi)}</td><td class="num">${money(tot.po)}</td><td class="num ${cl(tot.pi-tot.po)}">${money(tot.pi-tot.po)}</td><td></td>
-      <td class="num">${money(tot.ai)}</td><td class="num">${money(tot.ao)}</td><td class="num ${cl(tot.ai-tot.ao)}">${money(tot.ai-tot.ao)}</td><td></td></tr></tfoot>`
-      :`</tbody><tfoot><tr><td colspan="9" style="font-weight:400;color:var(--steel)">ยังไม่มีรายการ — กด “+ เพิ่มงวดรับ” หรือ “+ เพิ่มรายการจ่าย” แล้วผูกกับงานในแผน</td></tr></tfoot>`);
-  drawFinChart(rows);
+      <td class="num">${money(r.ai)}</td><td class="num">${money(r.ao)}</td><td class="num ${cl(r.ai-r.ao)}">${money(r.ai-r.ao)}</td><td class="num ${cl(r.ca)}">${money(r.ca)}</td>
+      <td class="src">${srcTxt(r)}</td></tr>`).join('')
+      +(all.length>rows.length?`<tr style="background:#FFF6E5"><td class="d">นอกช่วงแผน</td><td class="num">${money(outside.pi)}</td><td class="num">${money(outside.po)}</td>
+        <td class="num ${cl(outside.pi-outside.po)}">${money(outside.pi-outside.po)}</td><td></td>
+        <td class="num">${money(outside.ai)}</td><td class="num">${money(outside.ao)}</td><td class="num ${cl(outside.ai-outside.ao)}">${money(outside.ai-outside.ao)}</td><td></td>
+        <td class="src">${srcTxt(outside)}</td></tr>`:''):'')
+    +(has?`</tbody><tfoot><tr><td>รวม</td><td class="num">${money(tot.pi)}</td><td class="num">${money(tot.po)}</td><td class="num ${cl(tot.pi-tot.po)}">${money(tot.pi-tot.po)}</td><td></td>
+      <td class="num">${money(tot.ai)}</td><td class="num">${money(tot.ao)}</td><td class="num ${cl(tot.ai-tot.ao)}">${money(tot.ai-tot.ao)}</td><td></td><td></td></tr></tfoot>`
+      :`</tbody><tfoot><tr><td colspan="10" style="font-weight:400;color:var(--steel)">ยังไม่มีรายการ — กด “+ เพิ่มงวดรับ” หรือ “+ เพิ่มรายการจ่าย” แล้วผูกกับงานในแผน</td></tr></tfoot>`);
+  drawFinChart(has?rows:[]);
 }
 function drawFinChart(rows){
   if(!rows.length){finChart.innerHTML='';return}
