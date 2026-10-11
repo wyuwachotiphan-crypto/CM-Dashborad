@@ -89,7 +89,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);bor
 .ok{color:var(--green)} .bad{color:var(--accent)} .warn{color:var(--amber)}
 /* table */
 .tbl{width:100%;border-collapse:collapse;table-layout:fixed}
-.tbl th{background:var(--ink-soft);color:#fff;font-size:10.5px;font-weight:600;padding:7px 4px;text-align:left;white-space:nowrap}
+.tbl th{background:var(--ink-soft);color:#fff;font-size:10.5px;font-weight:600;padding:7px 4px;text-align:left;white-space:nowrap;position:relative}
+.tbl th .rz{position:absolute;right:0;top:0;bottom:0;width:7px;cursor:col-resize;border-right:2px solid rgba(255,255,255,.25)}
+.tbl th .rz:hover,.tbl th .rz.on{border-right-color:var(--accent);background:rgba(255,255,255,.18)}
 .tbl td{border-bottom:1px solid var(--line);padding:2px 4px;vertical-align:middle;overflow:hidden}
 .tbl tbody tr:hover td{background:rgba(0,48,73,.045)}
 .tbl td input,.tbl td select{width:100%;padding:4px 6px;font-size:12.5px;border-color:transparent;
@@ -522,6 +524,9 @@ const TIP={'น้ำหนัก%':'สัดส่วนของงานน�
   'MS':'Milestone / Hold Point','รอผู้อื่น':'งานที่เราไม่ได้ทำ — กินเวลาแต่ไม่นับน้ำหนัก'};
 /* ความกว้างคอลัมน์ — ชื่องานเว้นว่างไว้ให้ยืดกินพื้นที่ที่เหลือ */
 const CW=[32,64,0,98,160,56,52,52,76,76,68,58,120,36,64,106];
+/* ความกว้างคอลัมน์ที่ผู้ใช้ลากเอง — จำไว้ในเครื่องนี้ (ดับเบิลคลิกที่ขอบเพื่อกลับเป็นอัตโนมัติ) */
+let COLW={};try{COLW=JSON.parse(localStorage.getItem("msb-colw"))||{}}catch(e){}
+function saveColW(){try{localStorage.setItem("msb-colw",JSON.stringify(COLW))}catch(e){}}
 /* ซ่อนคอลัมน์รองตามความกว้างจอ เพื่อให้ตารางพอดีจอโดยไม่ต้องเลื่อนซ้าย-ขวา
    ลำดับการซ่อน: ชนิด+Lag → เฟส → ผู้รับผิดชอบ → MS+รอผู้อื่น (ติ๊ก "แสดงทุกคอลัมน์" เพื่อดูครบ) */
 let showAll=false, lastHide='', viewMode='normal';
@@ -565,7 +570,7 @@ function fitTaskCols(){
   const T=S.tasks, hd=i=>mh(COLS[i]);
   const need=[];
   need[0]=Math.max(hd(0),m(T.length))+PAD.plain;
-  need[1]=Math.max(hd(1),wMax(T,t=>m(t.wbs)))+PAD.text;
+  need[1]=Math.max(hd(1),m("WP-00"),wMax(T,t=>m(t.wbs)))+PAD.text+16;
   need[2]=0;
   need[3]=Math.max(hd(3),m('Second Fix'))+PAD.sel;
   need[4]=Math.max(hd(4),m('— เริ่มพร้อมโครงการ —'),wMax(T,(t,i)=>m(t.wbs||('แถว '+(i+1)))))+PAD.sel;
@@ -579,7 +584,7 @@ function fitTaskCols(){
   need[13]=Math.max(hd(13),18)+PAD.plain;
   need[14]=Math.max(hd(14),18)+PAD.plain;
   need[15]=106;
-  return need.map(v=>Math.min(240,Math.ceil(v)));
+  return need.map((v,i)=>(COLW[i]&&i!==2&&i!==15)?COLW[i]:Math.min(240,Math.ceil(v)));
 }
 function fitDefCols(){
   const m=measurer('#deftbl tbody input:not([type=date])',12),
@@ -635,13 +640,30 @@ function focusNeed(){
   const el=document.querySelector('#info .need,#tbl .need,#deftbl .need');
   if(el){el.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>el.focus(),250)}
 }
+/* ลากขอบหัวตารางเพื่อปรับความกว้างคอลัมน์ได้เอง */
+document.addEventListener('mousedown',e=>{
+  const h=e.target.closest&&e.target.closest('#tbl th .rz'); if(!h)return;
+  e.preventDefault();
+  const th=h.parentElement, c=+th.dataset.c, col=tbl.querySelectorAll('col')[th.cellIndex];
+  const x0=e.clientX, w0=th.getBoundingClientRect().width, mw0=parseFloat(tbl.style.minWidth)||0;
+  h.classList.add('on');
+  const mv=ev=>{const w=Math.max(36,Math.round(w0+ev.clientX-x0));
+    COLW[c]=w; col.style.width=w+'px'; tbl.style.minWidth=Math.max(mw0+(w-w0),0)+'px'};
+  const up=()=>{removeEventListener('mousemove',mv);removeEventListener('mouseup',up);
+    h.classList.remove('on'); saveColW(); buildTable()};
+  addEventListener('mousemove',mv); addEventListener('mouseup',up);
+});
+document.addEventListener('dblclick',e=>{
+  const h=e.target.closest&&e.target.closest('#tbl th .rz'); if(!h)return;
+  delete COLW[+h.parentElement.dataset.c]; saveColW(); buildTable();
+});
 function buildTable(){
   GRP=groupMap(); fillLists();
   const H=hiddenCols(); lastHide=[...H].join(',');
   const keep=(v,i)=>!H.has(i);
   const W=fitTaskCols();                                   // ความกว้างที่วัดจากข้อความจริง
   const cols='<colgroup>'+W.filter(keep).map(w=>`<col${w?` style="width:${w}px"`:''}>`).join('')+'</colgroup>';
-  const head='<thead><tr>'+COLS.filter(keep).map(c=>`<th${TIP[c]?` title="${TIP[c]}"`:''}>${c}</th>`).join('')+'</tr></thead>';
+  const head='<thead><tr>'+COLS.map((c,i)=>!keep(0,i)?'':`<th data-c="${i}"${TIP[c]?` title="${TIP[c]}"`:''}>${c}${(i===2||i===15)?'':'<span class="rz" title="ลากเพื่อปรับความกว้าง · ดับเบิลคลิกเพื่อกลับเป็นอัตโนมัติ"></span>'}</th>`).join('')+'</tr></thead>';
   const body=S.tasks.map((t,i)=>t.phase?rowPhase(t,i,H):rowTask(t,i,H)).join('');
   tbl.innerHTML=cols+head+'<tbody>'+body+'</tbody>';
   const box=document.getElementById('tblbox'), avail=box?box.clientWidth:1500;
