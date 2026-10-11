@@ -473,7 +473,17 @@ function nextWork(d,n){ // เลื่อนไป n วันทำงาน (
 function snapWork(d){let x=new Date(d);let g=0;while(!isWork(x)&&g++<400)x=addD(x,1);return x}
 
 /* ══════════════════ COMPUTE ══════════════════ */
+/* WBS ใส่ให้อัตโนมัติ ผู้ใช้แก้เองไม่ได้ — หัวข้อ = 1, 2, 3 · งานใต้หัวข้อ = 1.1, 1.2 … (เพิ่ม/ลบ/ย้ายแถวแล้วเรียงใหม่เอง)
+   รหัสเดิมที่เคยพิมพ์ไว้ (เช่น WP-02) เก็บไว้ใน wbs0 ให้ดูเทียบเมื่อเอาเมาส์ชี้ */
+function renumberWBS(){
+  let h=0,n=0;
+  S.tasks.forEach(t=>{
+    if(t.wbs&&t.wbs0===undefined&&!/^\d+(\.\d+)?$/.test(t.wbs))t.wbs0=t.wbs;
+    if(t.phase){h++;n=0;t.wbs=String(h)}else{n++;t.wbs=h+'.'+n}
+  });
+}
 function compute(){
+  renumberWBS();
   HOLI=new Set(String(S.info.holi||'').split(/[,\s]+/).filter(Boolean));
   const p0=snapWork(D(S.info.start));
   const by={},idx={};
@@ -618,7 +628,7 @@ function fitTaskCols(){
   const T=S.tasks, hd=i=>mh(COLS[i]);
   const need=[];
   need[0]=Math.max(hd(0),m(T.length))+PAD.plain;
-  need[1]=Math.max(hd(1),m("WP-00"),wMax(T,t=>m(t.wbs)))+PAD.text+16;
+  need[1]=Math.max(hd(1),md("00.000"),wMax(T,t=>md(t.wbs)))+PAD.plain;
   need[2]=0;
   need[3]=Math.max(hd(3),m('Second Fix'))+PAD.sel;
   need[4]=Math.max(hd(4),m('— เริ่มพร้อมโครงการ —'),wMax(T,(t,i)=>m(t.wbs||('แถว '+(i+1)))))+PAD.sel;
@@ -706,6 +716,7 @@ document.addEventListener('dblclick',e=>{
   delete COLW[+h.parentElement.dataset.c]; saveColW(); buildTable();
 });
 function buildTable(){
+  renumberWBS();
   GRP=groupMap(); fillLists();
   const H=hiddenCols(); lastHide=[...H].join(',');
   const keep=(v,i)=>!H.has(i);
@@ -750,8 +761,9 @@ function rowPhase(t,i,H){
   H=H||new Set();
   const gc=(GRP[i]||{}).c||PAL[0];
   const span=(a,b)=>{let n=0;for(let k=a;k<=b;k++)if(!H.has(k))n++;return n};
-  const s1=span(1,7), s2=span(10,16);
+  const s1=span(2,7), s2=span(10,16);
   return `<tr class="ph" style="background:${tint(gc,.18)};box-shadow:inset 4px 0 0 ${gc}"><td class="derived">${i+1}</td>`
+   +`<td class="derived" style="font-weight:700;color:var(--text)" title="เลขหัวข้อ — ระบบเรียงให้อัตโนมัติ">${esc(t.wbs)}</td>`
    +(s1?`<td colspan="${s1}"><input value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;refresh()" style="font-weight:700"></td>`:'')
    +`<td class="derived" id="s${i}"></td><td class="derived" id="f${i}"></td>`
    +(s2?`<td colspan="${s2}"></td>`:'')
@@ -769,7 +781,7 @@ function rowTask(t,i,H){
   const P=[['','—'],['1','First Fix'],['2','Second Fix']];
   const c=[
    `<td class="derived">${i+1}</td>`,
-   `<td><input list="dl-wbs" value="${esc(t.wbs)}" oninput="S.tasks[${i}].wbs=this.value;refresh()"></td>`,
+   `<td class="derived" title="${t.wbs0?'รหัสเดิม: '+esc(t.wbs0)+' · ':''}ระบบเรียงเลข WBS ให้อัตโนมัติ แก้เองไม่ได้">${esc(t.wbs)}</td>`,
    `<td><input list="dl-name" data-need="text" placeholder="พิมพ์ชื่องาน หรือเลือกจากรายการ" value="${esc(t.name)}" title="${esc(t.name)}" oninput="S.tasks[${i}].name=this.value;this.title=this.value;refresh()"></td>`,
    `<td><select onchange="S.tasks[${i}].pf=this.value;refresh()">
        ${P.map(([v,l])=>`<option value="${v}" ${t.pf===v?'selected':''}>${l}</option>`).join('')}</select></td>`,
