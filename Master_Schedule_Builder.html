@@ -313,6 +313,7 @@ dialog::backdrop{background:rgba(0,48,73,.4)}
       <div class="tools noprint">
         <label style="margin:0;font-size:12px" title="เปิด = วันที่เกินแผนดันงานถัดไปให้เลื่อนตาม · ปิด = แผนเดิมไม่ขยับ แสดงส่วนเกินเป็นแถบแดงเฉยๆ"><input type="checkbox" id="gshift" onchange="S.info.shiftOver=this.checked;refresh()" style="width:auto"> งานถัดไปเลื่อนตามวันที่เกิน</label>
         <label style="margin:0;font-size:12px"><input type="checkbox" id="glinks" checked onchange="refresh()" style="width:auto"> เส้นเชื่อมงาน</label>
+        <label style="margin:0;font-size:12px" title="เส้นแดง = Lag (ทำได้ช้ากว่าแผน) · เส้นเขียว = Lead (เร็วกว่าแผน) วัดจากจุดที่ %จริง ไปถึงบนแถบงาน เทียบกับเส้นวันนี้"><input type="checkbox" id="glag" checked onchange="refresh()" style="width:auto"> เส้น Lead / Lag</label>
         <label style="margin:0"><select id="scale" onchange="refresh()" style="width:auto">
           <option value="day">รายวัน</option><option value="week" selected>รายสัปดาห์</option><option value="month">รายเดือน</option>
         </select></label>
@@ -1127,7 +1128,9 @@ function drawGantt(C){
      <span><i style="background:repeating-linear-gradient(45deg,#DEDCD7,#DEDCD7 4px,#F5F4F1 4px,#F5F4F1 8px);border:1px solid #C9C6BF"></i>รอผู้อื่น (ไม่นับน้ำหนัก)</span>
      <span><i style="background:var(--accent);transform:rotate(45deg);width:9px"></i>Milestone ผ่านแล้ว</span>
      <span><i style="border:2px solid var(--accent);transform:rotate(45deg);width:9px;height:9px"></i>Milestone ยังไม่ถึง</span>
-     <span><i style="background:var(--accent);width:3px;height:12px"></i>วันนี้</span>`;
+     <span><i style="background:var(--accent);width:3px;height:12px"></i>วันนี้</span>
+     <span><i style="background:#C1121F;height:3px"></i>Lag ช้ากว่าแผน</span>
+     <span><i style="background:#2E8B57;height:3px"></i>Lead เร็วกว่าแผน</span>`;
 
   /* ลูกศรเชื่อมงานแบบ MS Project — FS: จากปลายงานก่อนหน้า → ต้นงานถัดไป · SS: จากต้นงานก่อนหน้า → ต้นงานถัดไป */
   let links='';
@@ -1147,6 +1150,25 @@ function drawGantt(C){
     });
   }
   const tx=days(g0,now)*px;
+  /* เส้น Lead/Lag — จุดที่ %จริงไปถึงบนแถบ เทียบกับเส้นวันนี้: อยู่ซ้ายวันนี้ = Lag (แดง) · อยู่ขวาวันนี้ = Lead (เขียว) */
+  const lg=document.getElementById('glag');
+  if(lg&&lg.checked&&now>=g0&&now<=g1){
+    S.tasks.forEach((t,i)=>{
+      if(t.phase||t.ext||t.ms||!t.s||+t.dur===0)return;
+      const pc=Math.min(100,Math.max(0,+t.act||0));
+      if(t.s>now&&pc===0)return;                       // ยังไม่ถึงกำหนดเริ่ม และยังไม่เริ่ม → ไม่มีส่วนต่าง
+      if(pc>=100&&t.f<=now)return;                     // เสร็จแล้วและครบกำหนดแล้ว → ไม่มีส่วนต่าง
+      const span=days(t.s,t.f)+1, ex=days(g0,t.s)*px, ax=ex+span*px*pc/100;   // ax = จุดที่ทำได้จริง
+      const dd=Math.round((ax-tx)/px);                 // วัน (ปฏิทิน) ต่างจากวันนี้
+      if(dd===0)return;
+      const late=dd<0, col=late?'#C1121F':'#2E8B57', y=44+i*26+22, a=Math.min(ax,tx), b=Math.max(ax,tx);
+      const txt=(late?'Lag ':'Lead ')+Math.abs(dd)+' วัน';
+      links+=`<g><title>${esc(t.name)} · ${txt} (ทำจริง ${pc}%)</title>
+        <path d="M${a} ${y}H${b}M${a} ${y-4}V${y+4}M${b} ${y-4}V${y+4}" stroke="${col}" stroke-width="2" fill="none"/>
+        <circle cx="${ax}" cy="${y}" r="3.2" fill="${col}"/>
+        <text x="${b+5}" y="${y+3.5}" font-size="10" font-weight="700" fill="${col}" paint-order="stroke" stroke="#fff" stroke-width="3">${txt}</text></g>`;
+    });
+  }
   const todayline=(now>=g0&&now<=g1)?`<div class="today" style="left:${tx}px;height:${S.tasks.length*26+44}px;top:0;position:absolute"></div>`:'';
   gantt.innerHTML=`<div class="gl">${L.join('')}</div>
     <div class="gr" style="position:relative;width:${W}px">${R.join('')}${links?`<svg width="${W}" height="${44+S.tasks.length*26}" style="position:absolute;left:0;top:0;pointer-events:none;z-index:2">${links}</svg>`:''}${todayline}</div>`;
